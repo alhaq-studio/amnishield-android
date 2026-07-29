@@ -1165,7 +1165,8 @@ class MainActivity : AppCompatActivity() {
             
             🔒 Privacy First - 100% local processing, zero tracking
             
-            Developed by Al-Haq Studio (Al-Haq Digital Services & Solutions)
+            Built under: Al-Haq Studio (Al-Haq Digital Services & Solutions)
+            Free Access Program: Provided by Al-Haq Initiative
             No Ads • No Tracking • Privacy First
         """.trimIndent()
         

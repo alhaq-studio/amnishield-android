@@ -403,6 +403,7 @@ class SettingsFragment : Fragment() {
                 • No Internet required for core features
                 
                 Developer: Al-Haq Studio (Al-Haq Digital Services & Solutions)
+                Free Access Program: Provided by Al-Haq Initiative
                 Contact: support@alhaq-initiative.org
                 Website: amn.alhaq-initiative.org
             """.trimIndent()
