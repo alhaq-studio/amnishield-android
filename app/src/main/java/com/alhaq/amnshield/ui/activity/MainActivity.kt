@@ -758,7 +758,7 @@ class MainActivity : AppCompatActivity() {
                     .setTitle("Support AmnShield Development")
                     .setMessage(
                         "Thank you for using AmnShield! " +
-                                "\n\nMy name is Habibur Rahman, and I am the founder of Al-Haq Initiative. I\'m a student with a passion for building Islamic wellbeing tools. " +
+                                "\n\nMy name is Habibur Rahman, and I am the founder of Al-Haq Studio (Al-Haq Digital Services & Solutions). I'm a student with a passion for building Islamic wellbeing tools. " +
                                 "I created AmnShield to help Muslims maintain a halal digital lifestyle. " +
                                 "\n\nIf you find AmnShield beneficial, please consider supporting the project by:\n" +
                                 "\u2022 Subscribing to Premium (unlocks advanced features)\n" +
@@ -1165,7 +1165,7 @@ class MainActivity : AppCompatActivity() {
             
             🔒 Privacy First - 100% local processing, zero tracking
             
-            Developed by Al-Haq Initiative
+            Developed by Al-Haq Studio (Al-Haq Digital Services & Solutions)
             No Ads • No Tracking • Privacy First
         """.trimIndent()
         

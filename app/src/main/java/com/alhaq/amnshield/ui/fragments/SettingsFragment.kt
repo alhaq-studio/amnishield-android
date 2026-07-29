@@ -402,7 +402,7 @@ class SettingsFragment : Fragment() {
                 • Zero Data Collection & Zero Telemetry
                 • No Internet required for core features
                 
-                Developer: Al-Haq Initiative
+                Developer: Al-Haq Studio (Al-Haq Digital Services & Solutions)
                 Contact: support@alhaq-initiative.org
                 Website: amn.alhaq-initiative.org
             """.trimIndent()
