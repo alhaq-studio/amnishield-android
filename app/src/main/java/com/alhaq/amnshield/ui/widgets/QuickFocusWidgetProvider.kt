@@ -9,6 +9,7 @@ import android.content.Intent
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
+import com.alhaq.amnshield.BuildConfig
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.blockers.FocusModeBlocker
 import com.alhaq.amnshield.services.AmnShieldAccessibilityService
@@ -20,11 +21,11 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "QuickFocusWidget"
-        private const val ACTION_START_FOCUS_15 = "com.alhaq.amnshield.focus.START_15"
-        private const val ACTION_START_FOCUS_30 = "com.alhaq.amnshield.focus.START_30"
-        private const val ACTION_START_FOCUS_60 = "com.alhaq.amnshield.focus.START_60"
-        private const val ACTION_STOP_FOCUS = "com.alhaq.amnshield.focus.STOP_FOCUS"
-        private const val ACTION_WIDGET_REFRESH = "com.alhaq.amnshield.focus.WIDGET_REFRESH"
+        private val ACTION_START_FOCUS_15 = "${BuildConfig.APPLICATION_ID}.focus.START_15"
+        private val ACTION_START_FOCUS_30 = "${BuildConfig.APPLICATION_ID}.focus.START_30"
+        private val ACTION_START_FOCUS_60 = "${BuildConfig.APPLICATION_ID}.focus.START_60"
+        private val ACTION_STOP_FOCUS = "${BuildConfig.APPLICATION_ID}.focus.STOP_FOCUS"
+        private val ACTION_WIDGET_REFRESH = "${BuildConfig.APPLICATION_ID}.focus.WIDGET_REFRESH"
 
         fun updateAllWidgets(context: Context) {
             try {
@@ -57,7 +58,7 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
 
         val action = intent.action ?: return
-        if (action.startsWith("com.alhaq.amnshield.focus.START_")) {
+        if (action.startsWith("${BuildConfig.APPLICATION_ID}.focus.START_")) {
             val minutes = when (action) {
                 ACTION_START_FOCUS_15 -> 15
                 ACTION_START_FOCUS_30 -> 30

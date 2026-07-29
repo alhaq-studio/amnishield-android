@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.widget.RemoteViews
+import com.alhaq.amnshield.BuildConfig
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.ui.activity.FragmentActivity
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
@@ -15,7 +16,7 @@ class ReelsMetricsWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "ReelsMetricsWidget"
-        private const val ACTION_WIDGET_REFRESH = "com.alhaq.amnshield.reels.WIDGET_REFRESH"
+        private val ACTION_WIDGET_REFRESH = "${BuildConfig.APPLICATION_ID}.reels.WIDGET_REFRESH"
     }
 
     override fun onUpdate(

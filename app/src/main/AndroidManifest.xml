@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <permission
-        android:name="com.alhaq.amnshield.permission.BIND_API"
+        android:name="${applicationId}.permission.BIND_API"
         android:protectionLevel="signature" />
 
     <application
@@ -152,9 +152,9 @@
         <service
             android:name=".api.AmnShieldApiService"
             android:exported="true"
-            android:permission="com.alhaq.amnshield.permission.BIND_API">
+            android:permission="${applicationId}.permission.BIND_API">
             <intent-filter>
-                <action android:name="com.alhaq.amnshield.api.BIND" />
+                <action android:name="${applicationId}.api.BIND" />
             </intent-filter>
         </service>
 
@@ -164,7 +164,7 @@
             android:exported="true"
             android:theme="@style/Theme.AmnShield.TransparentDialog">
             <intent-filter>
-                <action android:name="com.alhaq.amnshield.api.REQUEST_PERMISSION" />
+                <action android:name="${applicationId}.api.REQUEST_PERMISSION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -176,7 +176,7 @@
             android:label="Screen Time &amp; App Usage">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name=".amnshield.screentime.WIDGET_REFRESH" />
+                <action android:name="${applicationId}.screentime.WIDGET_REFRESH" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -189,7 +189,7 @@
             android:label="Reels &amp; Shorts Metrics">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.alhaq.amnshield.reels.WIDGET_REFRESH" />
+                <action android:name="${applicationId}.reels.WIDGET_REFRESH" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -202,9 +202,9 @@
             android:label="Quick Focus Space">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.alhaq.amnshield.focus.START_15" />
-                <action android:name="com.alhaq.amnshield.focus.START_30" />
-                <action android:name="com.alhaq.amnshield.focus.START_60" />
+                <action android:name="${applicationId}.focus.START_15" />
+                <action android:name="${applicationId}.focus.START_30" />
+                <action android:name="${applicationId}.focus.START_60" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -217,7 +217,7 @@
             android:label="Mindful Breathing Space">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.alhaq.amnshield.breathing.START" />
+                <action android:name="${applicationId}.breathing.START" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -239,9 +239,9 @@
             android:name=".notifications.NotificationActionReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.alhaq.amnshield.notifications.START_QUICK_FOCUS" />
-                <action android:name="com.alhaq.amnshield.notifications.SNOOZE_BLOCK" />
-                <action android:name="com.alhaq.amnshield.notifications.QUICK_BLOCK_APP" />
+                <action android:name="${applicationId}.notifications.START_QUICK_FOCUS" />
+                <action android:name="${applicationId}.notifications.SNOOZE_BLOCK" />
+                <action android:name="${applicationId}.notifications.QUICK_BLOCK_APP" />
             </intent-filter>
         </receiver>
 

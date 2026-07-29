@@ -158,8 +158,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
     override fun onCreate(savedInstanceState: Bundle?) {
-        ThemeUtils.applyTheme(this)
-
+        try {
+            ThemeUtils.applyTheme(this)
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "ThemeUtils.applyTheme failed", e)
+        }
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
@@ -187,7 +190,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Initialize helpers
-        googleSignInHelper = GoogleSignInHelper(this)
+        try {
+            googleSignInHelper = GoogleSignInHelper(this)
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "Failed to initialize GoogleSignInHelper", e)
+        }
         drawerLayout = binding.drawerLayout
 
         // Modern back-press handling: prefer OnBackPressedDispatcher over the
@@ -205,10 +212,18 @@ class MainActivity : AppCompatActivity() {
         })
 
         // Initialize notification channels
-        initializeNotificationChannels()
+        try {
+            initializeNotificationChannels()
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "Failed to initialize notification channels", e)
+        }
         
         // Restore premium purchases automatically on app start
-        restorePremiumPurchases()
+        try {
+            restorePremiumPurchases()
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "Failed to restore premium purchases", e)
+        }
         
         // Schedule daily reports for premium users
         scheduleDailyReportsIfPremium()
@@ -1133,21 +1148,25 @@ class MainActivity : AppCompatActivity() {
         val aboutMessage = """
             AmnShield v$versionName
             
-            A comprehensive Islamic digital wellbeing app designed to help you maintain focus, develop healthy digital habits, and protect yourself from distracting content.
+            A comprehensive digital wellbeing app designed to help you maintain focus, develop healthy digital habits, and protect yourself from distracting content.
             
-            Features:
-            • App Blocker - Block apps by category with smart controls
+            ✅ Free Core Features:
+            • App Blocker - Block apps with schedules & custom controls
             • Reel Blocker - Limit endless scrolling on Reels, Shorts, and TikTok
-            • Keyword Blocker - Detect and block inappropriate keywords
-            • Focus Mode - Time-boxed app restrictions with tracking
-            • Notifications Inbox - View your blocking activity notifications
-            • Usage Tracker - Monitor your digital habits
-            • Anti-Uninstall Protection - Secure your protection settings
-            • Privacy Focused - All processing happens on your device
+            • Keyword & Website Blocker - Block inappropriate content & sites
+            • Focus Mode - Time-boxed app restrictions with timer
+            • Launch Limits - Restrict daily app launch frequencies
+            • Notifications & Statistics - Activity reports & productivity trends
+            
+            ⭐ Premium Security:
+            • Anti-Uninstall Protection - Device Admin protection
+            • 4-Digit Security PIN & App Lock - Master PIN lock for settings
+            • Bypass PIN Lock - Require PIN to edit active blocks
+            
+            🔒 Privacy First - 100% local processing, zero tracking
             
             Developed by Al-Haq Initiative
-            
-            No Ads • No Tracking • Islamic Values
+            No Ads • No Tracking • Privacy First
         """.trimIndent()
         
         MaterialAlertDialogBuilder(this)

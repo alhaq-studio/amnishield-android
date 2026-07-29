@@ -62,10 +62,17 @@ class AppBlocker : BaseBlocker() {
             return AppBlockerResult(isBlocked = false)
         }
 
-        val packageRules = scheduleRules.filter { it.packageName.equals(packageName, ignoreCase = true) && it.isRuleEnabled }
+        val allPackageRules = scheduleRules.filter { it.packageName.equals(packageName, ignoreCase = true) }
+        val packageRules = allPackageRules.filter { it.isRuleEnabled }
+
+        // If custom rules exist for this package, but ALL of them are disabled by user, DO NOT BLOCK
+        if (allPackageRules.isNotEmpty() && packageRules.isEmpty()) {
+            return AppBlockerResult(isBlocked = false)
+        }
+
         val hasLaunchLimit = savedPrefs?.getAppLaunchLimitRule(packageName) != null
         val hasUsageLimit = packageRules.any { it.type == AppBlockScheduleRule.RuleType.BLOCK && it.durationHours > 0 }
-        val isManuallyBlocked = blockedApps.contains(packageName)
+        val isManuallyBlocked = blockedApps.contains(packageName) && (allPackageRules.isEmpty() || packageRules.isNotEmpty())
 
         if (packageRules.isEmpty() && !hasLaunchLimit && !hasUsageLimit && !isManuallyBlocked) {
             return AppBlockerResult(isBlocked = false)

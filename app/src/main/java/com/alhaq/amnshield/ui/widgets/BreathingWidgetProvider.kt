@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.widget.RemoteViews
+import com.alhaq.amnshield.BuildConfig
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.ui.activity.FragmentActivity
 
@@ -14,7 +15,7 @@ class BreathingWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "BreathingWidget"
-        private const val ACTION_START_BREATHING = "com.alhaq.amnshield.breathing.START"
+        private val ACTION_START_BREATHING = "${BuildConfig.APPLICATION_ID}.breathing.START"
     }
 
     override fun onUpdate(

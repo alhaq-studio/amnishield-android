@@ -88,22 +88,19 @@
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
-# Keep data classes for Gson serialization & Jetpack Compose state
--keep class com.alhaq.amnshield.models.** { *; }
--keepclassmembers class com.alhaq.amnshield.models.** { *; }
--keep class com.alhaq.amnshield.data.** { *; }
--keepclassmembers class com.alhaq.amnshield.data.** { *; }
--keep class com.alhaq.amnshield.ui.state.** { *; }
--keepclassmembers class com.alhaq.amnshield.ui.state.** { *; }
--keep class com.alhaq.amnshield.ui.activity.MainActivity$** { *; }
--keepclassmembers class com.alhaq.amnshield.ui.activity.MainActivity$** { *; }
--keep class com.alhaq.amnshield.notifications.** { *; }
--keepclassmembers class com.alhaq.amnshield.notifications.** { *; }
--keep class com.alhaq.amnshield.blockers.** { *; }
--keepclassmembers class com.alhaq.amnshield.blockers.** { 
-    <fields>;
-    <init>(...);
-}
+# Disable aggressive optimization passes to prevent R8 bytecode rewriting crashes on physical devices
+-dontoptimize
+
+# Keep all AmnShield application classes, activities, fragments, viewmodels, receivers, services, and models
+-keep class com.alhaq.amnshield.** { *; }
+-keepclassmembers class com.alhaq.amnshield.** { *; }
+
+# Jetpack Compose & ViewModel Lifecycle
+-keep class androidx.compose.** { *; }
+-keep class androidx.lifecycle.** { *; }
+-keepclassmembers class androidx.lifecycle.** { *; }
+-dontwarn androidx.compose.**
+-dontwarn androidx.lifecycle.**
 # Keep native methods
 -keepclasseswithmembernames class * {
     native <methods>;
@@ -167,6 +164,21 @@
     public static *** v(...);
     public static *** i(...);
 }
+
+# ==================== WorkManager, Room & App Startup ====================
+-keep class androidx.work.** { *; }
+-keep class androidx.work.impl.** { *; }
+-keep class * extends androidx.work.Worker { *; }
+-keep class * extends androidx.work.ListenableWorker { *; }
+-keep class * extends androidx.work.RxWorker { *; }
+
+-keep class androidx.room.** { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep class androidx.startup.** { *; }
+
+-dontwarn androidx.room.**
+-dontwarn androidx.work.**
+-dontwarn androidx.startup.**
 
 # ==================== Warnings to Ignore ====================
 -dontwarn org.conscrypt.**

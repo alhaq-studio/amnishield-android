@@ -298,7 +298,7 @@ fun BlocksScreen(
                 )
             }
 
-            itemsIndexed(state.scheduleRules, key = { index, rule -> "${rule.id}_${index}_${rule.name}" }) { _, rule ->
+            itemsIndexed(state.scheduleRules, key = { index, rule -> "${(rule?.id ?: "").ifEmpty { "rule" }}_${index}" }) { _, rule ->
                 BlocksSummaryRuleCard(
                     rule = rule,
                     onClick = onNavigateToSchedules
@@ -433,16 +433,17 @@ fun BlocksSummaryRuleCard(
     rule: ScheduleRule,
     onClick: () -> Unit
 ) {
-    val blockerColor = when (rule.targetBlockerType) {
+    val targetType = (rule.targetBlockerType ?: "").ifBlank { "App Blocker" }
+    val blockerColor = when (targetType) {
         "Keyword Blocker" -> Color(0xFF10B981)
         "Website Blocker" -> Color(0xFF3B82F6)
         "Reels Blocker" -> Color(0xFFEC4899)
         else -> Color(0xFF8B5CF6)
     }
 
-    val ruleName = rule.name.ifBlank { "Unnamed Blocker" }
-    val categoryText = rule.appOrCategory.ifBlank { "Apps" }
-    val blockerType = rule.targetBlockerType.ifBlank { "App Blocker" }
+    val ruleName = (rule.name ?: "").ifBlank { "Unnamed Blocker" }
+    val categoryText = (rule.appOrCategory ?: "").ifBlank { "Apps" }
+    val blockerType = targetType
 
     Card(
         modifier = Modifier

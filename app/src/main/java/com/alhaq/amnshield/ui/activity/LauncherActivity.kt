@@ -58,7 +58,7 @@ class LauncherActivity : AppCompatActivity() {
             registerReceiver(
                 packageChangeReceiver,
                 packageChangeIntentFilter,
-                Context.RECEIVER_NOT_EXPORTED
+                Context.RECEIVER_EXPORTED
             )
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")

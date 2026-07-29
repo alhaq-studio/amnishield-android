@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import com.alhaq.amnshield.notifications.SmartNotificationScheduler
-import com.alhaq.amnshield.utils.DndHelper
 import com.alhaq.amnshield.utils.NotificationHelper
 import java.util.*
 
@@ -68,9 +67,6 @@ fun RemindersScreen(
     var focusReminderEnabled by remember {
         mutableStateOf(sharedPreferences.getBoolean("focus_reminder_enabled", true))
     }
-    var autoDndEnabled by remember {
-        mutableStateOf(sharedPreferences.getBoolean("auto_dnd_enabled", false))
-    }
 
     val scheduler = remember { SmartNotificationScheduler(context) }
     var hasNotifPermission by remember {
@@ -78,9 +74,6 @@ fun RemindersScreen(
     }
     var hasExactAlarmPermission by remember {
         mutableStateOf(scheduler.canScheduleExactAlarms())
-    }
-    var hasDndPermission by remember {
-        mutableStateOf(DndHelper.hasDndAccess(context))
     }
 
     val scrollState = rememberScrollState()
@@ -143,13 +136,6 @@ fun RemindersScreen(
                                 context.startActivity(intent)
                             }
                         }
-                    )
-
-                    PermissionStatusRow(
-                        title = "Do Not Disturb (DND) Policy Access",
-                        granted = hasDndPermission,
-                        icon = Icons.Default.DoNotDisturbOn,
-                        onFix = { DndHelper.openDndPermissionSettings(context) }
                     )
                 }
             }
@@ -248,7 +234,7 @@ fun RemindersScreen(
                 }
             }
 
-            // Focus Mode & Auto-DND Card
+            // Focus Mode Reminders Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
@@ -257,7 +243,7 @@ fun RemindersScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("🎯 Focus Reminders & Auto-DND", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("🎯 Focus Reminders", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     SwitchSettingRow(
@@ -267,22 +253,6 @@ fun RemindersScreen(
                         onCheckedChange = { checked ->
                             focusReminderEnabled = checked
                             sharedPreferences.edit().putBoolean("focus_reminder_enabled", checked).apply()
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                    SwitchSettingRow(
-                        title = "CureBox Auto-DND Mode",
-                        subtitle = "Automatically toggle Do Not Disturb mode during active focus sessions",
-                        checked = autoDndEnabled,
-                        onCheckedChange = { checked ->
-                            if (checked && !hasDndPermission) {
-                                DndHelper.openDndPermissionSettings(context)
-                                return@SwitchSettingRow
-                            }
-                            autoDndEnabled = checked
-                            sharedPreferences.edit().putBoolean("auto_dnd_enabled", checked).apply()
                         }
                     )
                 }

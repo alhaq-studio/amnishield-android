@@ -306,11 +306,12 @@ fun RuleItemCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Display active modes as premium badges/chips in a FlowRow
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Display active modes as premium badges/chips in a horizontal scroll Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (rule.isScheduleEnabled) {
                     SuggestionChip(

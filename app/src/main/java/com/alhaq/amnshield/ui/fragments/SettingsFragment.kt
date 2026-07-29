@@ -382,25 +382,25 @@ class SettingsFragment : Fragment() {
             val message = """
                 Version: $versionName
                 
-                AmnShield is an Islamic digital wellbeing app that helps Muslims maintain a halal digital lifestyle through practical protection and healthy habits.
+                AmnShield is a privacy-first digital wellbeing app that helps users maintain a healthy, balanced digital lifestyle through practical protection, smart blocking, and focus habits.
                 
-                ✅ Free Features (Forever):
-                • Keyword Blocker with custom lists & packs
-                • Usage statistics and blocking reports
-                • Device admin protection
+                ✅ Free Features (100% Free for Everyone):
+                • App Blocker with schedules & category rules
+                • Focus Mode with timer & session tracking
+                • Reels & Shorts Blocker (YouTube Shorts, Instagram Reels, TikTok)
+                • Website & Keyword Blocker with custom packs
+                • App Launch Limits & Usage Statistics
+                • Smart Notifications, Reminders & Daily Reports
                 
-                ⭐ Premium Features:
-                • App Blocker with auto-block by category
-                • Focus Mode with session tracking
-                • View/Reel Blocker (limit doomscrolling)
-                • Anti-Uninstall Protection (password/timed)
-                • Priority support and updates
+                ⭐ Premium Security Features:
+                • Anti-Uninstall Protection (Device Admin protection)
+                • 4-Digit Security PIN & App Lock (Master PIN lock for settings)
+                • Bypass PIN Lock (Require PIN confirmation to edit active blocks)
                 
                 🔒 Privacy First:
-                • All detection is on-device
-                • No data collection or tracking
-                • No internet required for core features
-                • Clear privacy documentation
+                • 100% On-Device Processing
+                • Zero Data Collection & Zero Telemetry
+                • No Internet required for core features
                 
                 Developer: Al-Haq Initiative
                 Contact: support@alhaq-initiative.org

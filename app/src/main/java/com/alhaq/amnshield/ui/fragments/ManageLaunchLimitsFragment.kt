@@ -79,22 +79,6 @@ class ManageLaunchLimitsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        if (!PremiumManager.getInstance(requireContext().applicationContext).isPremium()) {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Premium Required")
-                .setMessage("Launch limits are available for premium users.")
-                .setPositiveButton("View Plans") { _, _ ->
-                    val intent = Intent(requireContext(), com.alhaq.amnshield.ui.activity.FragmentActivity::class.java)
-                    intent.putExtra("feature_type", "premium_features")
-                    startActivity(intent)
-                    requireActivity().finish()
-                }
-                .setNegativeButton("Close") { _, _ -> requireActivity().finish() }
-                .setCancelable(false)
-                .show()
-            return
-        }
-
         savedPrefs = SavedPreferencesLoader(requireContext())
 
         // Setup back button

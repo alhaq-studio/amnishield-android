@@ -389,7 +389,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 }
             }
 
-            val isReelsEnabled = savedPreferencesLoader.isReelBlockerEnabled()
+            val isReelsEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(true)
             if (isReelsEnabled && isFeatureCurrentlyActive("reel_blocker")) {
                 reelBlocker.isYoutubeEnabled = savedPreferencesLoader.isReelBlockerYoutubeEnabled()
                 reelBlocker.isInstagramEnabled = savedPreferencesLoader.isReelBlockerInstagramEnabled()
@@ -552,9 +552,12 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         val reelBlockerPrefs = getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
         val configReelsPrefs = getSharedPreferences("config_reels", Context.MODE_PRIVATE)
 
+        val hasReelsRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+            .any { (it.packageName.equals("reel_blocker", ignoreCase = true) || it.title.contains("Reel", ignoreCase = true)) && it.isRuleEnabled }
+
         reelBlocker.isEnabled = savedPreferencesLoader.isReelBlockerEnabled(
-            viewBlockerPrefs.getBoolean("is_enabled", false)
-        )
+            viewBlockerPrefs.getBoolean("is_enabled", true)
+        ) || hasReelsRules
         reelBlocker.isIGInboxReelAllowed = configReelsPrefs.getBoolean("is_reel_inbox", false)
         reelBlocker.isFirstReelInFeedAllowed = configReelsPrefs.getBoolean("is_reel_first", false)
         reelBlocker.modeType = savedPreferencesLoader.getReelBlockerMode(ReelBlocker.MODE_BLOCK_ALL)
@@ -1119,7 +1122,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         val isFocusTarget = featureKey.equals("FOCUS_MODE", ignoreCase = true)
 
         val allRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
-            .filter { it.packageName.equals(featureKey, ignoreCase = true) }
+            .filter { it.packageName.equals(featureKey, ignoreCase = true) || it.groupTitle?.equals(featureKey, ignoreCase = true) == true || it.title.equals(featureKey, ignoreCase = true) }
 
         if (allRules.isEmpty()) {
             // FOCUS_MODE only runs if there is an explicit auto-focus schedule.
@@ -1129,8 +1132,8 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
 
         val enabledRules = allRules.filter { it.isRuleEnabled }
         if (enabledRules.isEmpty()) {
-            // If all custom schedule rules for this feature are disabled, revert to default 24/7 behavior
-            return !isFocusTarget
+            // If all custom schedule rules for this feature are disabled, feature is inactive
+            return false
         }
 
         // Check cheat hours (cheat window bypasses blocking)

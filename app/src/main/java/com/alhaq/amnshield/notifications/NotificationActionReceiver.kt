@@ -4,9 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.alhaq.amnshield.BuildConfig
 import com.alhaq.amnshield.blockers.FocusModeBlocker
 import com.alhaq.amnshield.services.AmnShieldAccessibilityService
-import com.alhaq.amnshield.utils.DndHelper
 import com.alhaq.amnshield.utils.NotificationTimerManager
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
@@ -19,9 +19,9 @@ import com.alhaq.amnshield.utils.SavedPreferencesLoader
 class NotificationActionReceiver : BroadcastReceiver() {
 
     companion object {
-        const val ACTION_START_QUICK_FOCUS = "com.alhaq.amnshield.notifications.START_QUICK_FOCUS"
-        const val ACTION_SNOOZE_BLOCK = "com.alhaq.amnshield.notifications.SNOOZE_BLOCK"
-        const val ACTION_QUICK_BLOCK_APP = "com.alhaq.amnshield.notifications.QUICK_BLOCK_APP"
+        val ACTION_START_QUICK_FOCUS = "${BuildConfig.APPLICATION_ID}.notifications.START_QUICK_FOCUS"
+        val ACTION_SNOOZE_BLOCK = "${BuildConfig.APPLICATION_ID}.notifications.SNOOZE_BLOCK"
+        val ACTION_QUICK_BLOCK_APP = "${BuildConfig.APPLICATION_ID}.notifications.QUICK_BLOCK_APP"
 
         const val EXTRA_MINUTES = "extra_minutes"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
@@ -76,10 +76,6 @@ class NotificationActionReceiver : BroadcastReceiver() {
         context.sendBroadcast(Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
             setPackage(context.packageName)
         })
-
-        if (DndHelper.hasDndAccess(context)) {
-            DndHelper.setDndMode(context, true)
-        }
 
         val timer = NotificationTimerManager(context)
         timer.startTimer(totalMillis = durationMillis)

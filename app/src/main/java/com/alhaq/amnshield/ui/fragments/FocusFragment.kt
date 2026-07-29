@@ -153,10 +153,6 @@ class FocusFragment : BaseFeatureFragment() {
     }
 
     private fun checkNotificationPermissionAndStart(durationMinutes: Int, mode: Int, selectedApps: Set<String>) {
-        if (!premiumManager.isPremium()) {
-            Toast.makeText(requireContext(), "Focus Mode is a Premium Feature", Toast.LENGTH_SHORT).show()
-            return
-        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val hasPermission = ContextCompat.checkSelfPermission(
                 requireContext(),
@@ -253,10 +249,6 @@ class FocusFragment : BaseFeatureFragment() {
     }
 
     private fun configureApps() {
-        if (!premiumManager.isPremium()) {
-            Toast.makeText(requireContext(), "Focus Mode is a Premium Feature", Toast.LENGTH_SHORT).show()
-            return
-        }
         val intent = Intent(requireContext(), SelectAppsActivity::class.java).apply {
             putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(loader.getFocusModeSelectedApps()))
         }
@@ -264,10 +256,6 @@ class FocusFragment : BaseFeatureFragment() {
     }
 
     private fun configureSchedules() {
-        if (!premiumManager.isPremium()) {
-            Toast.makeText(requireContext(), "Focus Mode is a Premium Feature", Toast.LENGTH_SHORT).show()
-            return
-        }
         val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
             putExtra("fragment", BlocksManagerFragment.FRAGMENT_ID)
             putExtra("prefill_target", "FOCUS_MODE")

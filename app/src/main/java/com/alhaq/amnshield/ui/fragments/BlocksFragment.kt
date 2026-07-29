@@ -35,7 +35,7 @@ class BlocksFragment : BaseFeatureFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(this)[AmnShieldViewModel::class.java]
+        viewModel = ViewModelProvider(requireActivity())[AmnShieldViewModel::class.java]
     }
 
     override fun onCreateView(
@@ -71,7 +71,11 @@ class BlocksFragment : BaseFeatureFragment() {
 
     override fun onResume() {
         super.onResume()
-        refreshDashboard()
+        try {
+            refreshDashboard()
+        } catch (e: Throwable) {
+            android.util.Log.e("BlocksFragment", "refreshDashboard failed", e)
+        }
     }
 
     private fun refreshDashboard() {
@@ -79,16 +83,16 @@ class BlocksFragment : BaseFeatureFragment() {
         val premiumEnabled = premiumManager.isPremium()
 
         val appBlockedApps = blocksLoader.loadBlockedApps().size
-        val appActive = premiumEnabled && blocksLoader.isAppBlockerFeatureEnabled() && appBlockedApps > 0 && serviceEnabled
+        val appActive = blocksLoader.isAppBlockerFeatureEnabled() && appBlockedApps > 0 && serviceEnabled
 
         val keywordCount = blocksLoader.loadBlockedKeywords().size
         val adultPackEnabled = blocksLoader.isKeywordBlockerAdultPackEnabled()
         val keywordActive = blocksLoader.isKeywordBlockerFeatureEnabled() && (keywordCount > 0 || adultPackEnabled) && serviceEnabled
 
         val focusData = blocksLoader.getFocusModeData()
-        val focusActive = premiumEnabled && focusData.isTurnedOn && serviceEnabled
+        val focusActive = focusData.isTurnedOn && serviceEnabled
 
-        val websiteActive = premiumEnabled && blocksLoader.isWebsiteBlockerEnabled() && serviceEnabled
+        val websiteActive = blocksLoader.isWebsiteBlockerEnabled() && serviceEnabled
 
         val allSchedules = blocksLoader.loadAppBlockerScheduleRules()
         val cheatCount = allSchedules.count { it.type == AppBlockScheduleRule.RuleType.CHEAT }
@@ -130,166 +134,199 @@ class BlocksFragment : BaseFeatureFragment() {
     }
 
     private fun loadSchedulesAndLimits(): List<com.alhaq.amnshield.ui.state.ScheduleRule> {
-        val appSchedules = blocksLoader.loadAppBlockerScheduleRules()
-        val launchLimits = blocksLoader.loadAppLaunchLimitRules()
+        val appSchedules = try {
+            blocksLoader.loadAppBlockerScheduleRules()
+        } catch (e: Throwable) {
+            emptyList()
+        }
+        val launchLimits = try {
+            blocksLoader.loadAppLaunchLimitRules()
+        } catch (e: Throwable) {
+            emptyList()
+        }
 
         val rulesList = mutableListOf<com.alhaq.amnshield.ui.state.ScheduleRule>()
 
-        val allGroupIds = appSchedules.map { it.groupId ?: it.id }.distinct()
+        try {
+            val allGroupIds = appSchedules.mapNotNull { item ->
+                val idStr = item.groupId ?: item.id
+                idStr.takeIf { it.isNotBlank() }
+            }.distinct()
 
-        allGroupIds.forEach { groupId ->
-            val associatedApps = appSchedules.filter { (it.groupId ?: it.id) == groupId }
-
-            if (associatedApps.isNotEmpty()) {
-                val firstApp = associatedApps.first()
-
-                val name = firstApp.groupTitle ?: firstApp.title ?: "Unnamed Blocker"
-                val isEnabled = firstApp.isEnabled ?: true
-
-                val targetBlocker = when {
-                    associatedApps.any { it.packageName == "keyword_blocker" } -> "Keyword Blocker"
-                    associatedApps.any { it.packageName == "website_blocker" } -> "Website Blocker"
-                    associatedApps.any { it.packageName == "reel_blocker" } -> "Reels Blocker"
-                    associatedApps.any { it.packageName == "FOCUS_MODE" || it.packageName == "focus_mode" } -> "Focus Mode"
-                    else -> "App Blocker"
+            allGroupIds.forEach { groupId ->
+                val associatedApps = appSchedules.filter { item ->
+                    item.groupId == groupId || item.id == groupId
                 }
 
-                val apps = associatedApps.map { it.packageName }.filter {
-                    it != null && it != "keyword_blocker" && it != "website_blocker" && it != "reel_blocker" && it != "FOCUS_MODE" && it != "focus_mode"
-                }.distinct()
+                if (associatedApps.isNotEmpty()) {
+                    val firstApp = associatedApps.first()
 
-                val appOrCategory = when (targetBlocker) {
-                    "Keyword Blocker" -> "Keywords Blocker"
-                    "Website Blocker" -> "Website Blocker"
-                    "Reels Blocker" -> "Reels Blocker"
-                    "Focus Mode" -> "Focus Mode Schedules"
-                    else -> {
-                        if (apps.size == 1) {
-                            try {
-                                requireContext().packageManager.getApplicationLabel(
-                                    requireContext().packageManager.getApplicationInfo(apps.first(), 0)
-                                ).toString()
-                            } catch (e: Exception) {
-                                apps.first()
+                    val name = firstApp.groupTitle ?: firstApp.title
+                    val isEnabled = firstApp.isRuleEnabled
+
+                    val targetBlocker = when {
+                        associatedApps.any { it.packageName == "keyword_blocker" } -> "Keyword Blocker"
+                        associatedApps.any { it.packageName == "website_blocker" } -> "Website Blocker"
+                        associatedApps.any { it.packageName == "reel_blocker" } -> "Reels Blocker"
+                        associatedApps.any { it.packageName == "FOCUS_MODE" || it.packageName == "focus_mode" } -> "Focus Mode"
+                        else -> "App Blocker"
+                    }
+
+                    val apps = associatedApps.mapNotNull { it.packageName }.filter {
+                        it != "keyword_blocker" && it != "website_blocker" && it != "reel_blocker" && it != "FOCUS_MODE" && it != "focus_mode"
+                    }.distinct()
+
+                    val appOrCategory = when (targetBlocker) {
+                        "Keyword Blocker" -> "Keywords Blocker"
+                        "Website Blocker" -> "Website Blocker"
+                        "Reels Blocker" -> "Reels Blocker"
+                        "Focus Mode" -> "Focus Mode Schedules"
+                        else -> {
+                            if (apps.size == 1) {
+                                val pm = context?.packageManager
+                                if (pm != null) {
+                                    try {
+                                        pm.getApplicationLabel(pm.getApplicationInfo(apps.first(), 0)).toString()
+                                    } catch (_: Throwable) {
+                                        apps.first()
+                                    }
+                                } else {
+                                    apps.first()
+                                }
+                            } else if (apps.size > 1) {
+                                "${apps.size} Apps"
+                            } else {
+                                "App Blocker"
                             }
-                        } else {
-                            "${apps.size} Apps"
                         }
                     }
-                }
 
-                // 1. Standard Schedule & Always Block
-                val blockRules = associatedApps.filter { it.type == AppBlockScheduleRule.RuleType.BLOCK && it.durationHours <= 0 }
-                val isAlwaysBlockEnabled = blockRules.any { it.recurrence == AppBlockScheduleRule.Recurrence.ALWAYS }
-                val isScheduleEnabled = blockRules.isNotEmpty() && !isAlwaysBlockEnabled
-                val firstBlock = blockRules.firstOrNull()
-                val scheduleStartTime = if (firstBlock != null) String.format("%02d:%02d", firstBlock.startMinute / 60, firstBlock.startMinute % 60) else "09:00"
-                val scheduleEndTime = if (firstBlock != null) String.format("%02d:%02d", firstBlock.endMinute / 60, firstBlock.endMinute % 60) else "17:00"
-                val scheduleDays = if (firstBlock?.selectedDays != null && firstBlock.selectedDays.isNotEmpty()) {
-                    firstBlock.selectedDays.map { ScheduleUtils.calendarIntToDay(it) }
-                } else {
-                    listOf("Mon", "Tue", "Wed", "Thu", "Fri")
-                }
+                    // 1. Standard Schedule & Always Block
+                    val blockRules = associatedApps.filter { (it.type == AppBlockScheduleRule.RuleType.BLOCK) && it.durationHours <= 0 }
+                    val isAlwaysBlockEnabled = blockRules.any { it.recurrence == AppBlockScheduleRule.Recurrence.ALWAYS }
+                    val isScheduleEnabled = blockRules.isNotEmpty() && !isAlwaysBlockEnabled
+                    val firstBlock = blockRules.firstOrNull()
 
-                // 2. Cheat Window
-                val cheatRules = associatedApps.filter { it.type == AppBlockScheduleRule.RuleType.CHEAT }
-                val isCheatEnabled = cheatRules.isNotEmpty()
-                val firstCheat = cheatRules.firstOrNull()
-                val cheatStartTime = if (firstCheat != null) String.format("%02d:%02d", firstCheat.startMinute / 60, firstCheat.startMinute % 60) else "12:00"
-                val cheatEndTime = if (firstCheat != null) String.format("%02d:%02d", firstCheat.endMinute / 60, firstCheat.endMinute % 60) else "13:00"
-                val cheatDays = if (firstCheat?.selectedDays != null) {
-                    firstCheat.selectedDays.map { ScheduleUtils.calendarIntToDay(it) }
-                } else {
-                    listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-                }
+                    val startMin = (firstBlock?.startMinute ?: 540).coerceAtLeast(0)
+                    val endMin = (firstBlock?.endMinute ?: 1020).coerceAtLeast(0)
+                    val scheduleStartTime = String.format("%02d:%02d", startMin / 60, startMin % 60)
+                    val scheduleEndTime = String.format("%02d:%02d", endMin / 60, endMin % 60)
 
-                // 3. Usage Limit
-                val usageRules = associatedApps.filter { it.type == AppBlockScheduleRule.RuleType.BLOCK && it.durationHours > 0 }
-                val isUsageLimitEnabled = usageRules.isNotEmpty()
-                val usageLimitHours = if (isUsageLimitEnabled) usageRules.first().durationHours else 0
+                    val scheduleDays = if (firstBlock != null && firstBlock.selectedDays.isNotEmpty()) {
+                        firstBlock.selectedDays.map { ScheduleUtils.calendarIntToDay(it) }
+                    } else {
+                        listOf("Mon", "Tue", "Wed", "Thu", "Fri")
+                    }
 
-                val restrictionTypeStr = when {
-                    isAlwaysBlockEnabled -> "Always Block (24/7)"
-                    isScheduleEnabled -> "Block Schedule"
-                    isUsageLimitEnabled -> "Usage Limit"
-                    isCheatEnabled -> "Cheat Window"
-                    else -> "Block Schedule"
-                }
+                    // 2. Cheat Window
+                    val cheatRules = associatedApps.filter { it.type == AppBlockScheduleRule.RuleType.CHEAT }
+                    val isCheatEnabled = cheatRules.isNotEmpty()
+                    val firstCheat = cheatRules.firstOrNull()
+                    val cheatStartMin = (firstCheat?.startMinute ?: 720).coerceAtLeast(0)
+                    val cheatEndMin = (firstCheat?.endMinute ?: 780).coerceAtLeast(0)
+                    val cheatStartTime = String.format("%02d:%02d", cheatStartMin / 60, cheatStartMin % 60)
+                    val cheatEndTime = String.format("%02d:%02d", cheatEndMin / 60, cheatEndMin % 60)
+                    val cheatDays = if (firstCheat != null && firstCheat.selectedDays.isNotEmpty()) {
+                        firstCheat.selectedDays.map { ScheduleUtils.calendarIntToDay(it) }
+                    } else {
+                        listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                    }
 
-                val periods = mutableListOf<com.alhaq.amnshield.ui.state.SchedulePeriod>()
-                associatedApps.forEach { item ->
-                    val start = String.format("%02d:%02d", item.startMinute / 60, item.startMinute % 60)
-                    val end = String.format("%02d:%02d", item.endMinute / 60, item.endMinute % 60)
-                    val daysList = item.selectedDays?.map { ScheduleUtils.calendarIntToDay(it) } ?: emptyList()
-                    periods.add(com.alhaq.amnshield.ui.state.SchedulePeriod(start, end, daysList))
-                }
-                val distinctPeriods = periods.distinctBy { Triple(it.startTime, it.endTime, it.days.sorted()) }
+                    // 3. Usage Limit
+                    val usageRules = associatedApps.filter { (it.type == AppBlockScheduleRule.RuleType.BLOCK) && it.durationHours > 0 }
+                    val isUsageLimitEnabled = usageRules.isNotEmpty()
+                    val usageLimitHours = if (isUsageLimitEnabled) usageRules.first().durationHours else 0
 
-                rulesList.add(
-                    com.alhaq.amnshield.ui.state.ScheduleRule(
-                        id = groupId,
-                        name = name,
-                        appOrCategory = appOrCategory,
-                        restrictionType = restrictionTypeStr,
-                        startTime = scheduleStartTime,
-                        endTime = scheduleEndTime,
-                        days = scheduleDays,
-                        limitValue = if (isUsageLimitEnabled) usageLimitHours else 0,
-                        isActive = isEnabled,
-                        periods = distinctPeriods,
-                        targetBlockerType = targetBlocker,
-                        selectedApps = apps,
-                        selectedBlockers = listOf(targetBlocker),
-                        
-                        isAlwaysBlockEnabled = isAlwaysBlockEnabled,
-                        isScheduleEnabled = isScheduleEnabled,
-                        isCheatEnabled = isCheatEnabled,
-                        cheatStartTime = cheatStartTime,
-                        cheatEndTime = cheatEndTime,
-                        cheatDays = cheatDays,
-                        isUsageLimitEnabled = isUsageLimitEnabled,
-                        usageLimitHours = usageLimitHours
+                    val restrictionTypeStr = when {
+                        isAlwaysBlockEnabled -> "Always Block (24/7)"
+                        isScheduleEnabled -> "Block Schedule"
+                        isUsageLimitEnabled -> "Usage Limit"
+                        isCheatEnabled -> "Cheat Window"
+                        else -> "Block Schedule"
+                    }
+
+                    val periods = mutableListOf<com.alhaq.amnshield.ui.state.SchedulePeriod>()
+                    associatedApps.forEach { item ->
+                        val sMin = item.startMinute.coerceAtLeast(0)
+                        val eMin = item.endMinute.coerceAtLeast(0)
+                        val start = String.format("%02d:%02d", sMin / 60, sMin % 60)
+                        val end = String.format("%02d:%02d", eMin / 60, eMin % 60)
+                        val daysList = item.selectedDays.map { ScheduleUtils.calendarIntToDay(it) }
+                        periods.add(com.alhaq.amnshield.ui.state.SchedulePeriod(start, end, daysList))
+                    }
+                    val distinctPeriods = periods.distinctBy { Triple(it.startTime, it.endTime, it.days.sorted()) }
+
+                    rulesList.add(
+                        com.alhaq.amnshield.ui.state.ScheduleRule(
+                            id = groupId,
+                            name = name,
+                            appOrCategory = appOrCategory,
+                            restrictionType = restrictionTypeStr,
+                            startTime = scheduleStartTime,
+                            endTime = scheduleEndTime,
+                            days = scheduleDays,
+                            limitValue = if (isUsageLimitEnabled) usageLimitHours else 0,
+                            isActive = isEnabled,
+                            periods = distinctPeriods,
+                            targetBlockerType = targetBlocker,
+                            selectedApps = apps,
+                            selectedBlockers = listOf(targetBlocker),
+                            
+                            isAlwaysBlockEnabled = isAlwaysBlockEnabled,
+                            isScheduleEnabled = isScheduleEnabled,
+                            isCheatEnabled = isCheatEnabled,
+                            cheatStartTime = cheatStartTime,
+                            cheatEndTime = cheatEndTime,
+                            cheatDays = cheatDays,
+                            isUsageLimitEnabled = isUsageLimitEnabled,
+                            usageLimitHours = usageLimitHours
+                        )
                     )
-                )
+                }
             }
+        } catch (e: Throwable) {
+            android.util.Log.e("BlocksFragment", "Error processing schedule rules", e)
         }
 
         // 3. Launch Limits
-        launchLimits.forEach { limit ->
-            val appName = try {
-                requireContext().packageManager.getApplicationLabel(
-                    requireContext().packageManager.getApplicationInfo(limit.packageName, 0)
-                ).toString()
-            } catch (_: Exception) {
-                limit.packageName
-            }
-            rulesList.add(
-                com.alhaq.amnshield.ui.state.ScheduleRule(
-                    id = "limit::${limit.packageName}",
-                    name = "Limit: $appName",
-                    appOrCategory = appName,
-                    restrictionType = "Launch Limit",
-                    startTime = "00:00",
-                    endTime = "23:59",
-                    days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
-                    limitValue = limit.maxLaunches,
-                    isActive = true,
-                    targetBlockerType = "App Blocker",
-                    selectedApps = listOf(limit.packageName),
-                    selectedBlockers = listOf("App Blocker")
+        try {
+            launchLimits.forEach { limit ->
+                if (limit.packageName.isBlank()) return@forEach
+                val pm = context?.packageManager
+                val appName = if (pm != null) {
+                    try {
+                        pm.getApplicationLabel(pm.getApplicationInfo(limit.packageName, 0)).toString()
+                    } catch (_: Throwable) {
+                        limit.packageName
+                    }
+                } else {
+                    limit.packageName
+                }
+                rulesList.add(
+                    com.alhaq.amnshield.ui.state.ScheduleRule(
+                        id = "limit::${limit.packageName}",
+                        name = "Limit: $appName",
+                        appOrCategory = appName,
+                        restrictionType = "Launch Limit",
+                        startTime = "00:00",
+                        endTime = "23:59",
+                        days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
+                        limitValue = limit.maxLaunches,
+                        isActive = true,
+                        targetBlockerType = "App Blocker",
+                        selectedApps = listOf(limit.packageName),
+                        selectedBlockers = listOf("App Blocker")
+                    )
                 )
-            )
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("BlocksFragment", "Error processing launch limits", e)
         }
 
         return rulesList
     }
 
     private fun openFeatureConfig(featureType: String, requiresPremium: Boolean) {
-        if (requiresPremium && !premiumManager.isPremium()) {
-            showPremiumUpsell()
-            return
-        }
-
         val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
             putExtra("feature_type", featureType)
         }

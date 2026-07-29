@@ -15,9 +15,21 @@ class AmnShield: Application(), Application.ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
-        Thread.setDefaultUncaughtExceptionHandler(CrashLogger(this))
-        NotificationManager(this).createNotificationChannels()
-        registerActivityLifecycleCallbacks(this)
+        try {
+            Thread.setDefaultUncaughtExceptionHandler(CrashLogger(this))
+        } catch (e: Throwable) {
+            android.util.Log.e("AmnShield", "Failed to set CrashLogger", e)
+        }
+        try {
+            NotificationManager(this).createNotificationChannels()
+        } catch (e: Throwable) {
+            android.util.Log.e("AmnShield", "Failed to create notification channels", e)
+        }
+        try {
+            registerActivityLifecycleCallbacks(this)
+        } catch (e: Throwable) {
+            android.util.Log.e("AmnShield", "Failed to register activity lifecycle callbacks", e)
+        }
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}

@@ -46,8 +46,11 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 class FragmentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        com.alhaq.amnshield.utils.ThemeUtils.applyTheme(this)
-
+        try {
+            com.alhaq.amnshield.utils.ThemeUtils.applyTheme(this)
+        } catch (e: Throwable) {
+            android.util.Log.e("FragmentActivity", "ThemeUtils.applyTheme failed", e)
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_fragment)

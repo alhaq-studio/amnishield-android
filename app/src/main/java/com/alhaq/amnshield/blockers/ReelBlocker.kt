@@ -37,12 +37,14 @@ class ReelBlocker : BaseBlocker() {
         // Map of native (non-browser) reel surface view IDs to their platform.
         private val NATIVE_SURFACE_PLATFORM = linkedMapOf(
             "com.instagram.android:id/clips_viewer_view_pager" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/clips_video_container" to PLATFORM_INSTAGRAM,
             "com.myinsta.android:id/clips_viewer_view_pager" to PLATFORM_INSTAGRAM,
             "com.google.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/reel_player_page_container" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/reel_view_pager" to PLATFORM_YOUTUBE,
             "app.revanced.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
             "app.morphe.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
-            "desc:Tap to show video controls" to PLATFORM_INSTAGRAM,
-            "desc:Spotlight" to PLATFORM_INSTAGRAM
+            "desc:Tap to show video controls" to PLATFORM_INSTAGRAM
         )
 
         // Backwards-compat alias kept for older code paths.

@@ -478,6 +478,13 @@ fun CreateReelsBlockerRuleScreen(
                                 val parsedLimit = reelsLimitStr.toIntOrNull() ?: 200
                                 loader.setReelBlockerDailyLimit(parsedLimit)
                                 
+                                loader.setReelBlockerEnabled(true)
+                                loader.setReelBlockerMode(if (isLimitByReelsScrolled) 1 else 2)
+                                if (isLimitByReelsScrolled) {
+                                    val limit = reelsLimitStr.toIntOrNull() ?: 200
+                                    loader.setReelBlockerDailyLimit(limit)
+                                }
+
                                 // Trigger refresh
                                 val refreshIntent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER)
                                 context.sendBroadcast(refreshIntent.setPackage(context.packageName))

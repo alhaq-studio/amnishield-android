@@ -29,20 +29,6 @@ class WebsiteBlockerConfigFragment : BaseFeatureFragment() {
     ): View {
         _binding = FragmentWebsiteBlockerConfigBinding.inflate(inflater, container, false)
 
-        val premiumManager = PremiumManager.getInstance(requireContext().applicationContext)
-        if (!premiumManager.isPremium()) {
-            binding.configContainer.visibility = View.GONE
-            binding.statusCard.visibility = View.VISIBLE
-            binding.statusMessage.text = getString(R.string.premium_required_message)
-            binding.btnStatusAction.text = getString(R.string.premium_view_plans)
-            binding.btnStatusAction.setOnClickListener {
-                val intent = Intent(requireContext(), com.alhaq.amnshield.ui.activity.FragmentActivity::class.java)
-                intent.putExtra("feature_type", "premium_features")
-                startActivity(intent)
-            }
-            return binding.root
-        }
-
         if (!isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java)) {
             binding.configContainer.visibility = View.GONE
             binding.statusCard.visibility = View.VISIBLE

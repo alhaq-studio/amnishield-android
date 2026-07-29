@@ -453,10 +453,11 @@ fun CreateKeywordBlockerRuleScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
-                            androidx.compose.foundation.layout.FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 blockedKeywords.forEach { keyword ->
                                     InputChip(
