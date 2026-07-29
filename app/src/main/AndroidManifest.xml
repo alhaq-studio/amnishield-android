@@ -123,8 +123,16 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <meta-data android:name="android.app.shortcuts"
-            android:resource="@xml/shortcuts" />
+        <!-- Supabase & FCM Sync Messaging Service -->
+        <service
+            android:name="com.alhaq.amnshield.data.sync.AmnMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- BroadcastReceiver for daily report notifications -->
 
 
 

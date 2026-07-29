@@ -1,4 +1,4 @@
-package neth.iecal.curbox.data.sync
+package com.alhaq.amnshield.data.sync
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -12,7 +12,7 @@ class SecureKeyStore(context: Context) {
             .build()
         EncryptedSharedPreferences.create(
             context,
-            "curbox_sync_secrets",
+            "amnshield_sync_secrets",
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,

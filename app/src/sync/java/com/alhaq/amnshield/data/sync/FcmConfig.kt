@@ -1,4 +1,4 @@
-package neth.iecal.curbox.data.sync
+package com.alhaq.amnshield.data.sync
 
 object FcmConfig {
     const val PROJECT_ID = "curbox-e6b94"

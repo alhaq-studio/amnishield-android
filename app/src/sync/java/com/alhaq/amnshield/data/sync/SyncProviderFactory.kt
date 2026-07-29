@@ -1,4 +1,4 @@
-package neth.iecal.curbox.data.sync
+package com.alhaq.amnshield.data.sync
 
 import android.content.Context
 

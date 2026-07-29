@@ -1,4 +1,4 @@
-package neth.iecal.curbox.data.sync
+package com.alhaq.amnshield.data.sync
 
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -7,7 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class CurboxMessagingService : FirebaseMessagingService() {
+class AmnMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         Log.d("fcm","turning on sync")

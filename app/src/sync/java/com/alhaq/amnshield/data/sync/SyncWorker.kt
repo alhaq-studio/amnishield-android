@@ -1,4 +1,4 @@
-package neth.iecal.curbox.data.sync
+package com.alhaq.amnshield.data.sync
 
 import android.content.Context
 import androidx.work.Configuration
@@ -26,7 +26,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     }
 
     companion object {
-        private const val NAME = "curbox_sync"
+        private const val NAME = "amnshield_sync"
 
         fun schedule(context: Context) {
             if (!WorkManager.isInitialized()) {

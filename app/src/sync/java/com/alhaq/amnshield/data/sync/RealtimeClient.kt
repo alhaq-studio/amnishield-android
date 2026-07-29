@@ -1,4 +1,4 @@
-package neth.iecal.curbox.data.sync
+package com.alhaq.amnshield.data.sync
 
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
@@ -19,7 +19,7 @@ class RealtimeClient(
 ) {
     private val client = OkHttpClient()
     @Volatile private var ws: WebSocket? = null
-    private val topic = "realtime:curbox:$userId"
+    private val topic = "realtime:amnshield:$userId"
     private val running = AtomicBoolean(false)
     private val reconnecting = AtomicBoolean(false)
     private var ref = 0
