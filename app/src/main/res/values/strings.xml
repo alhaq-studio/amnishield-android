@@ -374,7 +374,7 @@
     <string name="reel_daily_limit_validation">Enter a daily limit of at least 1 reel.</string>
     <string name="shorts_blocker_description">Blocks YouTube Shorts and Instagram Reels surfaces in the Shorts Blocker flow.</string>
     <string name="compassionate_access_title">I Can\'t Afford to Pay</string>
-    <string name="compassionate_access_description">Islamic Rahmah (Mercy): Free Access Program provided by the Al-Haq Initiative so that wellbeing tools are available to everyone (amanah).</string>
+    <string name="compassionate_access_description">Free Access Program provided by the Al-Haq Initiative so that digital protection and wellbeing tools are accessible to everyone in financial need.</string>
     <string name="compassionate_access_button">Request Free Access</string>
     <string name="compassionate_access_intro_message">The Free Access Program is provided by the Al-Haq Initiative for people who are genuinely in financial need. We ask you to be truthful about your situation. If you proceed, free premium access will be granted on this device.</string>
     <string name="compassionate_access_intro_positive">I\'m in financial need</string>

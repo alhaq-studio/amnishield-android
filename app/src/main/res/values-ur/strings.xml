@@ -1,4 +1,4 @@
-﻿<resources xmlns:tools="http://schemas.android.com/tools">
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">AmnShield</string>
     <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
     <string name="launcher_options">Ù„Ø§Ù†Ú†Ø± Ú©Û’ Ø§Ø®ØªÛŒØ§Ø±Ø§Øª</string>
@@ -356,7 +356,7 @@
     <string name="reel_daily_limit_validation">Ú©Ù… Ø§Ø² Ú©Ù… 1 Ø±ÛŒÙ„ Ú©ÛŒ Ø±ÙˆØ²Ø§Ù†Û Ø­Ø¯ Ø¯Ø±Ø¬ Ú©Ø±ÛŒÚºÛ”</string>
     <string name="shorts_blocker_description">Blocks YouTube Shorts and Instagram Reels surfaces in the Shorts Blocker flow.</string>
     <string name="compassionate_access_title">Ù…ÛŒÚº Ø§Ø¯Ø§Ø¦ÛŒÚ¯ÛŒ Ù†ÛÛŒÚº Ú©Ø± Ø³Ú©ØªØ§</string>
-    <string name="compassionate_access_description">Islamic Rahmah (Mercy): digital protection should be available to everyone. We trust you to be honest about your situation (amanah).</string>
+    <string name="compassionate_access_description">Free Access Program provided by the Al-Haq Initiative so that digital protection and wellbeing tools are accessible to everyone in financial need.</string>
     <string name="compassionate_access_button">Ù…ÙØª Ø±Ø³Ø§Ø¦ÛŒ Ú©ÛŒ Ø¯Ø±Ø®ÙˆØ§Ø³Øª</string>
     <string name="compassionate_access_intro_message">This program is for people who are genuinely in financial need. We ask you to be truthful about your situation. If you proceed, AmnShield will grant 1 year of free premium access on this device.</string>
     <string name="compassionate_access_intro_positive">Ù…ÛŒÚº Ù…Ø§Ù„ÛŒ Ø¶Ø±ÙˆØ±Øª Ù…ÛŒÚº ÛÙˆÚº</string>
