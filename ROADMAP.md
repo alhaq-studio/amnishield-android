@@ -150,7 +150,7 @@ Last updated: 2026-07-22
 A multi-phase implementation roadmap to establish cross-platform synchronization of rules, schedules, and active focus sessions across Android, Windows, and Web Extension clients using Supabase as the central authority:
 
 ### Phase 1: Database Schema & RLS Setup
-- Provision tables in Supabase: `profiles`, `devices`, and `sync_rules`.
+- Provision tables in Supabase: `profiles`, `devices`, `sync_rules`, and `focus_sessions`.
 - Implement Row-Level Security (RLS) policies to isolate user device rules.
 - Set up signup triggers linking parental accounts.
 
@@ -162,12 +162,12 @@ A multi-phase implementation roadmap to establish cross-platform synchronization
 - Fire local IPC broadcasts to keep the companion FireWall app in sync offline.
 
 ### Phase 3: Windows Client Integration
-- Implement Supabase API REST polling in the Flutter client.
+- Implement Supabase API REST & WebSocket polling in the Flutter client.
 - Securely write synced settings updates to `C:\ProgramData\AmnShield\config.json`.
-- Let the background C# Guardian Service watch and apply these rules locally.
+- Let the background C# Guardian Service / native Dart service watch and apply these rules locally.
 
 ### Phase 4: Browser Web Extension Integration
-- Wire periodic fetch queries inside the background worker script.
+- Dynamic dual-sync: Local HTTP loopback (`127.0.0.1:48192`) when desktop app is active, falling back to Supabase REST for cloud sync.
 - Synchronize configurations into `chrome.storage.local`.
 - Let content scripts intercept page loads matching the blocked domains.
 
@@ -175,3 +175,4 @@ A multi-phase implementation roadmap to establish cross-platform synchronization
 - Build the Next.js parent administration dashboard.
 - Display registered devices and their current status.
 - Allow parents to edit blocking rules, schedules, and start focus sessions remotely.
+
