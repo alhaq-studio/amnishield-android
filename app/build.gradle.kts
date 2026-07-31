@@ -37,8 +37,8 @@ android {
         applicationId = "com.alhaq.deenshield"
         minSdk = 26
         targetSdk = 36
-        versionCode = 126
-        versionName = "0.15.0.2026"
+        versionCode = 128
+        versionName = "0.16.0.2026"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Fix for 16 KB page size devices (Android 15+)
@@ -77,6 +77,9 @@ android {
             applicationIdSuffix = ""
             isDebuggable = false
             isMinifyEnabled = true
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -91,14 +94,17 @@ android {
         create("playstore") {
             dimension = "distribution"
             buildConfigField("Boolean", "IS_PLAYSTORE", "true")
+            buildConfigField("String", "PLAYSTORE_BASE64_PUBLIC_KEY", "\"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvXXPe/sroGr8FaVSMilwzOlWc6D7PaszfIjm1s5OAKFhNkqyKIBoMRTe8CRzxAv4uQ8EUsfoO0m41yORhqvGKQ6M7/MaVFrW1xiUvXokWGtyofrTXyDTEASxeuHWcFaeoPyYA6J9NzMTLAFkM/i0ubep1B0fboqndaejWE8t+dN+EjUWoD8aY8OAk95HRzhQyf8aK7GPuyxWunjTDG2KkLCmRazycs4/K1HjSbWmWaGeM4h40WuTlv6Ko75bpguxE0ytPJ0IVow3/a8QEPWAw8oQ3jtSL7xejiib7+cSt3xrtQuigKNtOwqtvqFPF3D1r05yhX47nFqMj/injJQEpwIDAQAB\"")
         }
         create("fdroid") {
             dimension = "distribution"
             buildConfigField("Boolean", "IS_PLAYSTORE", "false")
+            buildConfigField("String", "PLAYSTORE_BASE64_PUBLIC_KEY", "\"\"")
         }
         create("universal") {
             dimension = "distribution"
             buildConfigField("Boolean", "IS_PLAYSTORE", "false")
+            buildConfigField("String", "PLAYSTORE_BASE64_PUBLIC_KEY", "\"\"")
         }
     }
     
