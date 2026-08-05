@@ -9,32 +9,35 @@
     tools:context=".ui.fragments.installation.WelcomeFragment">
 
     <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:overScrollMode="never"
-        android:padding="@dimen/padding_xlarge"
-        android:paddingBottom="88dp"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="24dp"
         app:layout_constraintBottom_toTopOf="@+id/bottomContainer"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_xxxlarge"
-                app:cardCornerRadius="@dimen/spacing_xxlarge"
-                app:cardElevation="@dimen/card_elevation_high">
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="32dp"
+                app:cardElevation="6dp"
+                app:strokeWidth="0dp">
 
                 <ImageView
                     android:id="@+id/imageView2"
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
+                    android:layout_width="110dp"
+                    android:layout_height="110dp"
                     android:scaleType="centerCrop"
                     android:src="@mipmap/ic_launcher_round" />
 
@@ -45,7 +48,7 @@
                 style="@style/TextAppearance.Material3.HeadlineLarge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_xxlarge"
+                android:layout_marginTop="24dp"
                 android:text="@string/welcome_to_amnshield"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
@@ -55,21 +58,115 @@
                 style="@style/TextAppearance.Material3.BodyLarge"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/spacing_normal"
-                android:layout_marginTop="@dimen/spacing_xlarge"
+                android:layout_marginTop="12dp"
                 android:gravity="center"
-                android:letterSpacing="0.02"
-                android:lineSpacingMultiplier="1.2"
+                android:letterSpacing="0.01"
+                android:lineSpacingExtra="4dp"
                 android:text="@string/welcome_message"
                 android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <!-- Key Feature Overview Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        style="@style/TextAppearance.Material3.TitleMedium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="What AmnShield Provides"
+                        android:textColor="?attr/colorPrimary"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/baseline_done_24"
+                            app:tint="?attr/colorPrimary" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodyMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:text="App Blocker &amp; Keyword Filtering"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/baseline_done_24"
+                            app:tint="?attr/colorPrimary" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodyMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:text="Focus Mode &amp; Launch Limits"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/baseline_done_24"
+                            app:tint="?attr/colorPrimary" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodyMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:text="100% Offline &amp; Privacy First"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <Button
                 android:id="@+id/open_tos"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_xxxlarge"
-                android:clickable="true"
+                android:layout_marginTop="24dp"
                 android:gravity="center"
                 android:text="@string/terms_and_conditions" />
 
@@ -78,8 +175,7 @@
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_small"
-                android:clickable="true"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:text="@string/privacy_policy" />
 
@@ -88,33 +184,35 @@
                 style="@style/Widget.Material3.CompoundButton.CheckBox"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_normal"
+                android:layout_marginTop="16dp"
                 android:text="@string/agree_to_terms"
                 android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:visibility="visible" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
     </ScrollView>
-
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:elevation="8dp"
-        android:padding="24dp"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:padding="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
-        <!-- Standardized next button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
             style="@style/Widget.Material3.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
             android:enabled="false"
             android:text="@string/next"
+            app:cornerRadius="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,7 +9,18 @@ object ThemeUtils {
     private const val KEY_THEME_STYLE = "theme_style"
 
     fun applyTheme(activity: Activity) {
-        activity.setTheme(resolveTheme(activity))
+        val themeId = resolveTheme(activity)
+        activity.setTheme(themeId)
+
+        val isDark = themeId == R.style.Theme_AmnShield_Purple || themeId == R.style.Theme_AmnShield_Gradient
+        try {
+            androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
+                isAppearanceLightStatusBars = !isDark
+                isAppearanceLightNavigationBars = !isDark
+            }
+        } catch (e: Exception) {
+            // Ignore if decorView or window isn't ready
+        }
     }
 
     fun resolveTheme(context: Context): Int {

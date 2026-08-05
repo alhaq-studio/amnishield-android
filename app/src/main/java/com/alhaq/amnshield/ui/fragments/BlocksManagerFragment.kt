@@ -8,10 +8,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -27,17 +29,32 @@ import com.alhaq.amnshield.ui.screens.CreateKeywordBlockerRuleScreen
 import com.alhaq.amnshield.ui.screens.CreateWebsiteBlockerRuleScreen
 import com.alhaq.amnshield.ui.screens.CreateReelsBlockerRuleScreen
 import com.alhaq.amnshield.ui.screens.CreateFocusModeRuleScreen
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import com.alhaq.amnshield.ui.theme.AmnShieldTheme
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
@@ -52,6 +69,11 @@ class BlocksManagerFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModel = ViewModelProvider(requireActivity())[AmnShieldViewModel::class.java]
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        (activity as? com.alhaq.amnshield.ui.activity.MainActivity)?.setBottomNavVisible(true)
     }
 
     override fun onCreateView(
@@ -88,6 +110,10 @@ class BlocksManagerFragment : Fragment() {
                 var editingRule by remember { mutableStateOf<com.alhaq.amnshield.ui.state.ScheduleRule?>(null) }
                 var showSelectBlockerDialog by remember { mutableStateOf(false) }
 
+                LaunchedEffect(currentScreen) {
+                    (activity as? com.alhaq.amnshield.ui.activity.MainActivity)?.setBottomNavVisible(currentScreen == "manage")
+                }
+
                 AmnShieldTheme(appTheme = activeTheme) {
                     when (currentScreen) {
                         "manage" -> {
@@ -119,37 +145,17 @@ class BlocksManagerFragment : Fragment() {
                             )
 
                             if (showSelectBlockerDialog) {
-                                AlertDialog(
+                                SelectBlockerBottomSheet(
                                     onDismissRequest = { showSelectBlockerDialog = false },
-                                    title = { Text("Select Blocker", fontWeight = FontWeight.Bold) },
-                                    text = {
-                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("Choose which blocker you want to schedule:")
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            val options = listOf("App Blocker", "Keyword Blocker", "Website Blocker", "Reels Blocker", "Focus Mode")
-                                            options.forEach { option ->
-                                                TextButton(
-                                                    onClick = {
-                                                        showSelectBlockerDialog = false
-                                                        currentScreen = when (option) {
-                                                            "App Blocker" -> "create_app"
-                                                            "Keyword Blocker" -> "create_keyword"
-                                                            "Website Blocker" -> "create_website"
-                                                            "Reels Blocker" -> "create_reels"
-                                                            "Focus Mode" -> "create_focus"
-                                                            else -> "create_app"
-                                                        }
-                                                    },
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Text(option, fontWeight = FontWeight.SemiBold)
-                                                }
-                                            }
-                                        }
-                                    },
-                                    confirmButton = {
-                                        TextButton(onClick = { showSelectBlockerDialog = false }) {
-                                            Text("Cancel")
+                                    onSelectOption = { option ->
+                                        showSelectBlockerDialog = false
+                                        currentScreen = when (option) {
+                                            "App Blocker" -> "create_app"
+                                            "Keyword Blocker" -> "create_keyword"
+                                            "Website Blocker" -> "create_website"
+                                            "Reels Blocker" -> "create_reels"
+                                            "Focus Mode" -> "create_focus"
+                                            else -> "create_app"
                                         }
                                     }
                                 )
@@ -831,5 +837,152 @@ class BlocksManagerFragment : Fragment() {
         private const val APP_GROUP_RULE_PREFIX = "app_group::"
         private const val FEATURE_GROUP_RULE_PREFIX = "feature_group::"
         const val FRAGMENT_ID = "blocks_manager_fragment"
+    }
+}
+
+private data class SelectBlockerOptionItem(
+    val title: String,
+    val description: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val iconBgColor: Color,
+    val iconTintColor: Color,
+    val key: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectBlockerBottomSheet(
+    onDismissRequest: () -> Unit,
+    onSelectOption: (String) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val options = remember {
+        listOf(
+            SelectBlockerOptionItem(
+                title = "App Blocker",
+                description = "Block specific apps or entire app categories",
+                icon = Icons.Default.Apps,
+                iconBgColor = Color(0xFF10B981).copy(alpha = 0.15f),
+                iconTintColor = Color(0xFF059669),
+                key = "App Blocker"
+            ),
+            SelectBlockerOptionItem(
+                title = "Keyword Blocker",
+                description = "Block explicit keywords, search queries & titles",
+                icon = Icons.Default.VpnKey,
+                iconBgColor = Color(0xFF3B82F6).copy(alpha = 0.15f),
+                iconTintColor = Color(0xFF2563EB),
+                key = "Keyword Blocker"
+            ),
+            SelectBlockerOptionItem(
+                title = "Website Blocker",
+                description = "Block website URLs, adult sites & custom domains",
+                icon = Icons.Default.Language,
+                iconBgColor = Color(0xFF8B5CF6).copy(alpha = 0.15f),
+                iconTintColor = Color(0xFF7C3AED),
+                key = "Website Blocker"
+            ),
+            SelectBlockerOptionItem(
+                title = "Reels Blocker",
+                description = "Block addictive short-form video feeds & reels",
+                icon = Icons.Default.Movie,
+                iconBgColor = Color(0xFFEC4899).copy(alpha = 0.15f),
+                iconTintColor = Color(0xFFDB2777),
+                key = "Reels Blocker"
+            ),
+            SelectBlockerOptionItem(
+                title = "Focus Mode",
+                description = "Set strict scheduled focus windows with custom restrictions",
+                icon = Icons.Default.Timer,
+                iconBgColor = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                iconTintColor = Color(0xFFD97706),
+                key = "Focus Mode"
+            )
+        )
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Select Protection Blocker",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Choose which type of blocker rule you would like to schedule:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            options.forEach { item ->
+                Surface(
+                    onClick = { onSelectOption(item.key) },
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(item.iconBgColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = null,
+                                tint = item.iconTintColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = item.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }

@@ -301,6 +301,10 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.selectedItemId = tabId
     }
 
+    fun setBottomNavVisible(visible: Boolean) {
+        binding.bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

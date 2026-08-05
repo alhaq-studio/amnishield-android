@@ -37,8 +37,8 @@ android {
         applicationId = "com.alhaq.deenshield"
         minSdk = 26
         targetSdk = 36
-        versionCode = 128
-        versionName = "7.29.2026"
+        versionCode = 129
+        versionName = "05.08.2026"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Fix for 16 KB page size devices (Android 15+)
@@ -162,7 +162,7 @@ dependencies {
     // Jetpack Compose Dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.runtime)
-    implementation(libs.androidx.compose.material.icons.extended)
+    implementation("androidx.compose.material:material-icons-extended:1.7.5")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.ui)

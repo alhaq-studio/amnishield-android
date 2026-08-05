@@ -36,6 +36,8 @@
             android:maxLength="3"
             android:minEms="2"
             android:text="0"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:ignore="HardcodedText,LabelFor" />
@@ -47,6 +49,7 @@
             android:gravity="center"
             android:lines="1"
             android:text="mins"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textStyle="bold" />
 
     </LinearLayout>

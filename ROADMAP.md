@@ -1,14 +1,23 @@
 # AmnShield Roadmap
 
-Last updated: 2026-07-22
+Last updated: 2026-08-05
 
-## Strategic Architectural Decisions (July 2026)
-- **Web Administration Portal Transition:**
+## Strategic Architectural Decisions (August 2026)
+- **Direct Stripe Gateway Migration (Non-Google Builds & Web Portal):**
+  - **Decision:** Deprecated Lemon Squeezy integration due to rejection of external merchant billing models. Migrated non-Google billing (`fdroid`, `universal`, Windows Desktop, Web Portal) directly to **Stripe Direct** (Stripe Checkout + Subscriptions).
+  - **Rationale:** Direct Stripe integration allows full control over checkout sessions, webhook lifecycle management, recurring subscription events, and compliant merchant billing across all platforms.
+  - **Client Impact:** Non-Google clients launch Stripe Web Checkout for payment and receive ECDSA-signed NIST P-256 license keys issued by Supabase Edge Webhook functions, verified offline via `LicenseValidator.kt`. Google Play builds continue using Google Play `BillingClient`.
+
+- **Web Administration Portal Transition (July 2026):**
   - **Decision:** Suspended development on the native Android **AmnShield Guardian** app in favor of a centralized **Web Administration Console** (React/Next.js + Supabase DB/Auth).
   - **Rationale:** A web portal provides platform-agnostic parental and administrative controls (accessible from iOS, Android, and Desktop browsers). It eliminates native Android IPC Binder dependencies and conforms to Google Play's strict security/policy guidelines regarding administrative control permissions.
   - **Client Impact:** The main `AmnShield-Android` app retains its local bound API (`IAmnShieldApi.aidl` and `AmnShieldApiService.kt`) for local extensibility, but will utilize HTTPS REST sync against Supabase for parental remote configuration instead of native inter-app IPC.
 
 ## Recently Completed
+- **KeyStore Recovery Architecture & Unlaunchable Startup Crash Fix (August 2026)**
+  - Wrapped `EncryptedSharedPreferences.create` and `MasterKey.Builder` in `SecureKeyStore` with self-healing file deletion and fallback recovery, resolving `AEADBadTagException` / `GeneralSecurityException` crashes caused by hardware KeyStore key invalidations.
+  - Added `amnshield_sync_secrets.xml` exclusions to `data_extraction_rules.xml` and `backup_rules.xml`, preventing Google Cloud Auto-Backup from syncing un-decryptable encryption keys onto fresh app reinstalls.
+  - Protected `AmnShieldAccessibilityService` startup binding with defensive `runCatching` wrappers, preventing accessibility background crashes when initializing blocker modules.
 - **Full Blocker Schedule Enforcement & Multi-Feature Integration (July 2026)**
   - Extended `UnifiedFeatureScheduleRule` to include `selectedWebsites`, `selectedKeywords`, and `selectedPlatforms`, allowing multi-feature schedule rules to dynamically enforce specific items during scheduled windows.
   - Refactored `AmnShieldAccessibilityService` to evaluate active schedule rules for Website Blocker, Keyword Blocker, and Reels Blocker in real-time, preventing false 24/7 blocking when schedules are inactive.

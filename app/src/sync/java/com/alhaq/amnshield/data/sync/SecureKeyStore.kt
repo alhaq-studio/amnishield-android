@@ -6,17 +6,43 @@ import androidx.security.crypto.MasterKey
 import java.util.UUID
 
 class SecureKeyStore(context: Context) {
-    private val prefs = run {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "amnshield_sync_secrets",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+    private val prefs = createEncryptedPreferences(context)
+
+    private fun createEncryptedPreferences(context: Context): android.content.SharedPreferences {
+        return try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                "amnshield_sync_secrets",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (e: Throwable) {
+            android.util.Log.e("SecureKeyStore", "Failed to create EncryptedSharedPreferences, attempting self-healing cleanup", e)
+            try {
+                // Delete corrupted encrypted preferences file
+                val sharedPrefsFile = java.io.File(context.filesDir.parent, "shared_prefs/amnshield_sync_secrets.xml")
+                if (sharedPrefsFile.exists()) {
+                    sharedPrefsFile.delete()
+                }
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                EncryptedSharedPreferences.create(
+                    context,
+                    "amnshield_sync_secrets",
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+            } catch (e2: Throwable) {
+                android.util.Log.e("SecureKeyStore", "EncryptedSharedPreferences self-healing failed, falling back to standard SharedPreferences", e2)
+                context.getSharedPreferences("amnshield_sync_secrets_fallback", Context.MODE_PRIVATE)
+            }
+        }
     }
 
     var dekB64: String?

@@ -5,36 +5,40 @@
     android:id="@+id/frameLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.fragments.installation.PermissionsFragment">
+    android:background="?attr/colorSurface"
+    tools:context=".ui.fragments.installation.AccessibilityGuide">
 
     <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:overScrollMode="never"
-        android:paddingHorizontal="24dp"
+        android:paddingHorizontal="20dp"
         android:paddingTop="24dp"
-        android:paddingBottom="100dp"
+        android:paddingBottom="24dp"
         android:scrollbars="none"
+        app:layout_constraintBottom_toTopOf="@+id/bottomContainer"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="8dp"
                 app:cardCornerRadius="28dp"
-                app:cardElevation="8dp">
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp">
 
                 <ImageView
                     android:id="@+id/imageView2"
-                    android:layout_width="110dp"
-                    android:layout_height="110dp"
+                    android:layout_width="90dp"
+                    android:layout_height="90dp"
                     android:scaleType="centerCrop"
                     android:src="@mipmap/ic_launcher_round" />
 
@@ -45,31 +49,30 @@
                 style="@style/TextAppearance.Material3.HeadlineMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Quick Setup Guide"
+                android:layout_marginTop="16dp"
+                android:text="Quick Accessibility Setup"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/textView25"
-                style="@style/TextAppearance.Material3.BodyLarge"
-                android:layout_width="352dp"
-                android:layout_height="116dp"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginTop="16dp"
+                style="@style/TextAppearance.Material3.BodyMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:letterSpacing="0.02"
-                android:lineSpacingMultiplier="1.2"
-                android:text="AmnShield needs Accessibility permissions to help you manage your screen time and block distracting content. Follow the steps below to complete setup."
+                android:lineSpacingExtra="2dp"
+                android:text="AmnShield needs Accessibility permissions to manage your screen time and block distracting content."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
+            <!-- Step 1 Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/c1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="20dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -78,7 +81,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -86,11 +89,11 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                                <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:src="@drawable/ic_logo_mini"
-                                    app:tint="?attr/colorPrimary" />
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_logo_mini"
+                            app:tint="?attr/colorPrimary" />
 
                         <TextView
                             android:id="@+id/bg_perm_title"
@@ -99,7 +102,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
                             android:text="Enable Accessibility Service"
-                            android:textColor="?attr/colorOnSurface" />
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
 
                     </LinearLayout>
 
@@ -109,21 +113,29 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:letterSpacing="0.02"
-                        android:lineSpacingMultiplier="1.2"
-                        android:text="1️⃣ Tap the button below to open Accessibility Settings\n\n2️⃣ Find and select 'AmnShield' from the list\n\n3️⃣ Toggle the switch to ON\n\n4️⃣ Confirm by tapping 'Allow' or 'OK'\n\n✅ This permission allows AmnShield to detect app usage and block distracting content"
+                        android:lineSpacingExtra="4dp"
+                        android:text="1️⃣ Open Accessibility Settings\n2️⃣ Select 'AmnShield' under Installed Apps\n3️⃣ Toggle switch to ON and confirm 'Allow'\n\n✅ This allows AmnShield to detect app usage and block distracting content."
                         android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_open_settings"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="16dp"
+                        android:text="Open Accessibility Settings"
+                        app:cornerRadius="12dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Troubleshooting Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -132,7 +144,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -152,20 +164,20 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:text="Additional Setup (If Needed)"
-                            android:textColor="?attr/colorOnSurface" />
+                            android:text="Restricted Settings? (Android 13+)"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
 
                     </LinearLayout>
 
                     <TextView
                         android:id="@+id/textView27"
-                        style="@style/TextAppearance.Material3.BodyMedium"
+                        style="@style/TextAppearance.Material3.BodySmall"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:letterSpacing="0.02"
-                        android:lineSpacingMultiplier="1.2"
-                        android:text="✅ If the above steps worked, you're all set! AmnShield is now ready to help you manage your digital wellbeing.\n\n⚠️ If accessibility isn't working properly:\n\nSome devices may restrict certain permissions by default. Please follow these additional steps:\n\n1️⃣ Open Settings → Apps → AmnShield\n\n2️⃣ Tap 'Permissions' → 'Special App Access'\n\n3️⃣ Select 'Accessibility' → Enable AmnShield\n\n4️⃣ Return to AmnShield App Info → Scroll down\n\n5️⃣ Tap 'Restricted Settings' → Select 'Allow'\n\n6️⃣ Restart the app and verify accessibility is enabled\n\n💡 Following these steps ensures full functionality on all devices."
+                        android:lineSpacingExtra="3dp"
+                        android:text="If Android blocks Accessibility as a 'Restricted Setting':\n\n1️⃣ Open Settings → Apps → AmnShield\n2️⃣ Tap the 3 dots (top right) → Allow Restricted Settings\n3️⃣ Return to Accessibility Settings &amp; enable AmnShield."
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
@@ -178,16 +190,21 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:elevation="8dp"
-        android:padding="24dp"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:padding="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
             style="@style/Widget.Material3.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/close"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Complete Setup"
+            app:cornerRadius="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

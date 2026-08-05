@@ -17,15 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.util.UUID
 import com.alhaq.amnshield.ui.state.AmnShieldState
 import com.alhaq.amnshield.ui.state.ScheduleRule
-import com.alhaq.amnshield.ui.state.SchedulePeriod
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,11 +55,12 @@ fun CreateReelsBlockerRuleScreen(
 
     // Reels Limit Mode (scrolled limit)
     var isLimitByReelsScrolled by remember {
-        mutableStateOf(loader.getReelBlockerMode(2) == 1) // 1 = MODE_BLOCK_AFTER_DAILY_COUNT, 2 = MODE_BLOCK_ALL
+        mutableStateOf(loader.getReelBlockerMode(2) == 1)
     }
-    var reelsLimitStr by remember {
-        mutableStateOf(loader.getReelBlockerDailyLimit(200).toString())
+    var reelsLimitCount by remember {
+        mutableStateOf(loader.getReelBlockerDailyLimit(25).toFloat())
     }
+
     var scheduleStartTime by remember(editingRule) {
         mutableStateOf(editingRule?.startTime ?: "09:00")
     }
@@ -99,8 +98,10 @@ fun CreateReelsBlockerRuleScreen(
     }
 
     // Time Pickers Dialog State
-    var activeTimePicker by remember { mutableStateOf("") } // "start", "end", "cheat_start", "cheat_end"
+    var activeTimePicker by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
+
+    val saveEnabled = ruleName.isNotBlank() && (isAlwaysBlockEnabled || isScheduleEnabled || isCheatEnabled || isLimitByReelsScrolled)
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -120,8 +121,47 @@ fun CreateReelsBlockerRuleScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
+            )
+        },
+        bottomBar = {
+            CreateRuleBottomActionBar(
+                onCancel = onBack,
+                onSave = {
+                    if (saveEnabled) {
+                        val modeToSave = if (isLimitByReelsScrolled) 1 else 2
+                        loader.setReelBlockerMode(modeToSave)
+                        loader.setReelBlockerDailyLimit(reelsLimitCount.roundToInt())
+
+                        val newRule = ScheduleRule(
+                            id = editingRule?.id ?: UUID.randomUUID().toString(),
+                            name = ruleName,
+                            appOrCategory = "Reels Blocker",
+                            restrictionType = "Reels Blocker",
+                            startTime = scheduleStartTime,
+                            endTime = scheduleEndTime,
+                            days = scheduleDays.toList(),
+                            limitValue = reelsLimitCount.roundToInt(),
+                            isActive = true,
+                            periods = emptyList(),
+                            targetBlockerType = "Reels Blocker",
+                            selectedApps = emptyList(),
+                            selectedKeywords = emptyList(),
+                            selectedWebsites = emptyList(),
+                            selectedPlatforms = listOf("Instagram", "YouTube", "TikTok", "Facebook"),
+                            selectedBlockers = listOf("Reels Blocker"),
+                            isAlwaysBlockEnabled = isAlwaysBlockEnabled,
+                            isScheduleEnabled = isScheduleEnabled,
+                            isCheatEnabled = isCheatEnabled,
+                            cheatStartTime = cheatStartTime,
+                            cheatEndTime = cheatEndTime,
+                            cheatDays = cheatDays.toList()
+                        )
+                        onSaveRule(newRule)
+                    }
+                },
+                saveEnabled = saveEnabled
             )
         }
     ) { paddingValues ->
@@ -130,264 +170,212 @@ fun CreateReelsBlockerRuleScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+            // Header Info Banner
+            BoundaryHeader(
+                title = "Short-Form Video Protection",
+                subtitle = "Restrict addictive YouTube Shorts, Instagram Reels, TikTok, and Facebook Video feeds.",
+                icon = Icons.Outlined.Lock
+            )
+
+            // Rule Name Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                // Rule Name
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    RuleNameSection(
+                        ruleName = ruleName,
+                        onRuleNameChange = { ruleName = it }
+                    )
+                }
+            }
+
+            // Protection Mode & Schedule Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Protection Mode",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // Always Block (24/7) Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "1. Rule Name",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            "Configure Reels",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.clickable {
-                                val intent = Intent(context, com.alhaq.amnshield.ui.activity.FragmentActivity::class.java).apply {
-                                    putExtra("feature_type", "reel_blocker")
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Shield,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Column {
+                                Text(
+                                    text = "Always Block (24/7)",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Block short video feeds 24/7 without exception",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isAlwaysBlockEnabled,
+                            onCheckedChange = {
+                                isAlwaysBlockEnabled = it
+                                if (it) {
+                                    isScheduleEnabled = false
                                 }
-                                context.startActivity(intent)
                             }
                         )
                     }
-                    OutlinedTextField(
-                        value = ruleName,
-                        onValueChange = { ruleName = it },
-                        placeholder = { Text("e.g. Study Time Reels") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
 
-                // Protection Settings (Block Schedule & Cheat Hours side-by-side)
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        "2. Protection Settings",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    // A) Always Block (24/7)
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Block Schedule Row
+                    AnimatedVisibility(visible = !isAlwaysBlockEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.Shield, contentDescription = null, tint = Color(0xFFEC4899))
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Lock,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                     Column {
-                                        Text("Always Block (24/7)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                                        Text("Block Reels all day, every day", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            text = "Scheduled Protection Window",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "Block reels during specific active hours",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                                 Switch(
-                                    checked = isAlwaysBlockEnabled,
+                                    checked = isScheduleEnabled,
                                     onCheckedChange = {
-                                        isAlwaysBlockEnabled = it
+                                        isScheduleEnabled = it
                                         if (it) {
-                                            isScheduleEnabled = false
+                                            isAlwaysBlockEnabled = false
                                         }
                                     }
                                 )
                             }
-                        }
-                    }
 
-                    // B) Block Schedule
-                    AnimatedVisibility(visible = !isAlwaysBlockEnabled) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFEC4899))
-                                        Column {
-                                            Text("Block Schedule", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                                            Text("Block Reels during these hours", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                    Switch(
-                                        checked = isScheduleEnabled,
-                                        onCheckedChange = {
-                                            isScheduleEnabled = it
-                                            if (it) {
-                                                isAlwaysBlockEnabled = false
-                                            }
-                                        }
-                                    )
-                                }
-
-                                AnimatedVisibility(visible = isScheduleEnabled) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                Text("Start Time", style = MaterialTheme.typography.labelSmall)
-                                                Button(
-                                                    onClick = {
-                                                        activeTimePicker = "start"
-                                                        showTimePicker = true
-                                                    },
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                ) {
-                                                    Text(scheduleStartTime, fontWeight = FontWeight.Bold)
-                                                }
-                                            }
-                                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                Text("End Time", style = MaterialTheme.typography.labelSmall)
-                                                Button(
-                                                    onClick = {
-                                                        activeTimePicker = "end"
-                                                        showTimePicker = true
-                                                    },
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                ) {
-                                                    Text(scheduleEndTime, fontWeight = FontWeight.Bold)
-                                                }
-                                            }
-                                        }
-
-                                        // Active Days
-                                        Text("Active Days", style = MaterialTheme.typography.labelSmall)
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-                                            daysList.forEach { day ->
-                                                val isSelected = scheduleDays.contains(day)
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(34.dp)
-                                                        .clip(CircleShape)
-                                                        .background(if (isSelected) Color(0xFFEC4899) else MaterialTheme.colorScheme.surfaceVariant)
-                                                        .clickable {
-                                                            if (isSelected) scheduleDays.remove(day) else scheduleDays.add(day)
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(day.take(1), color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // B) Cheat Hours
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.HourglassEmpty, contentDescription = null, tint = Color(0xFFF59E0B))
-                                    Column {
-                                        Text("Cheat Hours (Bypass)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                                        Text("Bypass active block during these hours", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                                Switch(checked = isCheatEnabled, onCheckedChange = { isCheatEnabled = it })
-                            }
-
-                            AnimatedVisibility(visible = isCheatEnabled) {
+                            AnimatedVisibility(visible = isScheduleEnabled) {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
                                             Text("Start Time", style = MaterialTheme.typography.labelSmall)
-                                            Button(
+                                            OutlinedButton(
                                                 onClick = {
-                                                    activeTimePicker = "cheat_start"
+                                                    activeTimePicker = "start"
                                                     showTimePicker = true
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                shape = RoundedCornerShape(10.dp)
                                             ) {
-                                                Text(cheatStartTime, fontWeight = FontWeight.Bold)
+                                                Text(scheduleStartTime, fontWeight = FontWeight.Bold)
                                             }
                                         }
-                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
                                             Text("End Time", style = MaterialTheme.typography.labelSmall)
-                                            Button(
+                                            OutlinedButton(
                                                 onClick = {
-                                                    activeTimePicker = "cheat_end"
+                                                    activeTimePicker = "end"
                                                     showTimePicker = true
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                shape = RoundedCornerShape(10.dp)
                                             ) {
-                                                Text(cheatEndTime, fontWeight = FontWeight.Bold)
+                                                Text(scheduleEndTime, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
 
-                                    // Cheat Days
-                                    Text("Cheat Days", style = MaterialTheme.typography.labelSmall)
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    // Active Days Selection
+                                    Text("Active Schedule Days", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
                                         val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
                                         daysList.forEach { day ->
-                                            val isSelected = cheatDays.contains(day)
+                                            val isSelected = scheduleDays.contains(day)
                                             Box(
                                                 modifier = Modifier
-                                                    .size(34.dp)
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
                                                     .clip(CircleShape)
-                                                    .background(if (isSelected) Color(0xFFF59E0B) else MaterialTheme.colorScheme.surfaceVariant)
+                                                    .background(
+                                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                    )
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.outlineVariant,
+                                                        shape = CircleShape
+                                                    )
                                                     .clickable {
-                                                        if (isSelected) cheatDays.remove(day) else cheatDays.add(day)
+                                                        if (isSelected) scheduleDays.remove(day) else scheduleDays.add(day)
                                                     },
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Text(day.take(1), color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text(
+                                                    text = day.take(1),
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
                                         }
                                     }
@@ -395,47 +383,96 @@ fun CreateReelsBlockerRuleScreen(
                             }
                         }
                     }
+                }
+            }
 
-                    // C) Reels Limit Mode (Block All Reels immediately, or Limit by Reels Scrolled)
-                    Card(
+            // Scroll Limit Card (Dynamic Slider)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                            Column {
+                                Text(
+                                    text = "Limit by Reels Scrolled",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Automatically block feeds after viewing N short videos daily",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isLimitByReelsScrolled,
+                            onCheckedChange = { isLimitByReelsScrolled = it }
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isLimitByReelsScrolled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.HourglassEmpty, contentDescription = null, tint = Color(0xFFEC4899))
-                                    Column {
-                                        Text("Limit by Reels Scrolled", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                                        Text("Block Reels only after scrolling a set number", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                                Switch(
-                                    checked = isLimitByReelsScrolled,
-                                    onCheckedChange = { isLimitByReelsScrolled = it }
+                                Text(
+                                    text = "Daily Limit:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Block after ${reelsLimitCount.roundToInt()} Reels",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
 
-                            AnimatedVisibility(visible = isLimitByReelsScrolled) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("Daily Reels Limit", style = MaterialTheme.typography.labelSmall)
-                                    OutlinedTextField(
-                                        value = reelsLimitStr,
-                                        onValueChange = { reelsLimitStr = it.filter { char -> char.isDigit() } },
-                                        placeholder = { Text("e.g. 50") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp),
-                                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            Slider(
+                                value = reelsLimitCount,
+                                onValueChange = { reelsLimitCount = it },
+                                valueRange = 5f..150f,
+                                steps = 28
+                            )
+
+                            // Quick Presets
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(10, 25, 50, 100).forEach { limit ->
+                                    val isSelected = reelsLimitCount.roundToInt() == limit
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { reelsLimitCount = limit.toFloat() },
+                                        label = { Text("$limit reels") },
+                                        modifier = Modifier.weight(1f),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                     )
                                 }
@@ -445,89 +482,138 @@ fun CreateReelsBlockerRuleScreen(
                 }
             }
 
-            // Bottom Actions (Save and Cancel)
+            // Cheat Hours Card (Dimmed & Disabled when 24/7 is Active)
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isAlwaysBlockEnabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    else MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = if (isAlwaysBlockEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                else MaterialTheme.colorScheme.secondary
+                            )
+                            Column {
+                                Text(
+                                    text = "Cheat Hours (Bypass)",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (isAlwaysBlockEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isAlwaysBlockEnabled) "Disabled while Always Block (24/7) is active"
+                                    else "Temporarily bypass reels blocking during these hours",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isCheatEnabled && !isAlwaysBlockEnabled,
+                            onCheckedChange = { isCheatEnabled = it },
+                            enabled = !isAlwaysBlockEnabled
+                        )
                     }
 
-                    val saveEnabled = ruleName.isNotBlank() && (isAlwaysBlockEnabled || isScheduleEnabled || isCheatEnabled)
-                    Button(
-                        onClick = {
-                            if (saveEnabled) {
-                                // Save Reels scrolled limit mode config
-                                val selectedMode = if (isLimitByReelsScrolled) 1 else 2 // 1 = MODE_BLOCK_AFTER_DAILY_COUNT, 2 = MODE_BLOCK_ALL
-                                loader.setReelBlockerMode(selectedMode)
-                                val parsedLimit = reelsLimitStr.toIntOrNull() ?: 200
-                                loader.setReelBlockerDailyLimit(parsedLimit)
-                                
-                                loader.setReelBlockerEnabled(true)
-                                loader.setReelBlockerMode(if (isLimitByReelsScrolled) 1 else 2)
-                                if (isLimitByReelsScrolled) {
-                                    val limit = reelsLimitStr.toIntOrNull() ?: 200
-                                    loader.setReelBlockerDailyLimit(limit)
+                    AnimatedVisibility(visible = isCheatEnabled && !isAlwaysBlockEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("Bypass Start", style = MaterialTheme.typography.labelSmall)
+                                    OutlinedButton(
+                                        onClick = {
+                                            activeTimePicker = "cheat_start"
+                                            showTimePicker = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(cheatStartTime, fontWeight = FontWeight.Bold)
+                                    }
                                 }
-
-                                // Trigger refresh
-                                val refreshIntent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER)
-                                context.sendBroadcast(refreshIntent.setPackage(context.packageName))
-
-                                val newRule = ScheduleRule(
-                                    id = editingRule?.id ?: UUID.randomUUID().toString(),
-                                    name = ruleName,
-                                    appOrCategory = "Reels Blocker",
-                                    restrictionType = "Reels Blocker",
-                                    startTime = scheduleStartTime,
-                                    endTime = scheduleEndTime,
-                                    days = scheduleDays.toList(),
-                                    limitValue = 0,
-                                    isActive = true,
-                                    periods = emptyList(),
-                                    targetBlockerType = "Reels Blocker",
-                                    selectedApps = emptyList(),
-                                    selectedKeywords = emptyList(),
-                                    selectedWebsites = emptyList(),
-                                    selectedPlatforms = emptyList(),
-                                    selectedBlockers = listOf("Reels Blocker"),
-                                    
-                                    isAlwaysBlockEnabled = isAlwaysBlockEnabled,
-                                    isScheduleEnabled = isScheduleEnabled,
-                                    isCheatEnabled = isCheatEnabled,
-                                    cheatStartTime = cheatStartTime,
-                                    cheatEndTime = cheatEndTime,
-                                    cheatDays = cheatDays.toList()
-                                )
-                                onSaveRule(newRule)
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("Bypass End", style = MaterialTheme.typography.labelSmall)
+                                    OutlinedButton(
+                                        onClick = {
+                                            activeTimePicker = "cheat_end"
+                                            showTimePicker = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(cheatEndTime, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
-                        },
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = saveEnabled,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text("Save & Apply Rule", fontWeight = FontWeight.Bold)
+
+                            // Cheat Days
+                            Text("Bypass Days", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                                daysList.forEach { day ->
+                                    val isSelected = cheatDays.contains(day)
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.secondary
+                                                else MaterialTheme.colorScheme.outlineVariant,
+                                                shape = CircleShape
+                                            )
+                                            .clickable {
+                                                if (isSelected) cheatDays.remove(day) else cheatDays.add(day)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = day.take(1),
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

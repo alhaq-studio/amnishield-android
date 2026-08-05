@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.edit
@@ -113,46 +114,57 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
         super.onServiceConnected()
-        reelsTrackingHandler.post(reelsTrackingRunnable)
+        try {
+            reelsTrackingHandler.post(reelsTrackingRunnable)
 
-        appBlocker = AppBlocker()
-        focusModeBlocker = FocusModeBlocker()
-        keywordBlocker = KeywordBlocker(this)
-        reelBlocker = ReelBlocker()
-        viewBlocker = ViewBlocker()
-        blockingStatsManager = BlockingStatsManager.getInstance(this)
-        premiumManager = PremiumManager.getInstance(this)
-        crashLogger = CrashLogger(this)
+            appBlocker = AppBlocker()
+            focusModeBlocker = FocusModeBlocker()
+            keywordBlocker = KeywordBlocker(this)
+            reelBlocker = ReelBlocker()
+            viewBlocker = ViewBlocker()
+            blockingStatsManager = BlockingStatsManager.getInstance(this)
+            premiumManager = PremiumManager.getInstance(this)
+            crashLogger = CrashLogger(this)
 
-        savedPreferencesLoader.migrateLegacySchedulesIfNeeded()
-        setupAppBlocker()
-        setupFocusMode()
-        setupKeywordBlocker()
-        setupReelBlocker()
-        setupViewBlocker()
-        setupAntiUninstall()
-        cachedDefaultLauncher = getDefaultLauncherPackage()
+            runCatching { savedPreferencesLoader.migrateLegacySchedulesIfNeeded() }
+                .onFailure { Log.e("AmnShieldService", "Failed schedule migration", it) }
+            runCatching { setupAppBlocker() }
+                .onFailure { Log.e("AmnShieldService", "Failed setupAppBlocker", it) }
+            runCatching { setupFocusMode() }
+                .onFailure { Log.e("AmnShieldService", "Failed setupFocusMode", it) }
+            runCatching { setupKeywordBlocker() }
+                .onFailure { Log.e("AmnShieldService", "Failed setupKeywordBlocker", it) }
+            runCatching { setupReelBlocker() }
+                .onFailure { Log.e("AmnShieldService", "Failed setupReelBlocker", it) }
+            runCatching { setupViewBlocker() }
+                .onFailure { Log.e("AmnShieldService", "Failed setupViewBlocker", it) }
+            runCatching { setupAntiUninstall() }
+                .onFailure { Log.e("AmnShieldService", "Failed setupAntiUninstall", it) }
+            cachedDefaultLauncher = getDefaultLauncherPackage()
 
-        val filter = IntentFilter().apply {
-            addAction(INTENT_ACTION_REFRESH_APP_BLOCKER)
-            addAction(INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
-            addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER)
-            addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN)
-            addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER)
-            addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN)
-            addAction(INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
-            addAction(INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN)
-            addAction(INTENT_ACTION_REFRESH_FOCUS_MODE)
-            addAction(INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
-            addAction(INTENT_ACTION_PASSWORD_VERIFIED)
+            val filter = IntentFilter().apply {
+                addAction(INTENT_ACTION_REFRESH_APP_BLOCKER)
+                addAction(INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER)
+                addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN)
+                addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER)
+                addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN)
+                addAction(INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+                addAction(INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN)
+                addAction(INTENT_ACTION_REFRESH_FOCUS_MODE)
+                addAction(INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+                addAction(INTENT_ACTION_PASSWORD_VERIFIED)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(refreshReceiver, filter, RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(refreshReceiver, filter)
+            }
+
+            startBackgroundWorker()
+        } catch (e: Throwable) {
+            android.util.Log.e("AmnShieldService", "Critical failure during onServiceConnected initialization", e)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(refreshReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(refreshReceiver, filter)
-        }
-
-        startBackgroundWorker()
     }
 
     private fun isSettingsApp(packageName: String?): Boolean {

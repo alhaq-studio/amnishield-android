@@ -19,13 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import com.alhaq.amnshield.ui.activity.SelectAppsActivity
 import com.alhaq.amnshield.ui.state.AmnShieldState
 import com.alhaq.amnshield.ui.state.ScheduleRule
@@ -136,7 +137,7 @@ fun CreateRuleScreen(
 
     // Time picker dialog state
     var showTimePicker by remember { mutableStateOf(false) }
-    var activeTimePicker by remember { mutableStateOf("start") } // "start", "end", "cheat_start", "cheat_end"
+    var activeTimePicker by remember { mutableStateOf("start") }
 
     // App Picker Activity Launcher
     val selectAppsLauncher = rememberLauncherForActivityResult(
@@ -160,355 +161,26 @@ fun CreateRuleScreen(
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
-                        if (editingRule != null) "Edit App Blocker Rule" else "Create App Blocker Rule",
+                        text = if (editingRule != null) "Edit App Rule" else "Create App Rule",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header Info Banner
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.Shield,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            "App Blocker Rule",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            "Configure schedules, cheat hours, and usage limits on target apps.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Rule Name Field
-            OutlinedTextField(
-                value = ruleName,
-                onValueChange = { ruleName = it },
-                label = { Text("Rule Name") },
-                placeholder = { Text("e.g., Social Media Limit, Gaming Block") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
-
-            // Select Target Apps
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Target Apps", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("${selectedApps.size} apps selected", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-
-                        Button(
-                            onClick = {
-                                val intent = Intent(context, SelectAppsActivity::class.java).apply {
-                                    putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(selectedApps))
-                                }
-                                selectAppsLauncher.launch(intent)
-                            },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("Select Apps")
-                        }
-                    }
-                }
-            }
-
-            // 1. Blocking Mode (Always Block vs Schedule)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Blocking Mode", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = isAlwaysBlockEnabled,
-                            onClick = {
-                                isAlwaysBlockEnabled = true
-                                isScheduleEnabled = false
-                            },
-                            label = { Text("Always Block (24/7)") },
-                            leadingIcon = if (isAlwaysBlockEnabled) {
-                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = isScheduleEnabled,
-                            onClick = {
-                                isAlwaysBlockEnabled = false
-                                isScheduleEnabled = true
-                            },
-                            label = { Text("Custom Schedule") },
-                            leadingIcon = if (isScheduleEnabled) {
-                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    if (isScheduleEnabled) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    activeTimePicker = "start"
-                                    showTimePicker = true
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Start Time", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(scheduleStartTime, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    activeTimePicker = "end"
-                                    showTimePicker = true
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("End Time", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(scheduleEndTime, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text("Active Days", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            weekDays.forEach { day ->
-                                val isSelected = scheduleDays.contains(day)
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = {
-                                        if (isSelected) scheduleDays.remove(day) else scheduleDays.add(day)
-                                    },
-                                    label = { Text(day.take(1), fontSize = 12.sp, fontWeight = FontWeight.Bold) },
-                                    modifier = Modifier.size(40.dp),
-                                    shape = CircleShape
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 2. Cheat Hours Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Cheat Hours (Bypass Window)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("Temporary daily window when blocking is bypassed", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(
-                            checked = isCheatEnabled,
-                            onCheckedChange = { isCheatEnabled = it }
-                        )
-                    }
-
-                    if (isCheatEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    activeTimePicker = "cheat_start"
-                                    showTimePicker = true
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Cheat Start", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(cheatStartTime, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    activeTimePicker = "cheat_end"
-                                    showTimePicker = true
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Cheat End", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(cheatEndTime, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 3. Usage & Launch Limits Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Usage & Launch Limits", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-
-                    // Daily Usage Duration Limit
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Daily Screen Time Limit", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            Text("Max total hours allowed per day", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(
-                            checked = isUsageLimitEnabled,
-                            onCheckedChange = { isUsageLimitEnabled = it }
-                        )
-                    }
-
-                    if (isUsageLimitEnabled) {
-                        OutlinedTextField(
-                            value = usageHoursStr,
-                            onValueChange = { usageHoursStr = it },
-                            label = { Text("Max Daily Hours") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Divider()
-
-                    // Daily Launch Limit
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Daily Launch Count Limit", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            Text("Max app opens allowed per day", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(
-                            checked = isLaunchLimitEnabled,
-                            onCheckedChange = { isLaunchLimitEnabled = it }
-                        )
-                    }
-
-                    if (isLaunchLimitEnabled) {
-                        OutlinedTextField(
-                            value = launchCountStr,
-                            onValueChange = { launchCountStr = it },
-                            label = { Text("Max App Launches") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Save Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Cancel")
-                }
-
-                Button(
-                    onClick = {
+        },
+        bottomBar = {
+            CreateRuleBottomActionBar(
+                onCancel = onBack,
+                onSave = {
+                    if (saveEnabled) {
                         val usageHours = usageHoursStr.toIntOrNull() ?: 1
                         val launchCount = launchCountStr.toIntOrNull() ?: 5
 
@@ -541,19 +213,532 @@ fun CreateRuleScreen(
                             launchLimitCount = launchCount
                         )
                         onSaveRule(newRule)
-                    },
-                    modifier = Modifier
-                        .weight(1.5f)
-                        .height(48.dp)
-                        .testTag("save_rule_button"),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = saveEnabled,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                    }
+                },
+                saveEnabled = saveEnabled
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header Info Banner
+            BoundaryHeader(
+                title = "App Protection Rules",
+                subtitle = "Schedule block windows, daily usage limits, and cheat hours for target apps.",
+                icon = Icons.Outlined.Lock
+            )
+
+            // Rule Name Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Save & Apply Rule", fontWeight = FontWeight.Bold)
+                    RuleNameSection(
+                        ruleName = ruleName,
+                        onRuleNameChange = { ruleName = it }
+                    )
+                }
+            }
+
+            // Target Apps Card with Mini Icon Preview
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Target Apps",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${selectedApps.size} apps selected",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val intent = Intent(context, SelectAppsActivity::class.java).apply {
+                                    putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(selectedApps))
+                                }
+                                selectAppsLauncher.launch(intent)
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Select Apps", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Mini App Icon Preview Row
+                    if (selectedApps.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            selectedApps.take(5).forEach { pkg ->
+                                val appIcon = remember(pkg) {
+                                    try {
+                                        context.packageManager.getApplicationIcon(pkg).toBitmap().asImageBitmap()
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                }
+                                if (appIcon != null) {
+                                    Image(
+                                        bitmap = appIcon,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Android,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            if (selectedApps.size > 5) {
+                                Text(
+                                    text = "+${selectedApps.size - 5} more",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Protection Mode & Schedule Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Protection Schedule",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // Always Block (24/7) Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Shield,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Column {
+                                Text(
+                                    text = "Always Block (24/7)",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Block target apps all day, every day",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isAlwaysBlockEnabled,
+                            onCheckedChange = {
+                                isAlwaysBlockEnabled = it
+                                if (it) {
+                                    isScheduleEnabled = false
+                                }
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // Block Schedule Row
+                    AnimatedVisibility(visible = !isAlwaysBlockEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Lock,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Scheduled Protection Window",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "Block apps during specific active hours",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Switch(
+                                    checked = isScheduleEnabled,
+                                    onCheckedChange = {
+                                        isScheduleEnabled = it
+                                        if (it) {
+                                            isAlwaysBlockEnabled = false
+                                        }
+                                    }
+                                )
+                            }
+
+                            AnimatedVisibility(visible = isScheduleEnabled) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text("Start Time", style = MaterialTheme.typography.labelSmall)
+                                            OutlinedButton(
+                                                onClick = {
+                                                    activeTimePicker = "start"
+                                                    showTimePicker = true
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(scheduleStartTime, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text("End Time", style = MaterialTheme.typography.labelSmall)
+                                            OutlinedButton(
+                                                onClick = {
+                                                    activeTimePicker = "end"
+                                                    showTimePicker = true
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(scheduleEndTime, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+
+                                    // Active Days Selection
+                                    Text("Active Schedule Days", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                                        daysList.forEach { day ->
+                                            val isSelected = scheduleDays.contains(day)
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                    )
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.outlineVariant,
+                                                        shape = CircleShape
+                                                    )
+                                                    .clickable {
+                                                        if (isSelected) scheduleDays.remove(day) else scheduleDays.add(day)
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = day.take(1),
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Cheat Hours Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                            Column {
+                                Text(
+                                    text = "Cheat Hours (Bypass)",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Temporarily bypass app blocking during these hours",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isCheatEnabled,
+                            onCheckedChange = { isCheatEnabled = it },
+                            enabled = !isAlwaysBlockEnabled
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isCheatEnabled && !isAlwaysBlockEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("Bypass Start", style = MaterialTheme.typography.labelSmall)
+                                    OutlinedButton(
+                                        onClick = {
+                                            activeTimePicker = "cheat_start"
+                                            showTimePicker = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(cheatStartTime, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("Bypass End", style = MaterialTheme.typography.labelSmall)
+                                    OutlinedButton(
+                                        onClick = {
+                                            activeTimePicker = "cheat_end"
+                                            showTimePicker = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(cheatEndTime, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // Cheat Days
+                            Text("Bypass Days", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                                daysList.forEach { day ->
+                                    val isSelected = cheatDays.contains(day)
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.secondary
+                                                else MaterialTheme.colorScheme.outlineVariant,
+                                                shape = CircleShape
+                                            )
+                                            .clickable {
+                                                if (isSelected) cheatDays.remove(day) else cheatDays.add(day)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = day.take(1),
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Usage & Launch Limits Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Usage & Launch Limits",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // Daily Screen Time Limit
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Daily Screen Time Limit", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            Text("Max total hours allowed per day", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = isUsageLimitEnabled,
+                            onCheckedChange = { isUsageLimitEnabled = it }
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isUsageLimitEnabled) {
+                        OutlinedTextField(
+                            value = usageHoursStr,
+                            onValueChange = { usageHoursStr = it },
+                            label = { Text("Max Daily Hours") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // Daily Launch Count Limit
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Daily Launch Count Limit", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            Text("Max app opens allowed per day", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = isLaunchLimitEnabled,
+                            onCheckedChange = { isLaunchLimitEnabled = it }
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isLaunchLimitEnabled) {
+                        OutlinedTextField(
+                            value = launchCountStr,
+                            onValueChange = { launchCountStr = it },
+                            label = { Text("Max App Launches") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
                 }
             }
         }

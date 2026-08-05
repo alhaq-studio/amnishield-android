@@ -90,7 +90,7 @@
         android:layout_height="wrap_content"
         android:text="⚠ When this limit is reached, the app will be automatically blocked until the next period."
         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-        android:alpha="0.7"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginBottom="24dp" />
 
     <LinearLayout

@@ -51,6 +51,6 @@ AmnShield is provided "AS IS" and "AS AVAILABLE" without warranties of any kind,
 To the maximum extent permitted by law, Alhaq Initiative is not liable for indirect, incidental, special, or consequential damages arising from use of AmnShield.
 
 ## 12. Contact
-- info@alhaq-initiative.org
-- contact@alhaq-initiative.org
-- support@alhaq-initiative.org
+- info@alhaq.uk
+- contact@alhaq.uk
+- support@alhaq-.uk

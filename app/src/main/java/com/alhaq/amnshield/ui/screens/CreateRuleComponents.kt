@@ -22,14 +22,18 @@ import com.alhaq.amnshield.ui.state.SchedulePeriod
 import com.alhaq.amnshield.ui.viewmodel.CreateRuleViewModel
 
 @Composable
-fun BoundaryHeader() {
+fun BoundaryHeader(
+    title: String = "Define Protection Boundary",
+    subtitle: String = "Configure restriction schedules, cheat hours, and protection rules.",
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.Shield
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
         ),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -44,7 +48,7 @@ fun BoundaryHeader() {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Shield,
+                    imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
@@ -52,13 +56,13 @@ fun BoundaryHeader() {
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Define Your Boundary",
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Apply tailored time windows to specific blocker features. Consolidate schedules seamlessly.",
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -72,28 +76,21 @@ fun RuleNameSection(
     ruleName: String,
     onRuleNameChange: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            "1. Give This Rule a Name",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+    OutlinedTextField(
+        value = ruleName,
+        onValueChange = onRuleNameChange,
+        label = { Text("Rule Name") },
+        placeholder = { Text("e.g. Work Social Blocker, Bedtime Rest") },
+        singleLine = true,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("rule_name_input"),
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
         )
-        OutlinedTextField(
-            value = ruleName,
-            onValueChange = onRuleNameChange,
-            placeholder = { Text("e.g. Work Social Blocker, Bedtime Rest") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("rule_name_input"),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-            )
-        )
-    }
+    )
 }
 
 @Composable
@@ -127,7 +124,7 @@ fun FeatureSelection(
                 val isSelected = selectedFeature == typeKey
                 Card(
                     modifier = Modifier
-                        .width(135.dp)
+                        .defaultMinSize(minWidth = 120.dp)
                         .clickable { onFeatureSelected(typeKey) }
                         .testTag("feature_tab_${typeKey.replace(" ", "_")}"),
                     colors = CardDefaults.cardColors(
@@ -716,11 +713,18 @@ fun AddNewTimeWindow(
                     val isSelected = newSelectedDays.contains(day)
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .weight(1f)
+                            .aspectRatio(1f)
                             .clip(CircleShape)
                             .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
+                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant,
+                                shape = CircleShape
                             )
                             .clickable { onToggleDay(day) },
                         contentAlignment = Alignment.Center
@@ -729,7 +733,7 @@ fun AddNewTimeWindow(
                             text = day.take(1),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -788,4 +792,66 @@ fun CreateRuleTimePickerDialog(
             }
         }
     )
+}
+
+@Composable
+fun CreateRuleBottomActionBar(
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+    saveButtonText: String = "Save & Apply Rule",
+    saveEnabled: Boolean = true
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier
+                    .weight(1f)
+                    .defaultMinSize(minHeight = 48.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Text(
+                    text = "Cancel",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Button(
+                onClick = onSave,
+                enabled = saveEnabled,
+                modifier = Modifier
+                    .weight(1.4f)
+                    .defaultMinSize(minHeight = 48.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text(
+                    text = saveButtonText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+        }
+    }
 }

@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.databinding.FragmentPermissionsBinding
+import com.alhaq.amnshield.permissions.PermissionsManager
 import com.alhaq.amnshield.utils.PermissionGuideHelper
 import com.alhaq.amnshield.utils.ZipUtils
 import com.alhaq.amnshield.utils.ZipUtils.unzipSharedPreferencesFromUri
@@ -33,9 +34,10 @@ class PermissionsFragment : Fragment() {
     }
 
     private var _binding: FragmentPermissionsBinding? = null
-    private val binding get() = _binding!!  // Safe getter for binding
+    private val binding get() = _binding!!
 
     private lateinit var permissionGuideHelper: PermissionGuideHelper
+    private lateinit var permissionsManager: PermissionsManager
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -44,14 +46,26 @@ class PermissionsFragment : Fragment() {
         }
 
     private val batteryOptimizationLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             setPermissionIconState(isBackgroundPermissionGiven(), binding.bgPermIcon)
             updateNextButtonState()
         }
 
     private val accessibilityLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             setPermissionIconState(isAccessibilityPermissionGiven(), binding.accessPermIcon)
+            updateNextButtonState()
+        }
+
+    private val overlayLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            setPermissionIconState(isOverlayPermissionGiven(), binding.overlayPermIcon)
+            updateNextButtonState()
+        }
+
+    private val usageStatsLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            setPermissionIconState(isUsageStatsPermissionGiven(), binding.usagePermIcon)
             updateNextButtonState()
         }
 
@@ -61,6 +75,7 @@ class PermissionsFragment : Fragment() {
                 val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 activity?.contentResolver?.takePersistableUriPermission(uri, takeFlags)
                 unzipSharedPreferencesFromUri(requireContext(), uri)
+                refreshPermissions()
             }
         }
 
@@ -77,6 +92,7 @@ class PermissionsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         permissionGuideHelper = PermissionGuideHelper(requireActivity())
+        permissionsManager = PermissionsManager(requireContext())
 
         binding.btnNext.setOnClickListener {
             val sharedPreferences =
@@ -92,21 +108,7 @@ class PermissionsFragment : Fragment() {
                 .commit()
         }
 
-        binding.notifPermRoot.setOnClickListener {
-            if (isNotificationPermissionGiven()) return@setOnClickListener
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
-        binding.bgPermRoot.setOnClickListener {
-            if (isBackgroundPermissionGiven()) return@setOnClickListener
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:${requireContext().packageName}")
-            }
-            batteryOptimizationLauncher.launch(intent)
-        }
-
+        // Accessibility click
         binding.accessPermRoot.setOnClickListener {
             if (isAccessibilityPermissionGiven()) return@setOnClickListener
             try {
@@ -118,6 +120,51 @@ class PermissionsFragment : Fragment() {
             }
         }
 
+        // Overlay click
+        binding.overlayPermRoot.setOnClickListener {
+            if (isOverlayPermissionGiven()) return@setOnClickListener
+            try {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${requireContext().packageName}")
+                )
+                overlayLauncher.launch(intent)
+            } catch (e: Exception) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                startActivity(intent)
+            }
+        }
+
+        // Usage Stats click
+        binding.usagePermRoot.setOnClickListener {
+            if (isUsageStatsPermissionGiven()) return@setOnClickListener
+            try {
+                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                usageStatsLauncher.launch(intent)
+            } catch (e: Exception) {
+                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                startActivity(intent)
+            }
+        }
+
+        // Background / Battery Optimization click
+        binding.bgPermRoot.setOnClickListener {
+            if (isBackgroundPermissionGiven()) return@setOnClickListener
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${requireContext().packageName}")
+            }
+            batteryOptimizationLauncher.launch(intent)
+        }
+
+        // Notifications click
+        binding.notifPermRoot.setOnClickListener {
+            if (isNotificationPermissionGiven()) return@setOnClickListener
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        // Restore click
         binding.restoreRoot.setOnClickListener {
             ZipUtils.showRestorePicker(restorePicker)
         }
@@ -134,22 +181,29 @@ class PermissionsFragment : Fragment() {
     }
 
     private fun refreshPermissions() {
+        val isAccessOk = isAccessibilityPermissionGiven()
+        val isOverlayOk = isOverlayPermissionGiven()
+        val isUsageOk = isUsageStatsPermissionGiven()
         val isBgOk = isBackgroundPermissionGiven()
         val isNotifOk = isNotificationPermissionGiven()
-        val isAccessOk = isAccessibilityPermissionGiven()
 
+        setPermissionIconState(isAccessOk, binding.accessPermIcon)
+        setPermissionIconState(isOverlayOk, binding.overlayPermIcon)
+        setPermissionIconState(isUsageOk, binding.usagePermIcon)
         setPermissionIconState(isBgOk, binding.bgPermIcon)
         setPermissionIconState(isNotifOk, binding.notifPermIcon)
-        setPermissionIconState(isAccessOk, binding.accessPermIcon)
 
         updateNextButtonState()
     }
 
     private fun updateNextButtonState() {
-        val isBgOk = isBackgroundPermissionGiven()
         val isAccessOk = isAccessibilityPermissionGiven()
-        // Enabled next button if background and accessibility service permissions are granted
-        binding.btnNext.isEnabled = isBgOk && isAccessOk
+        val isOverlayOk = isOverlayPermissionGiven()
+        val isUsageOk = isUsageStatsPermissionGiven()
+        val isBgOk = isBackgroundPermissionGiven()
+
+        // Enable next button when key permissions are configured
+        binding.btnNext.isEnabled = isAccessOk || (isBgOk && (isOverlayOk || isUsageOk))
     }
 
     private fun setPermissionIconState(isEnabled: Boolean, icon: ImageView) {
@@ -160,6 +214,24 @@ class PermissionsFragment : Fragment() {
             icon.setImageResource(R.drawable.baseline_close_24)
             icon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.error_color))
         }
+    }
+
+    private fun isAccessibilityPermissionGiven(): Boolean {
+        if (!::permissionGuideHelper.isInitialized) {
+            permissionGuideHelper = PermissionGuideHelper(requireActivity())
+        }
+        return permissionGuideHelper.isAccessibilityEnabled(com.alhaq.amnshield.services.AmnShieldAccessibilityService::class.java)
+    }
+
+    private fun isOverlayPermissionGiven(): Boolean {
+        return Settings.canDrawOverlays(requireContext())
+    }
+
+    private fun isUsageStatsPermissionGiven(): Boolean {
+        if (!::permissionsManager.isInitialized) {
+            permissionsManager = PermissionsManager(requireContext())
+        }
+        return permissionsManager.isUsageStatsPermissionGranted()
     }
 
     private fun isBackgroundPermissionGiven(): Boolean {
@@ -176,12 +248,5 @@ class PermissionsFragment : Fragment() {
             ) == PackageManager.PERMISSION_GRANTED
         }
         return true
-    }
-
-    private fun isAccessibilityPermissionGiven(): Boolean {
-        if (!::permissionGuideHelper.isInitialized) {
-            permissionGuideHelper = PermissionGuideHelper(requireActivity())
-        }
-        return permissionGuideHelper.isAccessibilityEnabled(com.alhaq.amnshield.services.AmnShieldAccessibilityService::class.java)
     }
 }

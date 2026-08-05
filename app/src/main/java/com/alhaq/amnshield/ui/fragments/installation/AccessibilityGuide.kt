@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,7 +18,7 @@ class AccessibilityGuide : Fragment() {
     }
 
     private var _binding: FragmentAccessibilityGuideBinding? = null
-    private val binding get() = _binding!!  // Safe getter for binding
+    private val binding get() = _binding!!
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -31,6 +32,16 @@ class AccessibilityGuide : Fragment() {
     @SuppressLint("CommitPrefEdits")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.btnOpenSettings.setOnClickListener {
+            try {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback
+            }
+        }
+
         binding.btnNext.setOnClickListener {
             val sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             sharedPreferences.edit().putBoolean("isFirstLaunchComplete", true).apply()

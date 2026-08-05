@@ -18,4 +18,6 @@
     <exclude domain="sharedpref" path="view_blocker.xml" />
     <exclude domain="sharedpref" path="reel_blocker.xml" />
     <exclude domain="sharedpref" path="focus_mode.xml" />
+    <exclude domain="sharedpref" path="amnshield_sync_secrets.xml" />
+    <exclude domain="sharedpref" path="amnshield_sync_secrets_fallback.xml" />
 </full-backup-content>
