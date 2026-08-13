@@ -70,6 +70,7 @@ class AmnShieldApiService : Service() {
         if (packages != null && (
             packages.contains("com.alhaq.amnshield.guardian") ||
             packages.contains("com.alhaq.amnshield.guardian.debug") ||
+            packages.contains("com.alhaq.amguard") ||
             packages.contains("com.alhaq.amnshield.netblock")
         )) {
             return true
