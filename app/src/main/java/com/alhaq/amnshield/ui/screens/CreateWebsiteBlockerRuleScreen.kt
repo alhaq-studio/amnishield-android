@@ -23,6 +23,7 @@ import com.alhaq.amnshield.ui.state.AmnShieldState
 import com.alhaq.amnshield.ui.state.ScheduleRule
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
+import com.alhaq.amnshield.data.blockers.PreloadedPacks
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -282,44 +283,103 @@ fun CreateWebsiteBlockerRuleScreen(
                         }
                     }
 
-                    // Quick-Add Presets Row
-                    Text(
-                        text = "Popular Domain Presets:",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // Preloaded Blacklist Packs Section
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        presetWebsites.forEach { preset ->
-                            val isAdded = blockedWebsites.contains(preset)
-                            FilterChip(
-                                selected = isAdded,
-                                onClick = {
-                                    if (isAdded) {
-                                        blockedWebsites.remove(preset)
-                                    } else {
-                                        blockedWebsites.add(preset)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Preloaded Website Packs",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "One-tap import curated domain packs or skip to add custom domains below.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PreloadedPacks.websitePacks.forEach { pack ->
+                            val allAdded = pack.items.all { blockedWebsites.contains(it) }
+                            val countAdded = pack.items.count { blockedWebsites.contains(it) }
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (allAdded) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (allAdded) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = pack.iconEmoji,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Column {
+                                            Text(
+                                                text = pack.title,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = if (allAdded) "All ${pack.items.size} domains imported"
+                                                       else if (countAdded > 0) "$countAdded of ${pack.items.size} domains added"
+                                                       else pack.description,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
-                                    loader.saveBlockedWebsites(blockedWebsites.toSet())
-                                    val intent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
-                                    intent.setPackage(context.packageName)
-                                    context.sendBroadcast(intent)
-                                },
-                                label = { Text("+ $preset") },
-                                leadingIcon = if (isAdded) {
-                                    { Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
-                                } else null,
-                                shape = RoundedCornerShape(20.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
+
+                                    Button(
+                                        onClick = {
+                                            if (allAdded) {
+                                                blockedWebsites.removeAll(pack.items)
+                                            } else {
+                                                pack.items.forEach { site ->
+                                                    if (!blockedWebsites.contains(site)) {
+                                                        blockedWebsites.add(site)
+                                                    }
+                                                }
+                                            }
+                                            loader.saveBlockedWebsites(blockedWebsites.toSet())
+                                            val intent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
+                                            intent.setPackage(context.packageName)
+                                            context.sendBroadcast(intent)
+                                        },
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (allAdded) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary,
+                                            contentColor = if (allAdded) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimary
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text(
+                                            text = if (allAdded) "Remove" else if (countAdded > 0) "Add Rest" else "Import Pack",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 

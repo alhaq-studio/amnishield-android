@@ -243,6 +243,23 @@ class MainActivity : AppCompatActivity() {
             return
         }
         showDonationDialog()
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: Intent?) {
+        val data: Uri? = intent?.data
+        if (data != null && data.scheme == "amnshield" && data.host == "activate") {
+            val key = data.getQueryParameter("key")
+            if (!key.isNullOrEmpty()) {
+                val payload = com.alhaq.amnshield.premium.LicenseValidator.verifyLicense(key)
+                if (payload != null) {
+                    premiumManager.redeemLicenseKey(key)
+                    Toast.makeText(this, "⚡ Premium activated successfully!", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Invalid or expired license key.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
     
     private fun setupFragmentNavigation(savedInstanceState: Bundle?) {
@@ -312,6 +329,7 @@ class MainActivity : AppCompatActivity() {
         if (startTab != -1) {
             selectTab(startTab)
         }
+        handleDeepLink(intent)
     }
 
     override fun onDestroy() {

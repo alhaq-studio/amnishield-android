@@ -89,15 +89,19 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private val reelsTrackingRunnable = object : Runnable {
         override fun run() {
             try {
-                val root = rootInActiveWindow
-                if (root != null) {
-                    val pkg = root.packageName?.toString().orEmpty()
-                    val surfaceId = reelBlocker.detectReelSurfaceId(root, pkg)
-                    if (surfaceId != null) {
-                        savedPreferencesLoader.addReelsWatchTime(1L)
-                        reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                if (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) {
+                    val root = rootInActiveWindow
+                    if (root != null) {
+                        val pkg = root.packageName?.toString().orEmpty()
+                        if (ReelBlocker.REEL_TARGET_PACKAGES.contains(pkg) || ReelBlocker.isBrowserPackage(pkg)) {
+                            val surfaceId = reelBlocker.detectReelSurfaceId(root, pkg)
+                            if (surfaceId != null) {
+                                savedPreferencesLoader.addReelsWatchTime(1L)
+                                reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                            }
+                        }
+                        root.recycle()
                     }
-                    root.recycle()
                 }
             } catch (e: Exception) {
                 crashLogger.logNonFatalError("AccessibilityService", "Error during reels tracking execution", e)
@@ -223,18 +227,21 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
             }
 
             if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-                val now = System.currentTimeMillis()
-                if (now - lastReelScrollTime > 1500L) {
-                    val root = rootInActiveWindow
-                    if (root != null) {
-                        val activePackage = event.packageName?.toString().orEmpty()
-                        val surfaceId = reelBlocker.detectReelSurfaceId(root, activePackage)
-                        if (surfaceId != null) {
-                            lastReelScrollTime = now
-                            savedPreferencesLoader.incrementReelsScrolled(activePackage)
-                            reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                val activePackage = event.packageName?.toString().orEmpty()
+                val isReelsEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)
+                if (isReelsEnabled && (ReelBlocker.REEL_TARGET_PACKAGES.contains(activePackage) || ReelBlocker.isBrowserPackage(activePackage))) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastReelScrollTime > 1500L) {
+                        val root = rootInActiveWindow
+                        if (root != null) {
+                            val surfaceId = reelBlocker.detectReelSurfaceId(root, activePackage)
+                            if (surfaceId != null) {
+                                lastReelScrollTime = now
+                                savedPreferencesLoader.incrementReelsScrolled(activePackage)
+                                reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                            }
+                            root.recycle()
                         }
-                        root.recycle()
                     }
                 }
             }
@@ -401,7 +408,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 }
             }
 
-            val isReelsEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(true)
+            val isReelsEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)
             if (isReelsEnabled && isFeatureCurrentlyActive("reel_blocker")) {
                 reelBlocker.isYoutubeEnabled = savedPreferencesLoader.isReelBlockerYoutubeEnabled()
                 reelBlocker.isInstagramEnabled = savedPreferencesLoader.isReelBlockerInstagramEnabled()
@@ -568,7 +575,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
             .any { (it.packageName.equals("reel_blocker", ignoreCase = true) || it.title.contains("Reel", ignoreCase = true)) && it.isRuleEnabled }
 
         reelBlocker.isEnabled = savedPreferencesLoader.isReelBlockerEnabled(
-            viewBlockerPrefs.getBoolean("is_enabled", true)
+            viewBlockerPrefs.getBoolean("is_enabled", false)
         ) || hasReelsRules
         reelBlocker.isIGInboxReelAllowed = configReelsPrefs.getBoolean("is_reel_inbox", false)
         reelBlocker.isFirstReelInFeedAllowed = configReelsPrefs.getBoolean("is_reel_first", false)

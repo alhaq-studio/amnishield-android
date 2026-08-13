@@ -31,8 +31,8 @@ Categories:
   - System
 License: GPL-3.0-only  # Update to match your LICENSE file
 AuthorName: Afrasyaab
-SourceCode: https://github.com/Afrasyaab-GH/AmnShield-Android
-IssueTracker: https://github.com/Afrasyaab-GH/AmnShield-Android/issues
+SourceCode: https://github.com/alhaq-studio/AmnShield-Android
+IssueTracker: https://github.com/alhaq-studio/AmnShield-Android/issues
 
 Summary: Privacy-focused app blocker, keyword filter, and focus mode utility.
 Description: |
@@ -42,7 +42,7 @@ Description: |
     All processing is performed entirely offline on your device for maximum privacy.
 
 RepoType: git
-Repo: https://github.com/Afrasyaab-GH/AmnShield-Android
+Repo: https://github.com/alhaq-studio/AmnShield-Android
 
 Builds:
   - versionName: 0.14.6.2026

@@ -1,126 +1,85 @@
-# AmnShield ProGuard Rules - Production v1.0.0
-# Add project specific ProGuard rules here.
+# AmnShield ProGuard & R8 Optimization Rules - Production v0.16.0
 
-# Enable optimization
+# -----------------------------------------------------------------------------
+# Optimization & Code Shrinking
+# -----------------------------------------------------------------------------
 -optimizationpasses 5
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
 -verbose
 
-# Preserve line numbers for debugging crashes
+# Preserve line numbers and source file names for production stack trace symbolication
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# Keep annotations
--keepattributes *Annotation*
--keepattributes Signature
--keepattributes Exceptions
+# Keep essential annotations and type signatures
+-keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
 
-# ==================== Kotlin ====================
--keep class kotlin.** { *; }
--keep class kotlin.Metadata { *; }
--dontwarn kotlin.**
--keepclassmembers class **$WhenMappings {
-    <fields>;
-}
--keepclassmembers class kotlin.Metadata {
-    public <methods>;
-}
+# -----------------------------------------------------------------------------
+# AmnShield Core Data Models & State (Serialized / Reflectively accessed)
+# -----------------------------------------------------------------------------
+-keep class com.alhaq.amnshield.data.** { *; }
+-keepclassmembers class com.alhaq.amnshield.data.** { *; }
 
-# Kotlin Coroutines
--keep class kotlinx.coroutines.** { *; }
--keep class kotlinx.coroutines.android.** { *; }
--keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
--keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
--keepclassmembers class kotlinx.coroutines.** {
-    volatile <fields>;
-}
--keepclassmembers class ** {
-    @kotlin.coroutines.jvm.internal.DebugMetadata kotlin.coroutines.Continuation interceptContinuation(kotlin.coroutines.Continuation);
-}
--dontwarn kotlinx.coroutines.**
+-keep class com.alhaq.amnshield.ui.state.** { *; }
+-keepclassmembers class com.alhaq.amnshield.ui.state.** { *; }
 
-# ==================== Android ====================
-# Keep Activity, Service, BroadcastReceiver declarations
+-keep class com.alhaq.amnshield.premium.** { *; }
+-keepclassmembers class com.alhaq.amnshield.premium.** { *; }
+
+# -----------------------------------------------------------------------------
+# Android System Components & Services
+# -----------------------------------------------------------------------------
 -keep public class * extends android.app.Activity
 -keep public class * extends android.app.Application
 -keep public class * extends android.app.Service
 -keep public class * extends android.content.BroadcastReceiver
 -keep public class * extends android.content.ContentProvider
 -keep public class * extends android.view.View
--keep public class * extends androidx.fragment.app.Fragment
--keep public class * extends android.app.Fragment
 
-# Keep accessibility service
+# Accessibility Service & VPN Service
 -keep class com.alhaq.amnshield.services.** { *; }
 -keepclassmembers class com.alhaq.amnshield.services.** { *; }
-
-# Keep VPN service
 -keep class * extends android.net.VpnService { *; }
--keepclassmembers class * extends android.net.VpnService { *; }
 
-# Keep device admin receiver
+# Device Admin Receiver
 -keep class * extends android.app.admin.DeviceAdminReceiver { *; }
 
-# Keep AppWidget providers
--keep class * extends android.appwidget.AppWidgetProvider { *; }
-
-# Keep view binding classes
+# ViewBinding
 -keep class com.alhaq.amnshield.databinding.** { *; }
 
-# ==================== Google Play Services ====================
-# Google Sign-In
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.android.gms.**
--keep class com.google.api.client.** { *; }
--dontwarn com.google.api.client.**
+# -----------------------------------------------------------------------------
+# Third-Party Libraries & Frameworks
+# -----------------------------------------------------------------------------
 
-# ==================== Google Play Billing ====================
+# Google Play Services & Google Sign-In
+-keep class com.google.android.gms.auth.api.signin.** { *; }
+-dontwarn com.google.android.gms.**
+
+# Google Play Billing
 -keep class com.android.billingclient.api.** { *; }
 -keepclassmembers class com.android.billingclient.api.** { *; }
 
-# ==================== Gson ====================
--keepattributes Signature
--keepattributes *Annotation*
--dontwarn sun.misc.**
+# Gson Serialization
 -keep class com.google.gson.** { *; }
 -keep class * implements com.google.gson.TypeAdapterFactory
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
-# Disable aggressive optimization passes to prevent R8 bytecode rewriting crashes on physical devices
--dontoptimize
+# MPAndroidChart
+-keep class com.github.mikephil.charting.** { *; }
+-dontwarn com.github.mikephil.charting.**
 
-# Keep all AmnShield application classes, activities, fragments, viewmodels, receivers, services, and models
--keep class com.alhaq.amnshield.** { *; }
--keepclassmembers class com.alhaq.amnshield.** { *; }
-
-# Jetpack Compose & ViewModel Lifecycle
--keep class androidx.compose.** { *; }
--keep class androidx.lifecycle.** { *; }
--keepclassmembers class androidx.lifecycle.** { *; }
--dontwarn androidx.compose.**
--dontwarn androidx.lifecycle.**
-# Keep native methods
+# Native (JNI) methods
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
-# ==================== Material Components ====================
--keep class com.google.android.material.** { *; }
--dontwarn com.google.android.material.**
--keepclassmembers class com.google.android.material.** { *; }
-
-# ==================== MPAndroidChart ====================
--keep class com.github.mikephil.charting.** { *; }
--dontwarn com.github.mikephil.charting.**
-
-# ==================== Parcelable ====================
+# Standard Android Interfaces
 -keepclassmembers class * implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator CREATOR;
 }
 
-# ==================== Serializable ====================
 -keepnames class * implements java.io.Serializable
 -keepclassmembers class * implements java.io.Serializable {
     static final long serialVersionUID;
@@ -134,53 +93,27 @@
     java.lang.Object readResolve();
 }
 
-# ==================== Enum ====================
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
 
-# ==================== Keep Application Class ====================
--keep class com.alhaq.amnshield.AmnShield { *; }
+# WorkManager, Room & App Startup
+-keep class androidx.work.** { *; }
+-keep class * extends androidx.work.ListenableWorker { *; }
+-dontwarn androidx.work.**
+-dontwarn androidx.room.**
+-dontwarn androidx.startup.**
 
-# ==================== Premium & Billing ====================
--keep class com.alhaq.amnshield.premium.** { *; }
--keepclassmembers class com.alhaq.amnshield.premium.** { *; }
-
-# ==================== Smart Features & Network ====================
--keep class com.alhaq.amnshield.smart.** { *; }
--keep class com.alhaq.amnshield.network.** { *; }
--keepclassmembers class com.alhaq.amnshield.network.** { *; }
-
-# ==================== Utils & Managers ====================
--keep class com.alhaq.amnshield.utils.** { *; }
--keepclassmembers class com.alhaq.amnshield.utils.** { 
-    public *;
-}
-
-# ==================== Remove Logging (Production) ====================
+# -----------------------------------------------------------------------------
+# Log Stripping (Removes debug and verbose logs from release builds)
+# -----------------------------------------------------------------------------
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
-    public static *** i(...);
 }
 
-# ==================== WorkManager, Room & App Startup ====================
--keep class androidx.work.** { *; }
--keep class androidx.work.impl.** { *; }
--keep class * extends androidx.work.Worker { *; }
--keep class * extends androidx.work.ListenableWorker { *; }
--keep class * extends androidx.work.RxWorker { *; }
-
--keep class androidx.room.** { *; }
--keep class * extends androidx.room.RoomDatabase { *; }
--keep class androidx.startup.** { *; }
-
--dontwarn androidx.room.**
--dontwarn androidx.work.**
--dontwarn androidx.startup.**
-
-# ==================== Warnings to Ignore ====================
+# Suppress harmless warnings from Conscrypt / BouncyCastle
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**

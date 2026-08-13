@@ -82,6 +82,9 @@ class PremiumManager private constructor(context: Context) {
         if (BuildConfig.IS_PLAYSTORE) return false
         val payload = LicenseValidator.verifyLicense(licenseString) ?: return false
         preferencesLoader.saveLicenseKey(payload.email, licenseString)
+        if (!payload.user_id.isNullOrEmpty()) {
+            preferencesLoader.saveUserProfile(payload.user_id, payload.email)
+        }
         return true
     }
 

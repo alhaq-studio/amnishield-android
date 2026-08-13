@@ -171,5 +171,11 @@ data class AmnShieldState(
     val profilePin: String = "",
     val isAppLockEnabled: Boolean = false,
     val isBypassPinLockEnabled: Boolean = false,
-    val isAdvancedMode: Boolean = true
+    val isAdvancedMode: Boolean = true,
+
+    // Sync & Data Privacy Settings
+    val syncRulesEnabled: Boolean = true,
+    val syncAppUsageEnabled: Boolean = true,
+    val syncWebUsageEnabled: Boolean = true,
+    val smartRecommendationsEnabled: Boolean = true
 )

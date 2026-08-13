@@ -15,7 +15,7 @@ class RealtimeClient(
     private val onChange: () -> Unit,
     private val onConnected: (Boolean) -> Unit = {},
     private val anonKey: String = SupabaseRest.ANON_KEY,
-    private val baseWss: String = "wss://pdixkzhncuuxuxwhdwdh.supabase.co/realtime/v1/websocket",
+    private val baseWss: String = "wss://jrgpmcomvibgklmvnxud.supabase.co/realtime/v1/websocket",
 ) {
     private val client = OkHttpClient()
     @Volatile private var ws: WebSocket? = null

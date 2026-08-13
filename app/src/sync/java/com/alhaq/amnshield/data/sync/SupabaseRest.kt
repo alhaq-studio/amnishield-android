@@ -9,7 +9,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class SupabaseRest(
-    private val baseUrl: String = "https://pdixkzhncuuxuxwhdwdh.supabase.co",
+    private val baseUrl: String = "https://jrgpmcomvibgklmvnxud.supabase.co",
     private val anonKey: String = ANON_KEY,
 ) {
     private val client = OkHttpClient()
@@ -247,6 +247,6 @@ class SupabaseRest(
 
     companion object {
         const val ANON_KEY =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaXhremhuY3V1eHV4d2hkd2RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzA2MjIsImV4cCI6MjA5Nzg0NjYyMn0.FfDMzEV6W5_IVuVmm_ld1zUx9wjrTE6Vuj415wHSAas"
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZ3BtY29tdmliZ2tsbXZueHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NzE0MjQsImV4cCI6MjA5OTQ0NzQyNH0.JvPyt8ye2OCBsLXMBUoIOXUz1E5UHDHOY55oDH6Ce10"
     }
 }

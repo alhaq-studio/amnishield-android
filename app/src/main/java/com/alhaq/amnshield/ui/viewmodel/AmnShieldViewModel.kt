@@ -174,4 +174,20 @@ class AmnShieldViewModel : ViewModel() {
     fun setAdvancedMode(enabled: Boolean) {
         _state.update { it.copy(isAdvancedMode = enabled) }
     }
+
+    fun toggleSyncRules() {
+        _state.update { it.copy(syncRulesEnabled = !it.syncRulesEnabled) }
+    }
+
+    fun toggleSyncAppUsage() {
+        _state.update { it.copy(syncAppUsageEnabled = !it.syncAppUsageEnabled) }
+    }
+
+    fun toggleSyncWebUsage() {
+        _state.update { it.copy(syncWebUsageEnabled = !it.syncWebUsageEnabled) }
+    }
+
+    fun toggleSmartRecommendations() {
+        _state.update { it.copy(smartRecommendationsEnabled = !it.smartRecommendationsEnabled) }
+    }
 }

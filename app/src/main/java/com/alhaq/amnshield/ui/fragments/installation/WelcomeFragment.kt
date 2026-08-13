@@ -50,7 +50,7 @@ class WelcomeFragment : Fragment() {
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(
                     R.id.fragment_holder,
-                    PermissionsFragment()
+                    TargetingFragment()
                 )
                 .addToBackStack(null)
                 .commit()

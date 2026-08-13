@@ -368,7 +368,7 @@
     <string name="compassionate_access_name_required">Ø¨Ø±Ø§Û Ú©Ø±Ù… Ø§Ù¾Ù†Ø§ Ù†Ø§Ù… Ø¯Ø±Ø¬ Ú©Ø±ÛŒÚºÛ”</string>
     <string name="compassionate_access_email_invalid">Enter a valid email address or leave it blank.</string>
     <string name="compassionate_access_success_title">Ù…ÙØª Ø±Ø³Ø§Ø¦ÛŒ ÙØ¹Ø§Ù„</string>
-    <string name="compassionate_access_success_message">Your 1-year AmnShield premium access is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amn.alhaq-initiative.org/support/ or email support@alhaq-initiative.org with your App ID.</string>
+    <string name="compassionate_access_success_message">Your 1-year AmnShield premium access is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amnshield.com/support/ or email support@alhaq-initiative.org with your App ID.</string>
     <string name="compassionate_access_no_email_value">ÙØ±Ø§ÛÙ… Ù†ÛÛŒÚº</string>
     <string name="compassionate_access_error">Could not activate free access. Please contact support@alhaq-initiative.org.</string>
     <string name="compassionate_access_active">Ù…ÙØª Ø±Ø³Ø§Ø¦ÛŒ ÙØ¹Ø§Ù„</string>

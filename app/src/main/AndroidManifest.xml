@@ -83,6 +83,12 @@
             android:exported="true"
             android:launchMode="singleTop">
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="amnshield" android:host="activate" />
+            </intent-filter>
+            <intent-filter>
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

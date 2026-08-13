@@ -90,7 +90,7 @@ class SavedPreferencesLoader(val context: Context) {
         return Gson().fromJson(json, type)
     }
 
-    fun isReelBlockerEnabled(defaultValue: Boolean = true): Boolean {
+    fun isReelBlockerEnabled(defaultValue: Boolean = false): Boolean {
         val sharedPreferences =
             context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
         return sharedPreferences.getBoolean("is_enabled", defaultValue)
@@ -613,7 +613,48 @@ class SavedPreferencesLoader(val context: Context) {
         getPremiumPrefs().edit()
             .remove("license_email")
             .remove("license_key")
+            .remove("user_id")
+            .remove("user_email")
             .apply()
+    }
+
+    fun getDeviceId(): String {
+        val prefs = context.getSharedPreferences("device_identity", Context.MODE_PRIVATE)
+        var deviceId = prefs.getString("unique_device_id", null)
+        if (deviceId.isNullOrEmpty()) {
+            deviceId = "android_" + UUID.randomUUID().toString().replace("-", "").take(16)
+            prefs.edit().putString("unique_device_id", deviceId).apply()
+        }
+        return deviceId
+    }
+
+    fun getDeviceLabel(): String {
+        val manufacturer = android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
+        val model = android.os.Build.MODEL
+        return if (model.startsWith(manufacturer, ignoreCase = true)) model else "$manufacturer $model"
+    }
+
+    fun saveUserProfile(userId: String, email: String, displayName: String? = null) {
+        getPremiumPrefs().edit()
+            .putString("user_id", userId)
+            .putString("user_email", email)
+            .putString("display_name", displayName ?: email.substringBefore("@"))
+            .putLong("last_profile_sync", System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getUserId(): String? {
+        return getPremiumPrefs().getString("user_id", null)
+    }
+
+    fun getUserEmail(): String? {
+        return getPremiumPrefs().getString("user_email", getLicenseEmail())
+    }
+
+    fun getDisplayName(): String {
+        return getPremiumPrefs().getString("display_name", null)
+            ?: getUserEmail()?.substringBefore("@")
+            ?: "AmnShield User"
     }
 
     fun getLastPremiumReminder(): Long {

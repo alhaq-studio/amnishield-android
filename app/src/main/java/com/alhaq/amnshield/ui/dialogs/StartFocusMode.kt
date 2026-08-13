@@ -35,14 +35,9 @@ class StartFocusMode(
         dialogFocusModeBinding.focusModeMinsPicker.minValue = 2
 
         var selectedMode = previousData?.modeType ?: Constants.FOCUS_MODE_BLOCK_SELECTED
-        if (previousData != null) {
-            when (previousData.modeType) {
-                Constants.FOCUS_MODE_BLOCK_SELECTED -> dialogFocusModeBinding.blockSelected.isChecked =
-                    true
-
-                Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED -> dialogFocusModeBinding.blockAll.isChecked =
-                    true
-            }
+        when (selectedMode) {
+            Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED -> dialogFocusModeBinding.blockAll.isChecked = true
+            else -> dialogFocusModeBinding.blockSelected.isChecked = true
         }
 
         dialogFocusModeBinding.modeType.setOnCheckedChangeListener { _, checkedId ->

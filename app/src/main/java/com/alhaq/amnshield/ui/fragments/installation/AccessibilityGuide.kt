@@ -43,14 +43,13 @@ class AccessibilityGuide : Fragment() {
         }
 
         binding.btnNext.setOnClickListener {
-            val sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-            sharedPreferences.edit().putBoolean("isFirstLaunchComplete", true).apply()
-
-            val intent = Intent(requireContext(), MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
-            requireActivity().finish()
+            requireActivity().supportFragmentManager.beginTransaction()
+                .replace(
+                    com.alhaq.amnshield.R.id.fragment_holder,
+                    SupportAlHaqFragment()
+                )
+                .addToBackStack(null)
+                .commit()
         }
     }
 

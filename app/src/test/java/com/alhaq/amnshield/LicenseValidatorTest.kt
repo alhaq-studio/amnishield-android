@@ -19,7 +19,7 @@ class LicenseValidatorTest {
         val email = "valid-user@alhaq.org"
         val expires = System.currentTimeMillis() + 1000 * 60 * 60 // 1 hour in future
         val type = "lifetime"
-        val payload = LicensePayload(email, type, expires, 1)
+        val payload = LicensePayload(email, type, expires, version = 1)
 
         val licenseString = generateLicenseString(payload)
         val verifiedPayload = LicenseValidator.verifyLicense(licenseString)
@@ -36,7 +36,7 @@ class LicenseValidatorTest {
         val email = "expired-user@alhaq.org"
         val expires = System.currentTimeMillis() - 1000 * 60 * 60 // 1 hour in past
         val type = "yearly"
-        val payload = LicensePayload(email, type, expires, 1)
+        val payload = LicensePayload(email, type, expires, version = 1)
 
         val licenseString = generateLicenseString(payload)
         val verifiedPayload = LicenseValidator.verifyLicense(licenseString)
@@ -49,7 +49,7 @@ class LicenseValidatorTest {
         val email = "hacker@evil.com"
         val expires = System.currentTimeMillis() + 1000 * 60 * 60
         val type = "lifetime"
-        val payload = LicensePayload(email, type, expires, 1)
+        val payload = LicensePayload(email, type, expires, version = 1)
 
         val licenseString = generateLicenseString(payload)
         
@@ -97,7 +97,7 @@ class LicenseValidatorTest {
         val expires = System.currentTimeMillis() + 1000 * 60 * 60
         val type = "lifetime"
         // Version 2 is NOT present in the keyring yet!
-        val payload = LicensePayload(email, type, expires, 2)
+        val payload = LicensePayload(email, type, expires, version = 2)
 
         val licenseString = generateLicenseString(payload)
         val verifiedPayload = LicenseValidator.verifyLicense(licenseString)

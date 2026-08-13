@@ -9,9 +9,11 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.alhaq.amnshield.data.AmnShieldProductDetails
+import com.alhaq.amnshield.BuildConfig
 import com.alhaq.amnshield.R
+import com.alhaq.amnshield.data.AmnShieldProductDetails
 import com.alhaq.amnshield.databinding.FragmentPremiumFeaturesBinding
+import com.alhaq.amnshield.premium.PaymentManager
 import com.alhaq.amnshield.premium.PremiumManager
 import com.alhaq.amnshield.premium.PremiumProducts
 import com.alhaq.amnshield.utils.BillingClientWrapper
@@ -26,7 +28,7 @@ class PremiumFeaturesFragment : Fragment() {
     private val binding get() = _binding!!
     private val premiumManager by lazy { PremiumManager.getInstance(requireContext().applicationContext) }
     private val preferencesLoader by lazy { SavedPreferencesLoader(requireContext().applicationContext) }
-    private lateinit var billingClientWrapper: BillingClientWrapper
+    private var billingClientWrapper: BillingClientWrapper? = null
     private val products = mutableMapOf<String, AmnShieldProductDetails>()
 
     override fun onCreateView(
@@ -42,13 +44,15 @@ class PremiumFeaturesFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupClickListeners()
         updatePremiumState()
-        binding.btnRedeemLicense.visibility = if (com.alhaq.amnshield.BuildConfig.IS_PLAYSTORE) View.GONE else View.VISIBLE
 
-        billingClientWrapper = BillingClientWrapper(requireContext())
-        billingClientWrapper.startConnection {
-            billingClientWrapper.queryProducts(PremiumProducts.allInAppProducts + PremiumProducts.allSubscriptionProducts) { productDetailsList ->
-                productDetailsList.forEach { products[it.productId] = it }
-                updateProductDetails()
+        if (BuildConfig.IS_PLAYSTORE) {
+            billingClientWrapper = BillingClientWrapper(requireContext()).apply {
+                startConnection {
+                    queryProducts(PremiumProducts.allInAppProducts + PremiumProducts.allSubscriptionProducts) { productDetailsList ->
+                        productDetailsList.forEach { products[it.productId] = it }
+                        updateProductDetails()
+                    }
+                }
             }
         }
     }
@@ -59,14 +63,11 @@ class PremiumFeaturesFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        binding.btnBuyLifetime.setOnClickListener {
-            launchPurchase(PremiumProducts.PRODUCT_LIFETIME)
-        }
         binding.btnBuyMonthly.setOnClickListener {
-            launchPurchase(PremiumProducts.PRODUCT_MONTHLY)
+            handlePlanSelection("monthly", PremiumProducts.PRODUCT_MONTHLY)
         }
         binding.btnBuyYearly.setOnClickListener {
-            launchPurchase(PremiumProducts.PRODUCT_YEARLY)
+            handlePlanSelection("annual", PremiumProducts.PRODUCT_YEARLY)
         }
         binding.btnRestore.setOnClickListener {
             restorePurchases()
@@ -74,20 +75,41 @@ class PremiumFeaturesFragment : Fragment() {
         binding.btnCompassionateAccess.setOnClickListener {
             showCompassionateAccessDialog()
         }
-
         binding.btnRedeemLicense.setOnClickListener {
-            showLicenseRedemptionDialog()
+            val key = binding.etKey.text?.toString()?.trim().orEmpty()
+            if (key.isNotEmpty()) {
+                if (premiumManager.redeemLicenseKey(key)) {
+                    Toast.makeText(requireContext(), "Pro License Activated Successfully! 👑", Toast.LENGTH_LONG).show()
+                    binding.etKey.text?.clear()
+                    updatePremiumState()
+                } else {
+                    Toast.makeText(requireContext(), "Invalid or Expired License Key", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                showLicenseRedemptionDialog()
+            }
         }
     }
 
-    private fun launchPurchase(productId: String) {
+    private fun handlePlanSelection(planType: String, playProductId: String) {
         if (premiumManager.isPremium()) {
             Toast.makeText(requireContext(), R.string.premium_already_active, Toast.LENGTH_SHORT).show()
             return
         }
+
+        if (BuildConfig.IS_PLAYSTORE) {
+            launchPlayPurchase(playProductId)
+        } else {
+            // Direct Supabase Stripe checkout for Universal & F-Droid
+            PaymentManager.openStripeCheckout(requireContext(), plan = planType)
+        }
+    }
+
+    private fun launchPlayPurchase(productId: String) {
         val activity = activity ?: return
-        products[productId]?.let {
-            billingClientWrapper.launchPurchaseFlow(activity, it) { isSuccess, debugMessage ->
+        val wrapper = billingClientWrapper ?: return
+        products[productId]?.let { product ->
+            wrapper.launchPurchaseFlow(activity, product) { isSuccess, debugMessage ->
                 if (isSuccess) {
                     premiumManager.updatePremiumStatus(true)
                     updatePremiumState()
@@ -96,27 +118,24 @@ class PremiumFeaturesFragment : Fragment() {
                     Toast.makeText(requireContext(), "Purchase failed: $debugMessage", Toast.LENGTH_LONG).show()
                 }
             }
+        } ?: run {
+            Toast.makeText(requireContext(), "Play Store purchase unavailable for this flavor", Toast.LENGTH_SHORT).show()
         }
     }
 
-    /**
-     * Restore previous purchases. Works for:
-     * - Real users who reinstalled the app
-     * - License Test accounts (testers won't be charged)
-     * - Users switching devices
-     */
     private fun restorePurchases() {
         Toast.makeText(requireContext(), R.string.premium_restore_in_progress, Toast.LENGTH_SHORT).show()
         
-        billingClientWrapper.queryPurchases { purchases ->
+        billingClientWrapper?.queryPurchases { purchases ->
             if (purchases.isNotEmpty()) {
-                // Found existing purchases (test or real)
                 premiumManager.updatePremiumStatus(true)
                 updatePremiumState()
                 Toast.makeText(requireContext(), R.string.premium_purchase_success, Toast.LENGTH_LONG).show()
             } else {
                 Toast.makeText(requireContext(), R.string.premium_no_previous_purchases, Toast.LENGTH_SHORT).show()
             }
+        } ?: run {
+            Toast.makeText(requireContext(), "Use license key activation for non-Play builds.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -125,10 +144,9 @@ class PremiumFeaturesFragment : Fragment() {
         val isPremium = userType != PremiumManager.UserType.FREE
         binding.premiumActiveContainer.visibility = if (isPremium) View.VISIBLE else View.GONE
         binding.premiumUpsellContainer.visibility = if (isPremium) View.GONE else View.VISIBLE
-        binding.btnBuyLifetime.isEnabled = !isPremium
         binding.btnBuyMonthly.isEnabled = !isPremium
         binding.btnBuyYearly.isEnabled = !isPremium
-        binding.btnRestore.visibility = if (isPremium) View.GONE else View.VISIBLE
+        binding.btnRestore.visibility = if (isPremium || !BuildConfig.IS_PLAYSTORE) View.GONE else View.VISIBLE
 
         val activeMessage = when (userType) {
             PremiumManager.UserType.PREMIUM -> getString(R.string.premium_active_message)
@@ -150,9 +168,6 @@ class PremiumFeaturesFragment : Fragment() {
 
     private fun updateProductDetails() {
         activity?.runOnUiThread {
-            products[PremiumProducts.PRODUCT_LIFETIME]?.let { product ->
-                binding.txtLifetimePrice.text = product.priceText
-            }
             products[PremiumProducts.PRODUCT_MONTHLY]?.let { product ->
                 binding.txtMonthlyPrice.text = product.priceText
             }
@@ -261,8 +276,6 @@ class PremiumFeaturesFragment : Fragment() {
         }
     }
 
-
-
     private fun showLicenseRedemptionDialog() {
         val input = EditText(requireContext()).apply {
             hint = "Paste your license key here"
@@ -272,14 +285,14 @@ class PremiumFeaturesFragment : Fragment() {
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Redeem License Key")
-            .setMessage("Paste the license key you received after purchasing AmnShield Premium via Lemon Squeezy.")
+            .setMessage("Paste the license key you received after purchasing AmnShield Pro.")
             .setView(input)
             .setPositiveButton("Activate") { _, _ ->
                 val licenseKey = input.text.toString().trim()
                 if (premiumManager.redeemLicenseKey(licenseKey)) {
                     Toast.makeText(
                         requireContext(),
-                        "Premium Access Activated Successfully!",
+                        "Pro License Activated Successfully! 👑",
                         Toast.LENGTH_LONG
                     ).show()
                     updatePremiumState()

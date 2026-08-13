@@ -17,8 +17,10 @@
 # ── Keystores & Certificates ──────────────────────────────────────────────
 keystore.properties
 deenshield-release-key.jks
+amnshield-release-key.jks
 upload_certificate.pem
 Signing Report-DeenShield.txt
+Signing Report-AmnShield.txt
 
 # ── Node / JS (Firebase Admin SDK, tooling, etc.) ──────────────────────────
 node_modules/

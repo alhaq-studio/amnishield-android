@@ -1,54 +1,39 @@
 package com.alhaq.amnshield.data.blockers
 
+/**
+ * Curated, precision-filtered Adult & Explicit Keywords.
+ * Overly broad words (e.g. "adult", "sex", "explicit", "webcam") have been removed
+ * to prevent false positives in educational, medical, and everyday web browsing.
+ */
 class KeywordPacks {
     companion object {
         val adultKeywords = setOf(
-            // Strict NSFW/adult sexual content keywords only
-            "nsfw",
             "porn",
             "pornography",
-            "adult",
+            "nsfw",
             "xxx",
+            "hentai",
+            "onlyfans",
             "erotic",
             "nude",
             "nudity",
-            "naked",
-            "sex",
-            "sexual",
-            "fetish",
             "camgirl",
-            "explicit",
-            "hardcore",
-            "lingerie",
-            "escort",
-            "prostitute",
-            "bdsm",
-            "kink",
-            "hentai",
-            "orgy",
             "striptease",
             "stripper",
             "milf",
-            "anal",
-            "blowjob",
-            "threesome",
-            "incest",
-            "masturbation",
-            "webcam",
-            "intercourse",
-            "orgasm",
-            "lewd",
-            "onlyfans",
-            "topless",
             "sexting",
-            "buceta",
-            "pussy",
-            "pelada",
-            "siririca",
-            "gozo",
-            "gozei",
-            "gozar",
-            "masturbate"
+            "topless",
+            "masturbate",
+            "masturbation",
+            "incest",
+            "blowjob",
+            "escort",
+            "prostitute",
+            "bdsm",
+            "xvideos",
+            "pornhub",
+            "xnxx",
+            "xhamster"
         )
     }
 }

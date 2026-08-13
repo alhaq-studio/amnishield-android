@@ -168,7 +168,7 @@ class FocusModeBlocker : BaseBlocker() {
     data class FocusModeData(
         var isTurnedOn: Boolean = false,
         val endTime: Long = -1,
-        val modeType: Int = Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED,
+        val modeType: Int = Constants.FOCUS_MODE_BLOCK_SELECTED,
         var selectedApps: HashSet<String> = hashSetOf()
     )
 
