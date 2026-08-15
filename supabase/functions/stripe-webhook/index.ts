@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   // Health check / Diagnostic Mode (GET request)
   if (req.method === "GET" || urlObj.searchParams.get("debug") === "true") {
     const diagnostics: Record<string, any> = {
-      service: "AmnShield Stripe Webhook",
+      service: "AmniShield Stripe Webhook",
       timestamp: new Date().toISOString(),
       STRIPE_SECRET_KEY_set: STRIPE_SECRET_KEY.length > 0,
       STRIPE_WEBHOOK_SECRET_set: STRIPE_WEBHOOK_SECRET.length > 0,
@@ -186,18 +186,18 @@ Deno.serve(async (req) => {
               Authorization: `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-              from: "AmnShield Team <noreply@mail.alhaq.uk>",
+              from: "AmniShield Team <noreply@mail.alhaq.uk>",
               to: [email],
-              subject: "Your AmnShield Premium License Key",
+              subject: "Your AmniShield Premium License Key",
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h2 style="color: #0f172a;">Thank you for purchasing AmnShield Premium!</h2>
+                  <h2 style="color: #0f172a;">Thank you for purchasing AmniShield Premium!</h2>
                   <p>Your subscription is now active! Here is your offline license key. Copy and paste this directly into the app's Profile settings or log into your account:</p>
                   <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; font-family: monospace; word-break: break-all; margin: 20px 0;">
                     ${licenseKey}
                   </div>
                   <p>Valid until: <b>${new Date(expiryTimestamp).toLocaleDateString()}</b></p>
-                  <p>Log in to your account at <a href="https://app.amnshield.com" style="color: #3b82f6;">app.amnshield.com</a> to manage your protected devices.</p>
+                  <p>Log in to your account at <a href="https://app.amnishield.com" style="color: #3b82f6;">app.amnishield.com</a> to manage your protected devices.</p>
                   <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
                   <p style="color: #64748b; font-size: 12px;">Al-Haq Studio &bull; <a href="https://alhaq.uk" style="color: #3b82f6;">alhaq.uk</a></p>
                 </div>

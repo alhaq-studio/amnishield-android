@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
         price_data: {
           currency: "usd",
           product_data: {
-            name: isAnnual ? "AmnShield Pro (Annual Pass)" : "AmnShield Pro (Monthly Subscription)",
+            name: isAnnual ? "AmniShield Pro (Annual Pass)" : "AmniShield Pro (Monthly Subscription)",
             description: "Unified Cross-Platform Digital Protection Suite (Android, Windows PC, Web Extensions)"
           },
           unit_amount: isAnnual ? 3999 : 499,
@@ -51,8 +51,8 @@ Deno.serve(async (req) => {
         line_items: [lineItem],
         mode: mode || "subscription",
         customer_email: customerEmail || undefined,
-        success_url: successUrl || "https://app.amnshield.com/?checkout=success",
-        cancel_url: cancelUrl || "https://amnshield.com/#pricing",
+        success_url: successUrl || "https://app.amnishield.com/?checkout=success",
+        cancel_url: cancelUrl || "https://amnishield.com/#pricing",
       });
     } catch (createErr: any) {
       if (createErr.message.includes("No such price")) {
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
             price_data: {
               currency: "usd",
               product_data: {
-                name: isAnnual ? "AmnShield Pro (Annual Pass)" : "AmnShield Pro (Monthly Subscription)",
+                name: isAnnual ? "AmniShield Pro (Annual Pass)" : "AmniShield Pro (Monthly Subscription)",
                 description: "Unified Cross-Platform Digital Protection Suite"
               },
               unit_amount: isAnnual ? 3999 : 499,
@@ -73,8 +73,8 @@ Deno.serve(async (req) => {
           }],
           mode: mode || "subscription",
           customer_email: customerEmail || undefined,
-          success_url: successUrl || "https://app.amnshield.com/?checkout=success",
-          cancel_url: cancelUrl || "https://amnshield.com/#pricing",
+          success_url: successUrl || "https://app.amnishield.com/?checkout=success",
+          cancel_url: cancelUrl || "https://amnishield.com/#pricing",
         });
       } else {
         throw createErr;
