@@ -37,6 +37,7 @@
                     android:layout_marginStart="8dp"
                     android:text="Website/URL Blocker"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
             </LinearLayout>
         </com.google.android.material.appbar.MaterialToolbar>
@@ -104,7 +105,7 @@
                 android:visibility="gone"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
-                app:cardElevation="@dimen/card_elevation_high"
+                app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
 
@@ -121,6 +122,7 @@
                         android:layout_alignParentStart="true"
                         android:layout_toStartOf="@id/switch_website_blocker"
                         android:text="Enable Website/URL Blocker"
+                        android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -140,7 +142,7 @@
                 android:layout_marginBottom="24dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
-                app:cardElevation="@dimen/card_elevation_high"
+                app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
 
@@ -155,6 +157,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Block Schedule"
+                        android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <TextView
@@ -198,20 +201,24 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                app:cardCornerRadius="@dimen/card_corner_radius_large"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="@dimen/padding_normal">
+                    android:padding="@dimen/padding_large">
 
                     <TextView
                         style="@style/TextAppearance.Material3.TitleMedium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/manage_warning_screen"
+                        android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <com.google.android.material.button.MaterialButton

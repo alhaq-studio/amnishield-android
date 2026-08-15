@@ -788,14 +788,24 @@ class BlocksManagerFragment : Fragment() {
     }
 
     private fun sendRefreshRequest() {
-        val intent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
-        requireContext().sendBroadcast(intent.setPackage(requireContext().packageName))
+        val context = context ?: return
+        val appIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
+        context.sendBroadcast(appIntent.setPackage(context.packageName))
+
         val unifiedIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
-        requireContext().sendBroadcast(unifiedIntent.setPackage(requireContext().packageName))
+        context.sendBroadcast(unifiedIntent.setPackage(context.packageName))
+
         val focusIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE)
-        requireContext().sendBroadcast(focusIntent.setPackage(requireContext().packageName))
+        context.sendBroadcast(focusIntent.setPackage(context.packageName))
+
         val reelIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER)
-        requireContext().sendBroadcast(reelIntent.setPackage(requireContext().packageName))
+        context.sendBroadcast(reelIntent.setPackage(context.packageName))
+
+        val keywordIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+        context.sendBroadcast(keywordIntent.setPackage(context.packageName))
+
+        val viewIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER)
+        context.sendBroadcast(viewIntent.setPackage(context.packageName))
     }
 
     private fun timeToMinutes(timeStr: String): Int {

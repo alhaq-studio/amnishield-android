@@ -5,13 +5,13 @@
     android:layout_height="wrap_content"
     android:padding="@dimen/padding_normal">
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/cb_time_elapsed"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/display_time_elapsed"
+        android:textColor="?attr/colorOnSurface"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

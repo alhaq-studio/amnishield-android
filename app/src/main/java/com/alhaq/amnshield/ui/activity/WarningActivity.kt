@@ -26,23 +26,24 @@ class WarningActivity : AppCompatActivity() {
 
         val mode = intent.getIntExtra("mode", 0)
         
-        val warningScreenConfig = if (mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER) {
-            savedPreferencesLoader.loadViewBlockerWarningInfo()
-        } else {
-            savedPreferencesLoader.loadAppBlockerWarningInfo()
-
+        val warningScreenConfig = when (mode) {
+            Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER -> savedPreferencesLoader.loadViewBlockerWarningInfo()
+            Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER -> savedPreferencesLoader.loadKeywordBlockerWarningInfo()
+            else -> savedPreferencesLoader.loadAppBlockerWarningInfo()
         }
         val binding = DialogWarningOverlayBinding.inflate(layoutInflater)
         val isHomePressRequested = intent.getBooleanExtra("is_press_home", false)
         val isReelBlockerWarning = intent.getBooleanExtra("is_reel_blocker", false)
         val isAppBlockerMode = mode == Constants.WARNING_SCREEN_MODE_APP_BLOCKER
+        val isKeywordBlockerMode = mode == Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER
 
         val isSimpleMode = savedPreferencesLoader.getEnforcementMode() == "SIMPLE"
-        val blockedFeature = intent.getStringExtra("blocked_by_feature") ?: if (isReelBlockerWarning) "Reels Blocker" else "App Blocker"
+        val blockedFeature = intent.getStringExtra("blocked_by_feature") 
+            ?: if (isKeywordBlockerMode) "Keyword Blocker" else if (isReelBlockerWarning) "Reels Blocker" else "App Blocker"
 
         binding.minsPicker.setValue(3)
         binding.minsPicker.minValue = 2
-        var isDialogCancelable = !isAppBlockerMode || isHomePressRequested
+        var isDialogCancelable = (!isAppBlockerMode && !isKeywordBlockerMode) || isHomePressRequested
 
         if (isSimpleMode) {
             binding.warningTitle.text = "Access Blocked"
@@ -52,10 +53,10 @@ class WarningActivity : AppCompatActivity() {
             binding.minsPicker.visibility = View.GONE
             isDialogCancelable = false
         } else {
-            binding.warningTitle.text = if (isAppBlockerMode) {
-                getString(R.string.warning_title_app_blocker)
-            } else {
-                getString(R.string.warning_title_reels_blocker)
+            binding.warningTitle.text = when {
+                isAppBlockerMode -> getString(R.string.warning_title_app_blocker)
+                isKeywordBlockerMode -> "Keyword Blocked"
+                else -> getString(R.string.warning_title_reels_blocker)
             }
 
             if (warningScreenConfig.isProceedDisabled) {
@@ -91,10 +92,10 @@ class WarningActivity : AppCompatActivity() {
             }
             .show()
 
-        val fallbackMessage = if (isAppBlockerMode) {
-            getString(R.string.warning_default_message_app)
-        } else {
-            getString(R.string.warning_default_message_reels)
+        val fallbackMessage = when {
+            isAppBlockerMode -> getString(R.string.warning_default_message_app)
+            isKeywordBlockerMode -> "Content containing a blocked keyword was detected."
+            else -> getString(R.string.warning_default_message_reels)
         }
         val configuredMessage = warningScreenConfig.message.trim()
 
@@ -103,7 +104,7 @@ class WarningActivity : AppCompatActivity() {
         } else {
             binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
             binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
-            binding.btnCancel.text = if (isAppBlockerMode || isHomePressRequested) {
+            binding.btnCancel.text = if (isAppBlockerMode || isKeywordBlockerMode || isHomePressRequested) {
                 getString(R.string.warning_cancel_go_home)
             } else {
                 getString(R.string.warning_cancel_stay_safe)
@@ -111,7 +112,7 @@ class WarningActivity : AppCompatActivity() {
         }
 
         binding.btnCancel.setOnClickListener {
-            if (isSimpleMode || isAppBlockerMode || isHomePressRequested) {
+            if (isSimpleMode || isAppBlockerMode || isKeywordBlockerMode || isHomePressRequested) {
                 val intent = Intent(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_HOME)
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -152,10 +153,20 @@ class WarningActivity : AppCompatActivity() {
                     }
             }
 
+            if (mode == Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER) {
+                intent.getStringExtra("result_id")
+                    ?.let { it1 ->
+                        sendRefreshRequest(
+                            it1,
+                            AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN,
+                            binding.minsPicker.getValue()
+                        )
+                    }
+            }
+
             dialog?.dismiss()
             finishAffinity()
         }
-
     }
 
     override fun onDestroy() {

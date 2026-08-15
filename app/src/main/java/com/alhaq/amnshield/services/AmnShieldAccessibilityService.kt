@@ -49,6 +49,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         const val INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN = "amnshield.refresh.viewblocker.cooldown"
         const val INTENT_ACTION_REFRESH_REEL_BLOCKER = "amnshield.refresh.reelblocker"
         const val INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN = "amnshield.refresh.reelblocker.cooldown"
+        const val INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN = "amnshield.refresh.keywordblocker.cooldown"
         const val INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES = "amnshield.refresh.unified.feature.schedules"
         const val INTENT_ACTION_REFRESH_ANTI_UNINSTALL = ".amnshield.refresh.anti_uninstall"
         const val INTENT_ACTION_PASSWORD_VERIFIED = "amnshield.password.verified"
@@ -62,9 +63,11 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private lateinit var blockingStatsManager: BlockingStatsManager
     private lateinit var premiumManager: PremiumManager
     private lateinit var crashLogger: CrashLogger
+    private lateinit var handGestureOverlayManager: com.alhaq.amnshield.ui.overlay.HandGestureOverlayManager
 
     private var appBlockerWarningConfig = MainActivity.WarningData()
     private var viewBlockerWarningConfig = MainActivity.WarningData()
+    private var keywordBlockerWarningConfig = MainActivity.WarningData()
 
     // Anti-uninstall protection state
     private var isAntiUninstallOn = false
@@ -129,6 +132,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
             blockingStatsManager = BlockingStatsManager.getInstance(this)
             premiumManager = PremiumManager.getInstance(this)
             crashLogger = CrashLogger(this)
+            handGestureOverlayManager = com.alhaq.amnshield.ui.overlay.HandGestureOverlayManager(this)
 
             runCatching { savedPreferencesLoader.migrateLegacySchedulesIfNeeded() }
                 .onFailure { Log.e("AmnShieldService", "Failed schedule migration", it) }
@@ -153,6 +157,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN)
                 addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER)
                 addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN)
+                addAction(INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
                 addAction(INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
                 addAction(INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN)
                 addAction(INTENT_ACTION_REFRESH_FOCUS_MODE)
@@ -228,7 +233,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
 
             if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
                 val activePackage = event.packageName?.toString().orEmpty()
-                val isReelsEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)
+                val isReelsEnabled = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
                 if (isReelsEnabled && (ReelBlocker.REEL_TARGET_PACKAGES.contains(activePackage) || ReelBlocker.isBrowserPackage(activePackage))) {
                     val now = System.currentTimeMillis()
                     if (now - lastReelScrollTime > 1500L) {
@@ -292,7 +297,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 }
             }
 
-            if (savedPreferencesLoader.isWebsiteBlockerEnabled() && isFeatureCurrentlyActive("website_blocker")) {
+            if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
                 val blockedSocialApps = savedPreferencesLoader.loadBlockedWebsitesApps()
                 if (blockedSocialApps.contains(packageName)) {
                     blockingStatsManager.recordAppBlock(packageName, "Blocked by Website Blocker")
@@ -308,7 +313,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
             }
 
             if (!isFocusBlockAllExSelectedActive) {
-                if (savedPreferencesLoader.isAppBlockerFeatureEnabled()) {
+                if (savedPreferencesLoader.isAppBlockerFeatureEnabled(false) && isFeatureCurrentlyActive("app_blocker")) {
                     val appBlockerResult = appBlocker.doesAppNeedToBeBlocked(packageName, savedPreferencesLoader)
                     if (appBlockerResult.isBlocked) {
                         blockingStatsManager.recordAppBlock(packageName, "Blocked by App Blocker")
@@ -375,7 +380,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 return
             }
 
-            val isKeywordEnabled = savedPreferencesLoader.isKeywordBlockerFeatureEnabled()
+            val isKeywordEnabled = savedPreferencesLoader.isKeywordBlockerFeatureEnabled(false)
             if (isKeywordEnabled && isFeatureCurrentlyActive("keyword_blocker")) {
                 val manualKeywords = savedPreferencesLoader.loadBlockedKeywords()
                     .map { it.trim().lowercase(Locale.ROOT) }
@@ -387,7 +392,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                         val keywordResult = keywordBlocker.checkIfUserGettingFreaky(rootNode, event)
                         if (keywordResult.resultDetectWord != null) {
                             blockingStatsManager.recordKeywordBlock(keywordResult.resultDetectWord, packageName)
-                            pressBack()
+                            handleKeywordBlockerResult(keywordResult, packageName)
                             return
                         }
                     } catch (e: Exception) {
@@ -396,7 +401,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 }
             }
 
-            if (savedPreferencesLoader.isWebsiteBlockerEnabled() && isFeatureCurrentlyActive("website_blocker")) {
+            if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
                 try {
                     if (checkBlockedWebsites(rootNode, packageName)) {
                         blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $packageName")
@@ -408,8 +413,8 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 }
             }
 
-            val isReelsEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)
-            if (isReelsEnabled && isFeatureCurrentlyActive("reel_blocker")) {
+            val isReelsEnabled = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
+            if (isReelsEnabled) {
                 reelBlocker.isYoutubeEnabled = savedPreferencesLoader.isReelBlockerYoutubeEnabled()
                 reelBlocker.isInstagramEnabled = savedPreferencesLoader.isReelBlockerInstagramEnabled()
                 reelBlocker.isTiktokEnabled = savedPreferencesLoader.isReelBlockerTiktokEnabled()
@@ -495,10 +500,56 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                     savedPreferencesLoader.saveAppBlockerCooldownData(appBlocker.getCooldownSnapshot())
                 }
 
+                INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN -> {
+                    val interval = intent.getIntExtra("selected_time", keywordBlockerWarningConfig.timeInterval)
+                    val endTime = System.currentTimeMillis() + interval
+                    intent.getStringExtra("result_id")?.let { keyword ->
+                        keywordBlocker.applyCooldown(keyword, endTime)
+                    }
+                }
+
                 INTENT_ACTION_PASSWORD_VERIFIED -> {
                     isPasswordVerified = true
                     lastPasswordVerificationTime = System.currentTimeMillis()
                 }
+            }
+        }
+    }
+
+    private fun handleKeywordBlockerResult(
+        result: KeywordBlocker.KeywordBlockerResult,
+        packageName: String
+    ) {
+        val feedbackMode = savedPreferencesLoader.getKeywordBlockerFeedbackMode()
+        val isHomePress = result.isHomePressRequested
+
+        when (feedbackMode) {
+            Constants.KEYWORD_FEEDBACK_HAND_GESTURE -> {
+                if (::handGestureOverlayManager.isInitialized) {
+                    handGestureOverlayManager.showGestureOverlay(result.resultDetectWord) {
+                        if (isHomePress) pressHome() else pressBack()
+                    }
+                } else {
+                    if (isHomePress) pressHome() else pressBack()
+                }
+            }
+            Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> {
+                val warningInfo = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
+                if (warningInfo.isWarningDialogHidden) {
+                    if (isHomePress) pressHome() else pressBack()
+                } else {
+                    val intent = Intent(this, com.alhaq.amnshield.ui.activity.WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("result_id", result.resultDetectWord)
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("is_press_home", isHomePress)
+                        putExtra("blocked_by_feature", "Keyword Blocker")
+                    }
+                    startActivity(intent)
+                }
+            }
+            else -> {
+                if (isHomePress) pressHome() else pressBack()
             }
         }
     }
@@ -512,6 +563,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun setupKeywordBlocker() {
+        keywordBlockerWarningConfig = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
         val userKeywords = savedPreferencesLoader.loadBlockedKeywords()
             .map { it.trim().lowercase(Locale.ROOT) }
             .filter { it.isNotEmpty() }
@@ -571,20 +623,17 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         val reelBlockerPrefs = getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
         val configReelsPrefs = getSharedPreferences("config_reels", Context.MODE_PRIVATE)
 
-        val hasReelsRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
-            .any { (it.packageName.equals("reel_blocker", ignoreCase = true) || it.title.contains("Reel", ignoreCase = true)) && it.isRuleEnabled }
-
         reelBlocker.isEnabled = savedPreferencesLoader.isReelBlockerEnabled(
             viewBlockerPrefs.getBoolean("is_enabled", false)
-        ) || hasReelsRules
+        )
         reelBlocker.isIGInboxReelAllowed = configReelsPrefs.getBoolean("is_reel_inbox", false)
         reelBlocker.isFirstReelInFeedAllowed = configReelsPrefs.getBoolean("is_reel_first", false)
         reelBlocker.modeType = savedPreferencesLoader.getReelBlockerMode(ReelBlocker.MODE_BLOCK_ALL)
         reelBlocker.dailyReelLimit = savedPreferencesLoader.getReelBlockerDailyLimit(200)
 
-        reelBlocker.isYoutubeEnabled = reelBlockerPrefs.getBoolean("is_youtube_enabled", true)
-        reelBlocker.isInstagramEnabled = reelBlockerPrefs.getBoolean("is_instagram_enabled", true)
-        reelBlocker.isTiktokEnabled = reelBlockerPrefs.getBoolean("is_tiktok_enabled", true)
+        reelBlocker.isYoutubeEnabled = reelBlockerPrefs.getBoolean("is_youtube_enabled", false)
+        reelBlocker.isInstagramEnabled = reelBlockerPrefs.getBoolean("is_instagram_enabled", false)
+        reelBlocker.isTiktokEnabled = reelBlockerPrefs.getBoolean("is_tiktok_enabled", false)
         reelBlocker.isBrowserShortsEnabled = savedPreferencesLoader.isReelBlockerBrowserEnabled()
         reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
 
@@ -1138,20 +1187,38 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun isFeatureCurrentlyActive(featureKey: String): Boolean {
-        val isFocusTarget = featureKey.equals("FOCUS_MODE", ignoreCase = true)
+        val isFocusTarget = featureKey.equals("FOCUS_MODE", ignoreCase = true) || featureKey.equals("focus_mode", ignoreCase = true)
+        val isAppBlockerTarget = featureKey.equals("app_blocker", ignoreCase = true)
 
-        val allRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
-            .filter { it.packageName.equals(featureKey, ignoreCase = true) || it.groupTitle?.equals(featureKey, ignoreCase = true) == true || it.title.equals(featureKey, ignoreCase = true) }
+        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
 
-        if (allRules.isEmpty()) {
-            // FOCUS_MODE only runs if there is an explicit auto-focus schedule.
-            // Other features run 24/7 when enabled if no custom schedule rules exist.
-            return !isFocusTarget
+        val featureRules = when {
+            isAppBlockerTarget -> {
+                rawRules.filter {
+                    it.packageName != "keyword_blocker" &&
+                    it.packageName != "website_blocker" &&
+                    it.packageName != "reel_blocker" &&
+                    !it.packageName.equals("FOCUS_MODE", ignoreCase = true) &&
+                    !it.packageName.equals("focus_mode", ignoreCase = true)
+                }
+            }
+            else -> {
+                rawRules.filter {
+                    it.packageName.equals(featureKey, ignoreCase = true) ||
+                    it.groupTitle?.equals(featureKey, ignoreCase = true) == true ||
+                    it.title.equals(featureKey, ignoreCase = true)
+                }
+            }
         }
 
-        val enabledRules = allRules.filter { it.isRuleEnabled }
+        if (featureRules.isEmpty()) {
+            // Strict Opt-In Architecture: No rules configured means feature is INACTIVE.
+            return false
+        }
+
+        val enabledRules = featureRules.filter { it.isRuleEnabled }
         if (enabledRules.isEmpty()) {
-            // If all custom schedule rules for this feature are disabled, feature is inactive
+            // All rules for this feature are disabled; feature is INACTIVE.
             return false
         }
 
@@ -1217,6 +1284,12 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         reelsTrackingHandler.removeCallbacks(reelsTrackingRunnable)
         try {
             unregisterReceiver(refreshReceiver)
+        } catch (_: Exception) {
+        }
+        try {
+            if (::handGestureOverlayManager.isInitialized) {
+                handGestureOverlayManager.dismissOverlay()
+            }
         } catch (_: Exception) {
         }
         eventChannel.close()

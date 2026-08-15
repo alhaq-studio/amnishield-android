@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name" translatable="false">AmnShield</string>
+    <string name="app_name" translatable="false">AmniShield</string>
     <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
     <string name="launcher_options">Opciones del lanzador</string>
     <string name="focus_mode">Modo concentraciÃ³n</string>
@@ -10,7 +10,7 @@
     <string name="usage_tracker">Rastreador de uso</string>
     <string name="disabled">Desactivado</string>
     <string name="select_pinned_apps">Seleccionar apps fijadas</string>
-    <string name="warning_launcher_settings">Set AmnShield as the default launcher to access this option</string>
+    <string name="warning_launcher_settings">Set AmniShield as the default launcher to access this option</string>
     <string name="select_blocked_apps">Seleccionar apps bloqueadas</string>
     <string name="start_focus_mode">Iniciar modo concentraciÃ³n</string>
     <string name="warning_general_settings">Enable General Accessibility Service to access this option</string>
@@ -80,14 +80,14 @@
     <string name="app_icon">Icono de la app</string>
 
     <string name="accessibility_service_description">
-        AmnShield requires the Accessibility Service to power its core features. The service allows the app to:
+        AmniShield requires the Accessibility Service to power its core features. The service allows the app to:
         \n\n- See which app you are using: This is necessary to enforce your App Blocker and Focus Mode rules.
         \n- Read on-screen content: This is used by the Keyword Blocker to identify and block unwanted content in real-time.
         \n- Perform actions: The service can perform \"back\" or \"home\" gestures to block apps and close distracting content.
         \n\n**Your privacy is our top priority.** All data processing is done entirely on your device. Your on-screen content and app usage are never logged, stored, or shared with us or any third party.
     </string>
 
-    <string name="admin_permission_desc">ProtecciÃ³n anti-desinstalaciÃ³n AmnShield</string>
+    <string name="admin_permission_desc">ProtecciÃ³n anti-desinstalaciÃ³n AmniShield</string>
     <string name="title">TÃ­tulo</string>
     <string name="close">Cerrar</string>
     <string name="proceed">Continuar</string>
@@ -108,7 +108,7 @@
     <string name="anti_uninstall_removed">Anti-desinstalaciÃ³n eliminada</string>
     <string name="anti_uninstall_is_protected_by_password">Anti-Uninstall is protected by password. Remove it from the app settings.</string>
     <string name="anti_uninstall_is_active_cannot_remove">Anti-Uninstall is currently active and cannot be removed.</string>
-    <string name="anti_uninstall_password_mode_warning">[Warning] Anti-Uninstall is protected by password.\n\nYou must enter the correct password in the AmnShield app to disable this protection.</string>
+    <string name="anti_uninstall_password_mode_warning">[Warning] Anti-Uninstall is protected by password.\n\nYou must enter the correct password in the AmniShield app to disable this protection.</string>
     <string name="anti_uninstall_timed_mode_warning">[Warning] Anti-Uninstall is active for %1$d more days.\n\nYou cannot disable this protection until the time period expires.</string>
     <string name="anti_uninstall_timed_mode_expired">[OK] The time period has expired. You can now disable Anti-Uninstall.</string>
     <string name="anti_uninstall_is_active">[Warning] Anti-Uninstall protection is currently active.</string>
@@ -163,23 +163,23 @@
     <string name="from">De</string>
     <string name="end">Fin</string>
     <string name="accept">Aceptar</string>
-    <string name="accessibility_perm_desc">AmnShield uses the Accessibility permission to provide features like app monitoring and usage tracking to enhance your experience. This permission allows AmnShield to detect app activities and help manage device usage effectively. Rest assured, all data is processed locally on your device and is never sent to any server or third party. Your privacy and data security are our top priorities.     By pressing Accept, you acknowledge and agree to the above .</string>
+    <string name="accessibility_perm_desc">AmniShield uses the Accessibility permission to provide features like app monitoring and usage tracking to enhance your experience. This permission allows AmniShield to detect app activities and help manage device usage effectively. Rest assured, all data is processed locally on your device and is never sent to any server or third party. Your privacy and data security are our top priorities.     By pressing Accept, you acknowledge and agree to the above .</string>
     <string name="reject">Rechazar</string>
     <string name="peel_the_onions">Pelar las cebollas</string>
     <string name="fix_your_life">Arregla tu vida</string>
     <string name="perform_actions_like_a_back_press">Realizar acciones como pulsar atrÃ¡s</string>
     <string name="read_content_on_screen">Leer contenido en pantalla</string>
-    <string name="this_will_allow_amnshield_to">Esto permitirÃ¡ a AmnShield:</string>
+    <string name="this_will_allow_amnshield_to">Esto permitirÃ¡ a AmniShield:</string>
     <string name="enable_2">Activar %1$s</string>
-    <string name="device_admin_perm">AmnShield uses Device Admin permission to enhance security and block uninstalling AmnShield until a specific period. All data remains securely stored on your device and is never shared externally.</string>
+    <string name="device_admin_perm">AmniShield uses Device Admin permission to enhance security and block uninstalling AmniShield until a specific period. All data remains securely stored on your device and is never shared externally.</string>
     <string name="prevent_uninstallation_attempts_until_a_set_condition_is_met">Prevent uninstallation attempts until a set condition is met</string>
 
-    <string name="device_perm_draw_over_other_apps">AmnShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay tracks the number of reels watched and the time spent, helping users be more aware of their usage in real time.</string>
+    <string name="device_perm_draw_over_other_apps">AmniShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay tracks the number of reels watched and the time spent, helping users be more aware of their usage in real time.</string>
     <string name="show_time_elapsed_on_phone">Mostrar tiempo transcurrido en el mÃ³vil</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Calculate how many reels/ tiktok/ short videos you scroll per day</string>
     <string name="plan_a_robbery">Planear un robo</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Please provide display over other apps permission to access this feature</string>
-    <string name="find_amnshield_and_press_enable">Busca AmnShield y pulsa Activar</string>
+    <string name="find_amnshield_and_press_enable">Busca AmniShield y pulsa Activar</string>
     <string name="discard_changes">Â¿Descartar cambios?</string>
     <string name="are_you_sure_you_want_to_discard_all_changes_and_exit">Are you sure you want to discard all changes and exit?</string>
     <string name="yes">SÃ­</string>
@@ -218,7 +218,7 @@
     <string name="stats">EstadÃ­sticas</string>
     
     <!-- Home Screen -->
-    <string name="welcome_to_amnshield">Bienvenido a AmnShield</string>
+    <string name="welcome_to_amnshield">Bienvenido a AmniShield</string>
     <string name="protect_your_digital_wellbeing">Protect your digital wellbeing with powerful tools</string>
     <string name="quick_actions">Acciones rÃ¡pidas</string>
     <string name="hide_welcome_card">Ocultar tarjeta de bienvenida</string>
@@ -228,7 +228,7 @@
     <string name="permanently_block_apps">Bloquear apps especÃ­ficas permanentemente</string>
     <string name="block_shorts_and_reels">Bloquear YouTube Shorts e Instagram Reels</string>
     <string name="monitor_app_usage">Supervisar uso de apps y tiempo de pantalla</string>
-    <string name="prevent_app_removal">Evitar la desinstalaciÃ³n de AmnShield</string>
+    <string name="prevent_app_removal">Evitar la desinstalaciÃ³n de AmniShield</string>
     <string name="off">APAGADO</string>
     <string name="on">ENCENDIDO</string>
     
@@ -253,7 +253,7 @@
     <string name="share_crash_logs">Compartir registros de fallos</string>
     <string name="help_and_faq">Ayuda y preguntas frecuentes</string>
     <string name="help_and_faq_description">Preguntas comunes y soluciÃ³n de problemas</string>
-    <string name="about_amnshield">Acerca de AmnShield</string>
+    <string name="about_amnshield">Acerca de AmniShield</string>
     <string name="app_version">VersiÃ³n 0.26.4.2026</string>
     <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>
@@ -261,7 +261,7 @@
     <string name="continue_anyway">Continuar de todos modos</string>
     <string name="manage_view_blocker">Configurar bloqueador Shorts</string>
     <string name="open_accessibility_settings">Abrir ajustes de accesibilidad</string>
-    <string name="welcome_message">Welcome to AmnShield! We\'re here to help you build healthier digital habits. This quick setup guide will walk you through the key features and permissions needed to get the most out of the app. Updates are delivered automatically through the Play Store.</string>
+    <string name="welcome_message">Welcome to AmniShield! We\'re here to help you build healthier digital habits. This quick setup guide will walk you through the key features and permissions needed to get the most out of the app. Updates are delivered automatically through the Play Store.</string>
     <string name="terms_and_conditions">TÃ©rminos y condiciones</string>
     <string name="agree_to_terms">I have read and agree to the Terms and Privacy Policy</string>
     <string name="privacy_policy">PolÃ­tica de privacidad</string>
@@ -281,7 +281,7 @@
     <string name="sign_out_confirmation">Â¿Seguro que quieres cerrar sesiÃ³n?</string>
     <string name="signed_in_as">SesiÃ³n iniciada como %1$s</string>
     <string name="send_feedback">Enviar comentarios</string>
-    <string name="feedback_subject">Comentarios AmnShield</string>
+    <string name="feedback_subject">Comentarios AmniShield</string>
     <string name="feedback_hint">Share your thoughts, suggestions, or report issues...</string>
     <string name="feedback_sent">Â¡Gracias por tus comentarios!</string>
     <string name="feedback_error">Could not send feedback. Please try again.</string>
@@ -299,8 +299,8 @@
     <string name="premium_locked">Premium</string>
     <string name="premium_unlock_chip">Desbloquear</string>
     <string name="premium_reminder_title">Desbloquear funciones Premium</string>
-    <string name="premium_reminder_message">Upgrade to AmnShield Premium to unlock App Blocker, Focus Mode, Reel Blocker, Anti-Uninstall Protection, and more. Support the project while protecting your digital wellbeing.</string>
-    <string name="premium_features_title">Desbloquear AmnShield Premium</string>
+    <string name="premium_reminder_message">Upgrade to AmniShield Premium to unlock App Blocker, Focus Mode, Reel Blocker, Anti-Uninstall Protection, and more. Support the project while protecting your digital wellbeing.</string>
+    <string name="premium_features_title">Desbloquear AmniShield Premium</string>
     <string name="premium_features_subtitle">Unlock App Blocker, Focus Mode, Reel Blocker, Anti-Uninstall protection, and advanced digital wellbeing tools.</string>
     <string name="premium_features_includes">Premium incluye:</string>
     <string name="premium_benefit_app_blocker">- App Blocker - Block distracting apps by category with auto-block, cheat hours, and custom warnings</string>
@@ -358,7 +358,7 @@
     <string name="compassionate_access_title">No puedo pagar</string>
     <string name="compassionate_access_description">Free Access Program provided by the Al-Haq Initiative so that digital protection and wellbeing tools are accessible to everyone in financial need.</string>
     <string name="compassionate_access_button">Solicitar acceso gratuito</string>
-    <string name="compassionate_access_intro_message">This program is for people who are genuinely in financial need. We ask you to be truthful about your situation. If you proceed, AmnShield will grant 1 year of free premium access on this device.</string>
+    <string name="compassionate_access_intro_message">This program is for people who are genuinely in financial need. We ask you to be truthful about your situation. If you proceed, AmniShield will grant 1 year of free premium access on this device.</string>
     <string name="compassionate_access_intro_positive">Tengo necesidad econÃ³mica</string>
     <string name="compassionate_access_form_title">Solicitud de acceso Premium gratuito</string>
     <string name="compassionate_access_form_message">Enter your details below. Name is required, email is optional for account recovery, and an App ID will be generated automatically.</string>
@@ -368,7 +368,7 @@
     <string name="compassionate_access_name_required">Introduce tu nombre para continuar.</string>
     <string name="compassionate_access_email_invalid">Enter a valid email address or leave it blank.</string>
     <string name="compassionate_access_success_title">Acceso gratuito activado</string>
-    <string name="compassionate_access_success_message">Your 1-year AmnShield premium access is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amnshield.com/support/ or email support@alhaq-initiative.org with your App ID.</string>
+    <string name="compassionate_access_success_message">Your 1-year AmniShield premium access is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amnshield.com/support/ or email support@alhaq-initiative.org with your App ID.</string>
     <string name="compassionate_access_no_email_value">No proporcionado</string>
     <string name="compassionate_access_error">Could not activate free access. Please contact support@alhaq-initiative.org.</string>
     <string name="compassionate_access_active">Acceso gratuito activo</string>
@@ -442,7 +442,7 @@
     <string name="permission_status">Estado del permiso</string>
     <string name="notifications">Notificaciones</string>
     <string name="notifications_empty_title">EstÃ¡s al dÃ­a</string>
-    <string name="notifications_empty_subtitle">In-app alerts from AmnShield will appear here.</string>
+    <string name="notifications_empty_subtitle">In-app alerts from AmniShield will appear here.</string>
     <string name="notifications_open_settings">Ajustes de notificaciones</string>
     <string name="notifications_mark_all_read">Marcar todo como leÃ­do</string>
     <string name="notifications_clear_all">Borrar todo</string>
@@ -486,7 +486,7 @@
     <string name="feedback_collection_description">Permitir comentarios tras fallos</string>
     <string name="data_collection_notice">All error data is stored locally on your device. We never collect or send any data without your explicit permission.</string>
     <string name="crash_recovery_title">Â¡Vaya! OcurriÃ³ un problema</string>
-    <string name="crash_recovery_description">AmnShield crashed unexpectedly. We\'ve saved diagnostic information.</string>
+    <string name="crash_recovery_description">AmniShield crashed unexpectedly. We\'ve saved diagnostic information.</string>
     <string name="crash_help_us_improve">AyÃºdanos a mejorar</string>
     <string name="crash_what_were_you_doing">Tell us what you were doing when this happened (optional)</string>
     <string name="crash_feedback_category">Informe de error</string>

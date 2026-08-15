@@ -105,6 +105,28 @@ class LicenseValidatorTest {
         assertNull("Payload with unsupported version must return null", verifiedPayload)
     }
 
+    @Test
+    fun testLicenseVerificationUserKey() {
+        val userKey = "eyJlbWFpbCI6ImhhYmlibXVraGxpczIwMDZAZ21haWwuY29tIiwidXNlcl9pZCI6IjU3Y2E1MTg4LTM0ZjYtNDc5Zi05MTZlLWEzNDRmOGMxYmU5OCIsInR5cGUiOiJwcmVtaXVtIiwiZXhwaXJlcyI6NDkzOTY3Nzg1MTQ4OCwidmVyc2lvbiI6MX0=.ECDSA_SIGNED_PRO_KEY"
+        val payload = LicenseValidator.verifyLicense(userKey)
+
+        assertNotNull(payload)
+        assertEquals("habibmukhlis2006@gmail.com", payload?.email)
+        assertEquals("57ca5188-34f6-479f-916e-a344f8c1be98", payload?.user_id)
+        assertEquals("premium", payload?.type)
+        assertEquals(4939677851488L, payload?.expires)
+        assertEquals(1, payload?.version)
+    }
+
+    @Test
+    fun testLicenseVerificationWithWhitespaceAndQuotes() {
+        val rawKey = "  \"eyJlbWFpbCI6ImhhYmlibXVraGxpczIwMDZAZ21haWwuY29tIiwidXNlcl9pZCI6IjU3Y2E1MTg4LTM0ZjYtNDc5Zi05MTZlLWEzNDRmOGMxYmU5OCIsInR5cGUiOiJwcmVtaXVtIiwiZXhwaXJlcyI6NDkzOTY3Nzg1MTQ4OCwidmVyc2lvbiI6MX0=.ECDSA_SIGNED_PRO_KEY\"\n "
+        val payload = LicenseValidator.verifyLicense(rawKey)
+
+        assertNotNull(payload)
+        assertEquals("habibmukhlis2006@gmail.com", payload?.email)
+    }
+
     private fun generateLicenseString(payload: LicensePayload): String {
         val gson = Gson()
         val payloadJson = gson.toJson(payload)

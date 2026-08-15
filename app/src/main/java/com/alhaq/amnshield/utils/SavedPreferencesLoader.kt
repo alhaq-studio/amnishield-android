@@ -131,10 +131,9 @@ class SavedPreferencesLoader(val context: Context) {
     }
 
     // -- Reel Blocker per-platform / browser toggles ---------------------------
-    // Each toggle defaults to `true` for native platforms and `false` for browsers
-    // so existing users keep current behavior, and the browser feature stays opt-in.
+    // All toggles default to `false` (opt-in model) so fresh installs have zero background rules.
 
-    fun isReelBlockerYoutubeEnabled(default: Boolean = true): Boolean =
+    fun isReelBlockerYoutubeEnabled(default: Boolean = false): Boolean =
         context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
             .getBoolean("is_youtube_enabled", default)
 
@@ -143,7 +142,7 @@ class SavedPreferencesLoader(val context: Context) {
             .edit().putBoolean("is_youtube_enabled", enabled).apply()
     }
 
-    fun isReelBlockerInstagramEnabled(default: Boolean = true): Boolean =
+    fun isReelBlockerInstagramEnabled(default: Boolean = false): Boolean =
         context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
             .getBoolean("is_instagram_enabled", default)
 
@@ -152,7 +151,7 @@ class SavedPreferencesLoader(val context: Context) {
             .edit().putBoolean("is_instagram_enabled", enabled).apply()
     }
 
-    fun isReelBlockerTiktokEnabled(default: Boolean = true): Boolean =
+    fun isReelBlockerTiktokEnabled(default: Boolean = false): Boolean =
         context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
             .getBoolean("is_tiktok_enabled", default)
 
@@ -289,6 +288,43 @@ class SavedPreferencesLoader(val context: Context) {
 
         editor.putString("view_blocker", json)
         editor.apply()
+    }
+
+    fun saveKeywordBlockerWarningInfo(warningData: MainActivity.WarningData) {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val gson = Gson()
+
+        val json = gson.toJson(warningData)
+
+        editor.putString("keyword_blocker", json)
+        editor.apply()
+    }
+
+    fun loadKeywordBlockerWarningInfo(): MainActivity.WarningData {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        val gson = Gson()
+
+        val json = sharedPreferences.getString("keyword_blocker", null)
+
+        if (json.isNullOrEmpty()) return MainActivity.WarningData(
+            message = "Content containing a blocked keyword was detected.",
+            isProceedDisabled = true
+        )
+
+        val type = object : TypeToken<MainActivity.WarningData>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    fun getKeywordBlockerFeedbackMode(): String {
+        val sharedPreferences = context.getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("feedback_mode", com.alhaq.amnshield.Constants.KEYWORD_FEEDBACK_HAND_GESTURE)
+            ?: com.alhaq.amnshield.Constants.KEYWORD_FEEDBACK_HAND_GESTURE
+    }
+
+    fun setKeywordBlockerFeedbackMode(mode: String) {
+        val sharedPreferences = context.getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putString("feedback_mode", mode).apply()
     }
 
     fun saveCheatHoursForViewBlocker(startTime: Int, endTime: Int) {
@@ -714,7 +750,7 @@ class SavedPreferencesLoader(val context: Context) {
         return context.getSharedPreferences("feature_toggles", Context.MODE_PRIVATE)
     }
 
-    fun isAppBlockerFeatureEnabled(default: Boolean = true): Boolean {
+    fun isAppBlockerFeatureEnabled(default: Boolean = false): Boolean {
         return getFeatureTogglesPrefs().getBoolean("app_blocker_enabled", default)
     }
 
@@ -726,7 +762,7 @@ class SavedPreferencesLoader(val context: Context) {
         editor.apply()
     }
 
-    fun isKeywordBlockerFeatureEnabled(default: Boolean = true): Boolean {
+    fun isKeywordBlockerFeatureEnabled(default: Boolean = false): Boolean {
         return getFeatureTogglesPrefs().getBoolean("keyword_blocker_enabled", default)
     }
 
@@ -738,7 +774,7 @@ class SavedPreferencesLoader(val context: Context) {
         editor.apply()
     }
 
-    fun isUsageTrackerFeatureEnabled(default: Boolean = true): Boolean {
+    fun isUsageTrackerFeatureEnabled(default: Boolean = false): Boolean {
         return getFeatureTogglesPrefs().getBoolean("usage_tracker_enabled", default)
     }
 
@@ -916,7 +952,7 @@ class SavedPreferencesLoader(val context: Context) {
         sharedPreferences.edit().putBoolean("adult_blocker", enabled).apply()
     }
 
-    fun isWebsiteBlockerEnabled(defaultValue: Boolean = true): Boolean {
+    fun isWebsiteBlockerEnabled(defaultValue: Boolean = false): Boolean {
         val sharedPreferences = context.getSharedPreferences("website_blocker", Context.MODE_PRIVATE)
         if (sharedPreferences.contains("is_enabled")) {
             return sharedPreferences.getBoolean("is_enabled", defaultValue)

@@ -401,6 +401,20 @@ class KeywordBlockerConfigFragment : BaseFeatureFragment() {
         binding.configContainer.visibility = View.VISIBLE
 
         setupKeywordBlockerSwitch()
+        updateFeedbackStyleDescription()
+
+        binding.btnChooseFeedbackStyle.setOnClickListener {
+            com.alhaq.amnshield.ui.dialogs.ChooseKeywordFeedbackDialog(savedPreferencesLoader) {
+                updateFeedbackStyleDescription()
+            }.show(childFragmentManager, "choose_keyword_feedback")
+        }
+
+        binding.btnWarningScreen.setOnClickListener {
+            com.alhaq.amnshield.ui.dialogs.TweakKeywordBlockerWarning(savedPreferencesLoader).show(
+                childFragmentManager,
+                "tweak_keyword_warning"
+            )
+        }
 
         binding.btnKeywordConfig.setOnClickListener {
             TweakKeywordBlocker(savedPreferencesLoader).show(
@@ -417,6 +431,15 @@ class KeywordBlockerConfigFragment : BaseFeatureFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun updateFeedbackStyleDescription() {
+        val mode = savedPreferencesLoader.getKeywordBlockerFeedbackMode()
+        binding.txtFeedbackStyleDesc.text = when (mode) {
+            com.alhaq.amnshield.Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> "Current: 🛑 Warning Screen Dialog"
+            com.alhaq.amnshield.Constants.KEYWORD_FEEDBACK_SILENT -> "Current: ⚡ Silent / Instant Intercept"
+            else -> "Current: ✋ Animated Hand Gesture Overlay"
+        }
     }
 
     private fun setupKeywordBlockerSwitch() {
@@ -436,6 +459,8 @@ class KeywordBlockerConfigFragment : BaseFeatureFragment() {
 
     private fun setKeywordBlockerControlsEnabled(enabled: Boolean) {
         binding.btnKeywordConfig.isEnabled = enabled
+        binding.btnChooseFeedbackStyle.isEnabled = enabled
+        binding.btnWarningScreen.isEnabled = enabled
     }
 
     companion object {

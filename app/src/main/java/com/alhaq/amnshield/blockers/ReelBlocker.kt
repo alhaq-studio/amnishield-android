@@ -94,10 +94,10 @@ class ReelBlocker : BaseBlocker() {
     var dailyReelLimit = 200
     var reelsScrolledToday = 0
 
-    // Per-platform toggles (default true so existing users keep current behavior).
-    var isYoutubeEnabled = true
-    var isInstagramEnabled = true
-    var isTiktokEnabled = true
+    // Per-platform toggles (default false for opt-in model).
+    var isYoutubeEnabled = false
+    var isInstagramEnabled = false
+    var isTiktokEnabled = false
 
     // Browser shorts detection (off by default to avoid surprising existing users).
     var isBrowserShortsEnabled = false
@@ -117,6 +117,10 @@ class ReelBlocker : BaseBlocker() {
         packageName: String
     ): ReelBlockerResult? {
         if (!isEnabled) {
+            return null
+        }
+
+        if (!isYoutubeEnabled && !isInstagramEnabled && !isTiktokEnabled && !isBrowserShortsEnabled) {
             return null
         }
 

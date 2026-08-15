@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.databinding.FragmentTargetingBinding
+import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
 class TargetingFragment : Fragment() {
 
@@ -36,18 +37,59 @@ class TargetingFragment : Fragment() {
         binding.cardFocus.setOnClickListener { binding.cbFocus.isChecked = !binding.cbFocus.isChecked }
 
         binding.btnContinue.setOnClickListener { saveTargetingAndProceed() }
-        binding.btnSkip.setOnClickListener { proceedToPermissions() }
+        binding.btnSkip.setOnClickListener { skipTargetingAndProceed() }
     }
 
     private fun saveTargetingAndProceed() {
-        val prefs = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val context = requireContext()
+        val isWeb = binding.cbWeb.isChecked
+        val isReels = binding.cbReels.isChecked
+        val isFocus = binding.cbFocus.isChecked
+
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         prefs.edit().apply {
             putBoolean("target_gaze_enabled", binding.cbGaze.isChecked)
-            putBoolean("target_web_enabled", binding.cbWeb.isChecked)
-            putBoolean("target_reels_enabled", binding.cbReels.isChecked)
-            putBoolean("target_focus_enabled", binding.cbFocus.isChecked)
+            putBoolean("target_web_enabled", isWeb)
+            putBoolean("target_reels_enabled", isReels)
+            putBoolean("target_focus_enabled", isFocus)
             apply()
         }
+
+        val loader = SavedPreferencesLoader(context)
+        loader.setReelBlockerEnabled(isReels)
+        loader.setReelBlockerTiktokEnabled(isReels)
+        loader.setReelBlockerYoutubeEnabled(isReels)
+        loader.setReelBlockerInstagramEnabled(isReels)
+
+        loader.setWebsiteBlockerEnabled(isWeb)
+        loader.setKeywordBlockerFeatureEnabled(isWeb)
+
+        loader.setAppBlockerFeatureEnabled(isFocus)
+
+        proceedToPermissions()
+    }
+
+    private fun skipTargetingAndProceed() {
+        val context = requireContext()
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putBoolean("target_gaze_enabled", false)
+            putBoolean("target_web_enabled", false)
+            putBoolean("target_reels_enabled", false)
+            putBoolean("target_focus_enabled", false)
+            apply()
+        }
+
+        // Ensure everything is explicitly disabled on skip so user gets zero hidden background blocks
+        val loader = SavedPreferencesLoader(context)
+        loader.setReelBlockerEnabled(false)
+        loader.setReelBlockerTiktokEnabled(false)
+        loader.setReelBlockerYoutubeEnabled(false)
+        loader.setReelBlockerInstagramEnabled(false)
+        loader.setWebsiteBlockerEnabled(false)
+        loader.setKeywordBlockerFeatureEnabled(false)
+        loader.setAppBlockerFeatureEnabled(false)
+
         proceedToPermissions()
     }
 

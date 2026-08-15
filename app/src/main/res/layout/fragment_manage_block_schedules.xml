@@ -42,6 +42,7 @@
                         android:layout_height="wrap_content"
                         android:text="Blocking Rules"
                         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                        android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <TextView
@@ -83,7 +84,7 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="12dp"
                 android:layout_marginBottom="4dp"
-                app:cardBackgroundColor="@color/emerald_primaryContainer"
+                app:cardBackgroundColor="?attr/colorPrimaryContainer"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
@@ -109,7 +110,7 @@
                             android:layout_height="wrap_content"
                             android:text="0"
                             android:textAppearance="@style/TextAppearance.Material3.DisplaySmall"
-                            android:textColor="@color/emerald_primary"
+                            android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
 
                         <TextView
@@ -117,14 +118,14 @@
                             android:layout_height="wrap_content"
                             android:text="Schedules"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                            android:textColor="@color/emerald_onPrimaryContainer" />
+                            android:textColor="?attr/colorOnPrimaryContainer" />
                     </LinearLayout>
 
                     <!-- Divider -->
                     <View
                         android:layout_width="1dp"
                         android:layout_height="40dp"
-                        android:background="@color/emerald_primary"
+                        android:background="?attr/colorPrimary"
                         android:alpha="0.3" />
 
                     <!-- Launch limits stat -->
@@ -141,7 +142,7 @@
                             android:layout_height="wrap_content"
                             android:text="0"
                             android:textAppearance="@style/TextAppearance.Material3.DisplaySmall"
-                            android:textColor="@color/emerald_primary"
+                            android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
 
                         <TextView
@@ -149,7 +150,7 @@
                             android:layout_height="wrap_content"
                             android:text="Launch Limits"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                            android:textColor="@color/emerald_onPrimaryContainer" />
+                            android:textColor="?attr/colorOnPrimaryContainer" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -188,6 +189,7 @@
                     android:layout_weight="1"
                     android:text="Block Schedules (Beta)"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -235,6 +237,7 @@
                         android:layout_marginTop="16dp"
                         android:text="No Schedules Yet"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <TextView
@@ -273,7 +276,7 @@
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     app:cardCornerRadius="16dp"
-                    app:cardBackgroundColor="@color/sunset_primaryContainer"
+                    app:cardBackgroundColor="?attr/colorSecondaryContainer"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp">
 
@@ -282,7 +285,7 @@
                         android:layout_height="18dp"
                         android:layout_gravity="center"
                         android:src="@drawable/baseline_task_alt_24"
-                        app:tint="@color/sunset_primary"
+                        app:tint="?attr/colorSecondary"
                         android:contentDescription="@null" />
                 </com.google.android.material.card.MaterialCardView>
 
@@ -293,6 +296,7 @@
                     android:layout_weight="1"
                     android:text="Launch Limits (Beta)"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -321,7 +325,7 @@
                         android:layout_width="64dp"
                         android:layout_height="64dp"
                         app:cardCornerRadius="32dp"
-                        app:cardBackgroundColor="@color/sunset_primaryContainer"
+                        app:cardBackgroundColor="?attr/colorSecondaryContainer"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
 
@@ -330,7 +334,7 @@
                             android:layout_height="32dp"
                             android:layout_gravity="center"
                             android:src="@drawable/baseline_task_alt_24"
-                            app:tint="@color/sunset_primary"
+                            app:tint="?attr/colorSecondary"
                             android:contentDescription="@null" />
                     </com.google.android.material.card.MaterialCardView>
 
@@ -340,6 +344,7 @@
                         android:layout_marginTop="14dp"
                         android:text="No Launch Limits"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <TextView

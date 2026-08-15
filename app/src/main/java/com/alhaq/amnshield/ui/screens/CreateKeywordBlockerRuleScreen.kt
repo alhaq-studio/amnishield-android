@@ -130,6 +130,8 @@ fun CreateKeywordBlockerRuleScreen(
                 onCancel = onBack,
                 onSave = {
                     if (saveEnabled) {
+                        loader.saveBlockedKeywords(blockedKeywords.toSet())
+
                         val newRule = ScheduleRule(
                             id = editingRule?.id ?: UUID.randomUUID().toString(),
                             name = ruleName,
@@ -143,7 +145,7 @@ fun CreateKeywordBlockerRuleScreen(
                             periods = emptyList(),
                             targetBlockerType = "Keyword Blocker",
                             selectedApps = emptyList(),
-                            selectedKeywords = emptyList(),
+                            selectedKeywords = blockedKeywords.toList(),
                             selectedWebsites = emptyList(),
                             selectedPlatforms = emptyList(),
                             selectedBlockers = listOf("Keyword Blocker"),
@@ -154,6 +156,11 @@ fun CreateKeywordBlockerRuleScreen(
                             cheatEndTime = cheatEndTime,
                             cheatDays = cheatDays.toList()
                         )
+
+                        val refreshIntent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+                        refreshIntent.setPackage(context.packageName)
+                        context.sendBroadcast(refreshIntent)
+
                         onSaveRule(newRule)
                     }
                 },

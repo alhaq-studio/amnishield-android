@@ -59,6 +59,7 @@
                     android:layout_height="wrap_content"
                     android:text="Recommended apps to control"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
                 <TextView
@@ -91,6 +92,7 @@
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="?attr/colorOnSurface"
                         tools:text="Instagram • 2h 10m • High" />
                 </LinearLayout>
 
@@ -115,6 +117,7 @@
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="?attr/colorOnSurface"
                         tools:text="YouTube • 1h 44m • Moderate" />
                 </LinearLayout>
 
@@ -139,6 +142,7 @@
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="?attr/colorOnSurface"
                         tools:text="TikTok • 58m • Elevated" />
                 </LinearLayout>
             </LinearLayout>
@@ -156,8 +160,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Screentime"
-            android:alpha="0.7"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
             app:layout_constraintBottom_toTopOf="@+id/total_usage"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
@@ -168,6 +172,7 @@
             android:layout_height="wrap_content"
             android:text="1 hr, 22 min"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+            android:textColor="?attr/colorOnSurface"
             app:layout_constraintBottom_toBottomOf="@+id/pieChart"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

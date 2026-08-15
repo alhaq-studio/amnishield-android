@@ -247,19 +247,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleDeepLink(intent: Intent?) {
-        val data: Uri? = intent?.data
-        if (data != null && data.scheme == "amnshield" && data.host == "activate") {
+        val data = intent?.data ?: return
+        val scheme = data.scheme?.lowercase().orEmpty()
+        val host = data.host?.lowercase().orEmpty()
+        val path = data.path?.lowercase().orEmpty()
+
+        val isAmnScheme = scheme == "amnshield"
+        val isWebActivation = (scheme == "https" || scheme == "http") &&
+                (host.contains("amnshield.com") || host.contains("amnshield.org")) &&
+                (path.contains("activate") || path.contains("license") || data.getQueryParameter("key") != null)
+
+        if (isAmnScheme || isWebActivation) {
             val key = data.getQueryParameter("key")
-            if (!key.isNullOrEmpty()) {
+                ?: data.getQueryParameter("license")
+                ?: data.getQueryParameter("token")
+                ?: data.getQueryParameter("code")
+                ?: data.getQueryParameter("data")
+
+            if (!key.isNullOrBlank()) {
                 val payload = com.alhaq.amnshield.premium.LicenseValidator.verifyLicense(key)
                 if (payload != null) {
-                    premiumManager.redeemLicenseKey(key)
-                    Toast.makeText(this, "⚡ Premium activated successfully!", Toast.LENGTH_LONG).show()
+                    val activated = premiumManager.redeemLicenseKey(key)
+                    if (activated) {
+                        Toast.makeText(this, "👑 AmnShield Pro License Activated!", Toast.LENGTH_LONG).show()
+                        showProActivationSuccessDialog(payload)
+                        // Trigger bottom navigation refresh to update UI state
+                        binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                    }
                 } else {
                     Toast.makeText(this, "Invalid or expired license key.", Toast.LENGTH_LONG).show()
                 }
             }
         }
+    }
+
+    private fun showProActivationSuccessDialog(payload: com.alhaq.amnshield.premium.LicensePayload) {
+        val expiryDate = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(java.util.Date(payload.expires))
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("👑 Pro License Activated!")
+            .setMessage("Welcome to AmnShield Pro!\n\n• Account: ${payload.email}\n• Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n• Valid Until: $expiryDate\n\nAll premium features, advanced rules, and cross-device sync are now fully unlocked on this device.")
+            .setPositiveButton("Continue", null)
+            .show()
     }
     
     private fun setupFragmentNavigation(savedInstanceState: Bundle?) {

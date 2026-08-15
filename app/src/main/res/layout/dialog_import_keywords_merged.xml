@@ -11,6 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Built-in Keyword Packs"
+        android:textColor="?attr/colorOnSurface"
         android:textStyle="bold" />
 
     <com.google.android.material.card.MaterialCardView
@@ -41,6 +42,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Adult Content Pack"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
                 <TextView
@@ -72,6 +74,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Custom Keyword File"
+        android:textColor="?attr/colorOnSurface"
         android:textStyle="bold" />
 
     <TextView

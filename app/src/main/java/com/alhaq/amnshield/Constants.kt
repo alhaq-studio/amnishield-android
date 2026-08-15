@@ -9,6 +9,12 @@ class Constants {
         // available types of warning screen
         const val WARNING_SCREEN_MODE_VIEW_BLOCKER = 1
         const val WARNING_SCREEN_MODE_APP_BLOCKER = 2
+        const val WARNING_SCREEN_MODE_KEYWORD_BLOCKER = 3
+
+        // available feedback modes for keyword blocker
+        const val KEYWORD_FEEDBACK_HAND_GESTURE = "HAND_GESTURE"
+        const val KEYWORD_FEEDBACK_WARNING_SCREEN = "WARNING_SCREEN"
+        const val KEYWORD_FEEDBACK_SILENT = "SILENT"
 
         // available types for focus mode
         const val FOCUS_MODE_BLOCK_ALL_EX_SELECTED = 1

@@ -16,6 +16,7 @@
             android:id="@+id/pack_name_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurface"
             android:inputType="text"
             android:maxLines="1"
             android:text="My Keywords" />
@@ -32,6 +33,7 @@
             android:id="@+id/pack_desc_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurface"
             android:inputType="textMultiLine"
             android:maxLines="3"
             android:text="Custom keyword pack" />

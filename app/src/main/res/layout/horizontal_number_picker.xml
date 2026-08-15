@@ -10,58 +10,69 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/decrementButton"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        android:padding="0dp"
         android:text="-"
-        android:textSize="18sp"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        android:textStyle="bold"
         tools:ignore="HardcodedText" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="4dp"
-        android:layout_weight="2"
+        android:layout_marginHorizontal="12dp"
+        android:minWidth="72dp"
         android:gravity="center"
         android:orientation="vertical">
 
         <EditText
             android:id="@+id/valueTxt"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@null"
             android:gravity="center"
             android:importantForAutofill="no"
             android:inputType="number"
             android:maxLength="3"
             android:minEms="2"
             android:text="0"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
             android:textColor="?attr/colorOnSurface"
             android:textColorHint="?attr/colorOnSurfaceVariant"
-            android:textSize="24sp"
             android:textStyle="bold"
             tools:ignore="HardcodedText,LabelFor" />
 
         <TextView
             android:id="@+id/unit"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:lines="1"
             android:text="mins"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textStyle="bold" />
 
     </LinearLayout>
 
-
     <com.google.android.material.button.MaterialButton
         android:id="@+id/incrementButton"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        android:padding="0dp"
         android:text="+"
-        android:textSize="18sp"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        android:textStyle="bold"
         tools:ignore="HardcodedText" />
 </LinearLayout>

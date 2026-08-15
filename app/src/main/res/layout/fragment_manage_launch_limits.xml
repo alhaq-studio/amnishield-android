@@ -34,6 +34,7 @@
                     android:layout_weight="1"
                     android:text="Launch Limits"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
             </LinearLayout>
         </com.google.android.material.appbar.MaterialToolbar>
@@ -58,7 +59,10 @@
                 android:layout_marginVertical="@dimen/spacing_xlarge"
                 android:visibility="gone"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_corner_radius_large">
+                app:cardCornerRadius="@dimen/card_corner_radius_large"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -72,7 +76,7 @@
                         android:layout_height="64dp"
                         android:layout_marginBottom="@dimen/spacing_large"
                         android:src="@drawable/baseline_query_stats_24"
-                        android:tint="?attr/colorOnSurfaceVariant" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:layout_width="wrap_content"

@@ -16,15 +16,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Keyword Blocker Configuration"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_large"
-            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
             app:cardCornerRadius="@dimen/card_corner_radius"
-            app:cardElevation="0dp">
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -37,6 +40,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Redirect URL"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -62,9 +66,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
             app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -77,6 +83,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Scanning Mode"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
                 <com.google.android.material.checkbox.MaterialCheckBox
@@ -85,7 +92,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:paddingVertical="8dp"
-                    android:text="Scan all text fields for keywords" />
+                    android:text="Scan all text fields for keywords"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -117,6 +125,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Keyword Detection"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
 
         <TextView

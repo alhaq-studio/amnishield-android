@@ -77,6 +77,18 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
 
     private val recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
 
+    private val keywordCooldowns = mutableMapOf<String, Long>()
+
+    fun applyCooldown(keyword: String, untilTimeMillis: Long) {
+        keywordCooldowns[keyword.trim().lowercase(Locale.ROOT)] = untilTimeMillis
+        resetDetectionCache()
+    }
+
+    fun isUnderCooldown(keyword: String): Boolean {
+        val until = keywordCooldowns[keyword.trim().lowercase(Locale.ROOT)] ?: return false
+        return System.currentTimeMillis() < until
+    }
+
     private fun containsBlockedKeyword(text: CharSequence?): String? {
         if (text.isNullOrBlank()) return null
         if (blockedKeyword.isEmpty()) return null
@@ -89,7 +101,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
 
         val keywords = parseTextForKeywords(rawText)
         keywords.forEach { word ->
-            if (blockedKeyword.contains(word)) {
+            if (blockedKeyword.contains(word) && !isUnderCooldown(word)) {
                 detectionCache.put(rawText, word)
                 return word
             }

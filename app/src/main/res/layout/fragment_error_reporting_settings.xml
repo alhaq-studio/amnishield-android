@@ -23,6 +23,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Error Reporting &amp; Feedback"
+                android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
                 android:layout_marginBottom="@dimen/spacing_normal" />
 
@@ -32,6 +33,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/spacing_normal"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
                 app:cardBackgroundColor="?attr/colorPrimaryContainer">
 
                 <LinearLayout
@@ -55,6 +59,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Crash Reporting"
+                android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
                 android:layout_marginTop="@dimen/spacing_normal"
                 android:layout_marginBottom="@dimen/spacing_small" />
@@ -65,7 +70,9 @@
                 android:layout_marginBottom="@dimen/spacing_normal"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -85,6 +92,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Enable Crash Reporting"
+                            android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold" />
 
                         <TextView
@@ -96,7 +104,7 @@
                             android:layout_marginTop="@dimen/spacing_tiny" />
                     </LinearLayout>
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
+                    <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_crash_reporting"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -110,6 +118,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="User Feedback"
+                android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
                 android:layout_marginTop="@dimen/spacing_normal"
                 android:layout_marginBottom="@dimen/spacing_small" />
@@ -120,7 +129,9 @@
                 android:layout_marginBottom="@dimen/spacing_normal"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -140,6 +151,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Enable Feedback Collection"
+                            android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold" />
 
                         <TextView
@@ -151,7 +163,7 @@
                             android:layout_marginTop="@dimen/spacing_tiny" />
                     </LinearLayout>
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
+                    <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_feedback_collection"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -165,6 +177,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Data Management"
+                android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
                 android:layout_marginTop="@dimen/spacing_normal"
                 android:layout_marginBottom="@dimen/spacing_small" />
@@ -176,7 +189,9 @@
                 android:layout_marginBottom="@dimen/spacing_small"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_view_crash_logs"
@@ -197,7 +212,9 @@
                 android:layout_marginBottom="@dimen/spacing_small"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_view_feedback"
@@ -218,7 +235,9 @@
                 android:layout_marginBottom="@dimen/spacing_small"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_export_logs"
@@ -239,6 +258,8 @@
                 android:layout_marginBottom="@dimen/spacing_normal"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
                 app:cardBackgroundColor="?attr/colorErrorContainer">
 
                 <com.google.android.material.button.MaterialButton
@@ -260,6 +281,8 @@
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="@dimen/card_corner_radius_large"
                 app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp"
                 app:cardElevation="0dp">
 
                 <LinearLayout

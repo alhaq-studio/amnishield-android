@@ -72,7 +72,7 @@ class AppBlocker : BaseBlocker() {
 
         val hasLaunchLimit = savedPrefs?.getAppLaunchLimitRule(packageName) != null
         val hasUsageLimit = packageRules.any { it.type == AppBlockScheduleRule.RuleType.BLOCK && it.durationHours > 0 }
-        val isManuallyBlocked = blockedApps.contains(packageName) && (allPackageRules.isEmpty() || packageRules.isNotEmpty())
+        val isManuallyBlocked = blockedApps.contains(packageName) && packageRules.isNotEmpty()
 
         if (packageRules.isEmpty() && !hasLaunchLimit && !hasUsageLimit && !isManuallyBlocked) {
             return AppBlockerResult(isBlocked = false)

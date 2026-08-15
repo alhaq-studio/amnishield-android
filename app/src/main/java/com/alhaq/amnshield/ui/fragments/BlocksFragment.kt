@@ -99,10 +99,12 @@ class BlocksFragment : BaseFeatureFragment() {
         val scheduleCount = allSchedules.count { it.type == AppBlockScheduleRule.RuleType.BLOCK }
         val launchLimitCount = blocksLoader.loadAppLaunchLimitRules().size
 
-        val viewBlockerPrefs = requireContext().getSharedPreferences("view_blocker", Context.MODE_PRIVATE)
-        val legacyEnabled = viewBlockerPrefs.getBoolean("is_enabled", false)
-        val reelBlockerPrefs = requireContext().getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
-        val reelsActive = reelBlockerPrefs.getBoolean("is_enabled", legacyEnabled) && serviceEnabled
+        val reelsMasterEnabled = blocksLoader.isReelBlockerEnabled()
+        val reelsAnyPlatformEnabled = blocksLoader.isReelBlockerYoutubeEnabled() ||
+                blocksLoader.isReelBlockerInstagramEnabled() ||
+                blocksLoader.isReelBlockerTiktokEnabled() ||
+                blocksLoader.isReelBlockerBrowserEnabled()
+        val reelsActive = reelsMasterEnabled && reelsAnyPlatformEnabled && serviceEnabled
 
         val antiUninstallPrefs = requireContext().getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
         val hasDeviceAdmin = isDeviceAdminEnabled(requireContext())

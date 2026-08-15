@@ -86,7 +86,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="amnishield" android:host="activate" />
+                <data android:scheme="amnishield" android:host="license" />
                 <data android:scheme="amnshield" android:host="activate" />
+                <data android:scheme="amnshield" android:host="license" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/activate" />
+                <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/activate" />
+                <data android:scheme="https" android:host="app.amnshield.com" android:pathPrefix="/activate" />
+                <data android:scheme="https" android:host="amnshield.com" android:pathPrefix="/activate" />
+                <data android:scheme="http" android:host="app.amnishield.com" android:pathPrefix="/activate" />
+                <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/activate" />
             </intent-filter>
             <intent-filter>
                 <category android:name="android.intent.category.DEFAULT" />

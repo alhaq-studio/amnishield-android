@@ -13,6 +13,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:paddingTop="8dp"
+        android:textColor="?attr/colorOnSurface"
         android:textStyle="bold"
         tools:text="Protection Warning" />
 
@@ -24,6 +25,7 @@
         android:layout_gravity="center"
         android:gravity="center"
         android:padding="8dp"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="24sp"
         android:textStyle="bold"
         tools:text="TextView" />
@@ -35,9 +37,7 @@
         android:layout_gravity="center"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:visibility="gone">
-
-    </com.alhaq.amnshield.views.HorizontalNumberPicker>
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/proceed_seconds"
@@ -46,6 +46,8 @@
         android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp"
         android:gravity="center"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:text="@string/proceed_in" />
 
     <Button
@@ -60,11 +62,11 @@
 
     <Button
         android:id="@+id/btn_cancel"
+        style="@style/Widget.Material3.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         android:layout_marginBottom="16dp"
-        android:text="@string/cancel"
-        android:textAllCaps="true" />
+        android:text="@string/cancel" />
 
 </LinearLayout>
