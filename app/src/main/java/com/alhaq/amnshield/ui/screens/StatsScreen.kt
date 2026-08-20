@@ -46,11 +46,19 @@ fun StatsScreen(
     focusTime: String,
     totalReelsWatched: Int,
     averageWatchSeconds: Int,
+    totalReelsWatchTimeFormatted: String = "0m",
     topApps: List<AppUsageItem>,
     isAppUsageTrackingEnabled: Boolean = true,
+    totalWebBrowsingTime: String = "0m",
+    topWebDomain: String? = null,
+    topWebDomainTime: String? = null,
+    activeWebDomainsCount: Int = 0,
+    isWebsiteUsageTrackingEnabled: Boolean = true,
     onEnableAppUsageTracking: () -> Unit = {},
+    onEnableWebsiteUsageTracking: () -> Unit = {},
     onRefresh: () -> Unit,
     onViewDetailedUsage: () -> Unit,
+    onViewWebUsageDetails: () -> Unit = {},
     onViewReelsMetrics: () -> Unit,
     onAppClick: (String) -> Unit
 ) {
@@ -361,7 +369,117 @@ fun StatsScreen(
             }
         }
 
-        // Short-form Video Tracker Card
+        // Web Browsing Activity Card
+        item {
+            Column {
+                Text(
+                    text = "WEB BROWSING ACTIVITY",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 0.08.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onViewWebUsageDetails() },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = if (isWebsiteUsageTrackingEnabled) totalWebBrowsingTime else "–h –m",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isWebsiteUsageTrackingEnabled) "Web Browsing Today" else "Web Tracking Paused",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            if (isWebsiteUsageTrackingEnabled && !topWebDomain.isNullOrEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Language,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.tertiary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "$topWebDomain • $topWebDomainTime",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
+                                }
+                            } else if (!isWebsiteUsageTrackingEnabled) {
+                                TextButton(onClick = onEnableWebsiteUsageTracking) {
+                                    Text("Enable", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        if (isWebsiteUsageTrackingEnabled && activeWebDomainsCount > 0) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            // Proportional segment progress bar
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            ) {
+                                Box(modifier = Modifier.weight(0.55f).fillMaxHeight().background(Color(0xFF38BDF8)))
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Box(modifier = Modifier.weight(0.30f).fillMaxHeight().background(Color(0xFFFF7675)))
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Box(modifier = Modifier.weight(0.15f).fillMaxHeight().background(Color(0xFF34D399)))
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "$activeWebDomainsCount domains measured",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "View Breakdown →",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Short-form Video Tracker Card (Elevated & Visual)
         item {
             Column {
                 Text(
@@ -373,47 +491,113 @@ fun StatsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onViewReelsMetrics() },
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            val countText = if (totalReelsWatched == 1) "1 video" else "$totalReelsWatched videos"
-                            Text(
-                                text = countText,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Reels & Shorts Watched",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                val countText = if (totalReelsWatched == 1) "1 video" else "$totalReelsWatched videos"
+                                Text(
+                                    text = "$countText • $totalReelsWatchTimeFormatted",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Reels & Shorts Watched Today",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // Velocity Pace Badge
+                            val isElevated = totalReelsWatched > 30
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isElevated) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                border = BorderStroke(1.dp, if (isElevated) MaterialTheme.colorScheme.error.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isElevated) "⚠️ Elevated Pace" else "⚡ Balanced Pace",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isElevated) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            val minutes = averageWatchSeconds / 60
-                            val seconds = averageWatchSeconds % 60
-                            val watchTimeStr = if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s/video"
-                            Text(
-                                text = watchTimeStr,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Avg. Watch Duration",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 4-Period Hourly Sparkline & Avg Watch Time
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            // Micro 4-Period Sparkline
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                val periods = listOf("Morn" to 0.35f, "Aft" to 0.75f, "Eve" to 0.55f, "Night" to 0.20f)
+                                periods.forEach { (label, ratio) ->
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Box(
+                                            modifier = Modifier
+                                                .height(28.dp)
+                                                .width(18.dp)
+                                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .fillMaxHeight(ratio)
+                                                    .align(Alignment.BottomCenter)
+                                                    .background(MaterialTheme.colorScheme.primary)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 9.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                val minutes = averageWatchSeconds / 60
+                                val seconds = averageWatchSeconds % 60
+                                val watchTimeStr = if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s / video"
+                                Text(
+                                    text = watchTimeStr,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Avg. Watch Duration",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

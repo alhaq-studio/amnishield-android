@@ -47,6 +47,12 @@ class StatsFragment : Fragment() {
     private val focusTimeState = mutableStateOf("0m")
     private val totalReelsWatchedState = mutableStateOf(0)
     private val averageWatchSecondsState = mutableStateOf(0)
+    private val totalReelsWatchTimeFormattedState = mutableStateOf("0m")
+    private val isWebsiteUsageTrackingState = mutableStateOf(true)
+    private val totalWebBrowsingTimeState = mutableStateOf("0m")
+    private val topWebDomainState = mutableStateOf<String?>("youtube.com")
+    private val topWebDomainTimeState = mutableStateOf<String?>("42m")
+    private val activeWebDomainsCountState = mutableStateOf(0)
     private val topAppsState = mutableStateListOf<AppUsageItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,15 +77,36 @@ class StatsFragment : Fragment() {
                         focusTime = focusTimeState.value,
                         totalReelsWatched = totalReelsWatchedState.value,
                         averageWatchSeconds = averageWatchSecondsState.value,
+                        totalReelsWatchTimeFormatted = totalReelsWatchTimeFormattedState.value,
                         topApps = topAppsState,
                         isAppUsageTrackingEnabled = isAppUsageTrackingState.value,
+                        totalWebBrowsingTime = totalWebBrowsingTimeState.value,
+                        topWebDomain = topWebDomainState.value,
+                        topWebDomainTime = topWebDomainTimeState.value,
+                        activeWebDomainsCount = activeWebDomainsCountState.value,
+                        isWebsiteUsageTrackingEnabled = isWebsiteUsageTrackingState.value,
                         onEnableAppUsageTracking = {
                             savedPreferencesLoader.setAppUsageTrackingEnabled(true)
                             isAppUsageTrackingState.value = true
                             loadStats()
                         },
+                        onEnableWebsiteUsageTracking = {
+                            savedPreferencesLoader.setWebsiteUsageTrackingEnabled(true)
+                            isWebsiteUsageTrackingState.value = true
+                            loadStats()
+                        },
                         onRefresh = { loadStats() },
                         onViewDetailedUsage = {
+                            val intent = Intent(requireContext(), FragmentActivity::class.java)
+                            intent.putExtra("fragment", AllAppsUsageFragment.FRAGMENT_ID)
+                            val options = ActivityOptionsCompat.makeCustomAnimation(
+                                requireContext(),
+                                R.anim.fade_in,
+                                R.anim.fade_out
+                            )
+                            startActivity(intent, options.toBundle())
+                        },
+                        onViewWebUsageDetails = {
                             val intent = Intent(requireContext(), FragmentActivity::class.java)
                             intent.putExtra("fragment", AllAppsUsageFragment.FRAGMENT_ID)
                             val options = ActivityOptionsCompat.makeCustomAnimation(
@@ -218,9 +245,31 @@ class StatsFragment : Fragment() {
                             val reelsScrolled = savedPreferencesLoader.getReelsScrolledToday()
                             val reelsWatchTime = savedPreferencesLoader.getReelsWatchTimeSeconds()
                             val avgWatch = if (reelsScrolled > 0) (reelsWatchTime / reelsScrolled).toInt() else 0
+                            val reelsWatchMins = reelsWatchTime / 60
+                            val reelsWatchSecRemainder = reelsWatchTime % 60
+                            totalReelsWatchTimeFormattedState.value = if (reelsWatchMins > 0) "${reelsWatchMins}m ${reelsWatchSecRemainder}s" else "${reelsWatchSecRemainder}s"
 
                             totalReelsWatchedState.value = reelsScrolled
                             averageWatchSecondsState.value = avgWatch
+
+                            // Update web browsing stats
+                            isWebsiteUsageTrackingState.value = savedPreferencesLoader.isWebsiteUsageTrackingEnabled(true)
+                            val domainStats = savedPreferencesLoader.loadWebsiteUsageStats()
+                            val totalWebMillis = domainStats.values.sum()
+                            val totalWebHours = totalWebMillis / (1000 * 60 * 60)
+                            val totalWebMins = (totalWebMillis % (1000 * 60 * 60)) / (1000 * 60)
+                            totalWebBrowsingTimeState.value = if (totalWebHours > 0) "${totalWebHours}h ${totalWebMins}m" else "${totalWebMins}m"
+                            activeWebDomainsCountState.value = domainStats.size
+
+                            val topDomainEntry = domainStats.maxByOrNull { it.value }
+                            if (topDomainEntry != null) {
+                                topWebDomainState.value = topDomainEntry.key
+                                val domMins = topDomainEntry.value / (1000 * 60)
+                                topWebDomainTimeState.value = if (domMins >= 60) "${domMins / 60}h ${domMins % 60}m" else "${domMins}m"
+                            } else {
+                                topWebDomainState.value = null
+                                topWebDomainTimeState.value = null
+                            }
 
                             // Update top apps list
                             topAppsState.clear()
