@@ -114,29 +114,24 @@ class SupabaseRest(
     fun verifyOtp(email: String, token: String, type: String = "email"): Session {
         val trimmedToken = token.trim()
         val trimmedEmail = email.trim().lowercase()
-        return try {
-            val body = JsonObject().apply {
-                addProperty("email", trimmedEmail)
-                addProperty("token", trimmedToken)
-                addProperty("type", type)
-            }
-            parseSession(postAuth("verify", body)) ?: throw IOException("Verification did not return a session")
-        } catch (e: Exception) {
-            if (type != "magiclink") {
-                try {
-                    val fallbackBody = JsonObject().apply {
-                        addProperty("email", trimmedEmail)
-                        addProperty("token", trimmedToken)
-                        addProperty("type", "magiclink")
-                    }
-                    parseSession(postAuth("verify", fallbackBody)) ?: throw IOException("Verification fallback failed")
-                } catch (fallbackEx: Exception) {
-                    throw e
+
+        val typesToTry = if (type == "email") listOf("email", "signup", "magiclink", "recovery") else listOf(type, "email", "signup")
+        var lastError: Exception? = null
+
+        for (tryType in typesToTry) {
+            try {
+                val body = JsonObject().apply {
+                    addProperty("email", trimmedEmail)
+                    addProperty("token", trimmedToken)
+                    addProperty("type", tryType)
                 }
-            } else {
-                throw e
+                val session = parseSession(postAuth("verify", body))
+                if (session != null) return session
+            } catch (e: Exception) {
+                lastError = e
             }
         }
+        throw lastError ?: IOException("Invalid or expired verification code.")
     }
 
     fun fetchProfile(session: Session): UserProfile? {
@@ -338,8 +333,8 @@ class SupabaseRest(
                 }
                 val dev = arr[0].asJsonObject
                 val deviceId = dev.get("id").asString
-                val ownerId = dev.get("owner_id").asString
-                val isManaged = dev.get("is_managed")?.asBoolean ?: false
+                val ownerId = dev.get("owner_id")?.takeIf { !it.isJsonNull }?.asString
+                val isManaged = dev.get("is_managed")?.takeIf { !it.isJsonNull }?.asBoolean ?: false
                 val policyPayload = if (dev.has("policy_payload") && !dev.get("policy_payload").isJsonNull) dev.getAsJsonObject("policy_payload") else null
 
                 // Check expiry

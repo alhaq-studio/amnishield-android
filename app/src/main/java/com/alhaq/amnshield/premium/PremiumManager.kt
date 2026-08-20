@@ -38,18 +38,14 @@ class PremiumManager private constructor(context: Context) {
         val key = preferencesLoader.getLicenseKey() ?: return false
         val email = preferencesLoader.getLicenseEmail() ?: return false
         val payload = LicenseValidator.verifyLicense(key) ?: return false
-        return payload.email == email && payload.expires > System.currentTimeMillis()
+        return payload.email.equals(email, ignoreCase = true) && payload.expires > System.currentTimeMillis()
     }
 
     /**
      * Get the current user type
      */
     fun getUserType(): UserType {
-        val isPremiumActive = if (BuildConfig.IS_PLAYSTORE) {
-            preferencesLoader.isPremiumUser()
-        } else {
-            isLicenseKeyValid()
-        }
+        val isPremiumActive = preferencesLoader.isPremiumUser() || isLicenseKeyValid()
         return when {
             isCompassionateAccessActive() -> UserType.COMPASSIONATE
             isPremiumActive -> UserType.PREMIUM
@@ -79,9 +75,9 @@ class PremiumManager private constructor(context: Context) {
      * Redeem offline license key
      */
     fun redeemLicenseKey(licenseString: String): Boolean {
-        if (BuildConfig.IS_PLAYSTORE) return false
         val payload = LicenseValidator.verifyLicense(licenseString) ?: return false
         preferencesLoader.saveLicenseKey(payload.email, licenseString)
+        preferencesLoader.setPremiumUser(true)
         if (!payload.user_id.isNullOrEmpty()) {
             preferencesLoader.saveUserProfile(payload.user_id, payload.email)
         }

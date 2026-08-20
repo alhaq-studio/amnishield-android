@@ -149,6 +149,13 @@ class LicenseValidatorTest {
         assertEquals("habibmukhlis2006@gmail.com", payload?.email)
     }
 
+    @Test
+    fun testCloudGeneratedLicense() {
+        val cloudKey = "eyJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJ0eXBlIjoibGlmZXRpbWUiLCJleHBpcmVzIjo0OTQwODU4ODQ4MTg4LCJ2ZXJzaW9uIjoxfQ==.TeTV1qsULJtzgqzzO8t7lMKhByJfngXfHVAHgTGwiEjaAoWuIZkk9CdyRANiw/fO3q/I1gnGB+Vnd57RmSZ6pQ=="
+        val payload = LicenseValidator.verifyLicense(cloudKey)
+        assertNotNull("Cloud generated license should verify!", payload)
+    }
+
     private fun generateLicenseString(payload: LicensePayload): String {
         val gson = Gson()
         val payloadJson = gson.toJson(payload)

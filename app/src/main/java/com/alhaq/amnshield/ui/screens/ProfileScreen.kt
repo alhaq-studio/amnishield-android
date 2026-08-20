@@ -37,6 +37,10 @@ import com.alhaq.amnshield.ui.components.AmnShieldButtonStyle
 import com.alhaq.amnshield.ui.components.AmnShieldInputField
 import com.alhaq.amnshield.ui.state.AmnShieldState
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 data class PresetAvatar(
