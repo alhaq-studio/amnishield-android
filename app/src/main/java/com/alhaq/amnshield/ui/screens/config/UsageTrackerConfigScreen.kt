@@ -48,14 +48,15 @@ fun UsageTrackerConfigScreen(
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
 
-    // Dual core toggles
+    // Core feature toggles
     var isReelsTrackingEnabled by remember { mutableStateOf(loader.isReelsTrackingEnabled(true)) }
     var isReelsOverlayEnabled by remember { mutableStateOf(loader.isReelsOverlayCounterEnabled(true)) }
     var isAppUsageTrackingEnabled by remember { mutableStateOf(loader.isAppUsageTrackingEnabled(true)) }
+    var isWebsiteUsageTrackingEnabled by remember { mutableStateOf(loader.isWebsiteUsageTrackingEnabled(true)) }
     var overlayMode by remember { mutableIntStateOf(loader.getOverlayCounterDisplayMode()) }
     var targetAppsCount by remember { mutableIntStateOf(loader.getReelsOverlayApps().size) }
 
-    Log.d(TAG, "Rendering UsageTrackerConfigScreen: reelsTracking=$isReelsTrackingEnabled, appUsageTracking=$isAppUsageTrackingEnabled")
+    Log.d(TAG, "Rendering UsageTrackerConfigScreen: reelsTracking=$isReelsTrackingEnabled, appUsageTracking=$isAppUsageTrackingEnabled, websiteTracking=$isWebsiteUsageTrackingEnabled")
 
     Scaffold(
         topBar = {
@@ -445,7 +446,176 @@ fun UsageTrackerConfigScreen(
             }
 
             // =========================================================================
-            // 3. TRACKER DISPLAY & BEHAVIORAL TWEAKS
+            // 3. TOGGLE 3: WEBSITE BROWSING USAGE TRACKING & PRIVACY
+            // =========================================================================
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Website Browsing Usage Tracking",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isWebsiteUsageTrackingEnabled) "Logging domain screen time 100% on-device" else "Website tracking paused — domain stats blurred",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isWebsiteUsageTrackingEnabled,
+                            onCheckedChange = { checked ->
+                                Log.i(TAG, "Website Usage Tracking toggle changed: $checked")
+                                isWebsiteUsageTrackingEnabled = checked
+                                loader.setWebsiteUsageTrackingEnabled(checked)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Live Interactive Preview of Domain Stats with Real-Time Blur Effect
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .then(if (!isWebsiteUsageTrackingEnabled) Modifier.blur(14.dp) else Modifier)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "TODAY'S WEB BROWSING",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                                Text(
+                                    text = "1h 24m",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LinearProgressIndicator(
+                                progress = { 0.45f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = MaterialTheme.colorScheme.tertiary,
+                                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "• youtube.com: 42m\n• reddit.com: 24m\n• github.com: 12m",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Frosted Glass Privacy Overlay when Website Tracking is Disabled
+                        if (!isWebsiteUsageTrackingEnabled) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.VisibilityOff,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Website Usage Tracking Paused",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Web domain metrics are paused and blurred for privacy",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Privacy Guarantee Notice
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "100% On-Device: Web domains are measured locally. Search queries, form data, and URLs are never saved or sent to any server.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 14.sp
+                        )
+                    }
+                }
+            }
+
+            // =========================================================================
+            // 4. TRACKER DISPLAY & BEHAVIORAL TWEAKS
             // =========================================================================
             Card(
                 shape = RoundedCornerShape(20.dp),

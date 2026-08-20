@@ -57,6 +57,18 @@ class AmnShieldViewModel : ViewModel() {
         _state.update { it.copy(isUsageLimitEnabled = !it.isUsageLimitEnabled) }
     }
 
+    fun setAppUsageTrackingEnabled(enabled: Boolean) {
+        _state.update { it.copy(isAppUsageTrackingEnabled = enabled) }
+    }
+
+    fun setWebsiteUsageTrackingEnabled(enabled: Boolean) {
+        _state.update { it.copy(isWebsiteUsageTrackingEnabled = enabled) }
+    }
+
+    fun setReelsTrackingEnabled(enabled: Boolean) {
+        _state.update { it.copy(isReelsTrackingEnabled = enabled) }
+    }
+
     fun toggleFocusMode() {
         _state.update { 
             val newActive = !it.isFocusModeActive

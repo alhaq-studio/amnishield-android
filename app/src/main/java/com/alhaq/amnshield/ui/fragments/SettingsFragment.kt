@@ -141,7 +141,27 @@ class SettingsFragment : Fragment() {
                         },
                         onToggleUsageLimit = { enabled ->
                             savedPreferencesLoader.setUsageTrackerFeatureEnabled(enabled)
-                            viewModel.loadState(viewModel.state.value.copy(isUsageLimitEnabled = enabled))
+                            savedPreferencesLoader.setAppUsageTrackingEnabled(enabled)
+                            viewModel.loadState(viewModel.state.value.copy(
+                                isUsageLimitEnabled = enabled,
+                                isAppUsageTrackingEnabled = enabled
+                            ))
+                        },
+                        onToggleAppUsageTracking = { enabled ->
+                            savedPreferencesLoader.setAppUsageTrackingEnabled(enabled)
+                            savedPreferencesLoader.setUsageTrackerFeatureEnabled(enabled)
+                            viewModel.loadState(viewModel.state.value.copy(
+                                isAppUsageTrackingEnabled = enabled,
+                                isUsageLimitEnabled = enabled
+                            ))
+                        },
+                        onToggleWebsiteUsageTracking = { enabled ->
+                            savedPreferencesLoader.setWebsiteUsageTrackingEnabled(enabled)
+                            viewModel.loadState(viewModel.state.value.copy(isWebsiteUsageTrackingEnabled = enabled))
+                        },
+                        onToggleReelsTracking = { enabled ->
+                            savedPreferencesLoader.setReelsTrackingEnabled(enabled)
+                            viewModel.loadState(viewModel.state.value.copy(isReelsTrackingEnabled = enabled))
                         },
                         onBack = {
                             if (!parentFragmentManager.popBackStackImmediate()) {
@@ -163,6 +183,9 @@ class SettingsFragment : Fragment() {
     private fun loadSettingsState() {
         val webFilterEnabled = savedPreferencesLoader.isWebsiteBlockerEnabled()
         val usageTrackerEnabled = savedPreferencesLoader.isUsageTrackerFeatureEnabled()
+        val appUsageTrackingEnabled = savedPreferencesLoader.isAppUsageTrackingEnabled()
+        val websiteUsageTrackingEnabled = savedPreferencesLoader.isWebsiteUsageTrackingEnabled()
+        val reelsTrackingEnabled = savedPreferencesLoader.isReelsTrackingEnabled()
         val account = googleSignInHelper.getLastSignedInAccount()
         val name = account?.displayName ?: "Alhaq DST"
         val email = account?.email ?: "alhaq.dst@gmail.com"
@@ -173,6 +196,9 @@ class SettingsFragment : Fragment() {
             viewModel.state.value.copy(
                 isWebFilterEnabled = webFilterEnabled,
                 isUsageLimitEnabled = usageTrackerEnabled,
+                isAppUsageTrackingEnabled = appUsageTrackingEnabled,
+                isWebsiteUsageTrackingEnabled = websiteUsageTrackingEnabled,
+                isReelsTrackingEnabled = reelsTrackingEnabled,
                 userName = name,
                 userEmail = email,
                 isAdvancedMode = isAdvanced

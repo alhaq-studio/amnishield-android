@@ -32,6 +32,14 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +82,7 @@ class AllAppsUsageFragment : Fragment() {
     private lateinit var savedPreferencesLoader: SavedPreferencesLoader
 
     private var selectedPackageForDonut: String? = null
+    private var isWebsiteModeActive: Boolean = false
 
     val selectIgnoredAppsLauncher =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -442,27 +451,144 @@ class AllAppsUsageFragment : Fragment() {
             )
         }
 
+        val domainStatsMap = savedPreferencesLoader.loadWebsiteUsageStats()
+        val totalWebMillis = domainStatsMap.values.sum().coerceAtLeast(1L)
+        val topWebsites = domainStatsMap.entries.sortedByDescending { it.value }.map { entry ->
+            AppUsageItem(
+                name = entry.key,
+                packageName = entry.key,
+                timeFormatted = TimeTools.formatTime(entry.value, false),
+                progress = (entry.value.toFloat() / totalWebMillis.toFloat())
+            )
+        }
+        val totalWebFormatted = TimeTools.formatTime(totalWebMillis, false)
+
         binding.composeDonutChart.setContent {
             val activeTheme = ThemeUtils.resolveAppTheme(requireContext())
+            var currentMode by remember { mutableStateOf(if (isWebsiteModeActive) "websites" else "apps") }
+            val isAppTrackingOn = savedPreferencesLoader.isAppUsageTrackingEnabled()
+            val isWebTrackingOn = savedPreferencesLoader.isWebsiteUsageTrackingEnabled()
+
             AmnShieldTheme(appTheme = activeTheme) {
-                InteractiveScreenTimeDonut(
-                    totalDurationFormatted = if (totalMillis > 0) totalFormatted else "0m",
-                    apps = topApps,
-                    selectedAppPackage = selectedPackageForDonut,
-                    onAppSelected = { pkg ->
-                        selectedPackageForDonut = if (selectedPackageForDonut == pkg) null else pkg
-                        if (pkg != null && pkg != "other_apps") {
-                            val matchedStat = statsList.find { it.packageName == pkg }
-                            if (matchedStat != null) {
-                                activity?.supportFragmentManager?.beginTransaction()
-                                    ?.setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                                    ?.replace(R.id.fragment_holder, AppUsageBreakdown(matchedStat))
-                                    ?.addToBackStack(null)
-                                    ?.commit()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Category Selector Pills: Apps vs Websites
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilterChip(
+                            selected = currentMode == "apps",
+                            onClick = {
+                                currentMode = "apps"
+                                isWebsiteModeActive = false
+                            },
+                            label = { Text("📱 Apps", fontSize = 13.sp) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        FilterChip(
+                            selected = currentMode == "websites",
+                            onClick = {
+                                currentMode = "websites"
+                                isWebsiteModeActive = true
+                            },
+                            label = { Text("🌐 Websites", fontSize = 13.sp) },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (currentMode == "apps") {
+                        if (!isAppTrackingOn) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "🔒 App Usage Tracking Paused",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Enable App Tracking in Settings to log screen time.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
+                        } else {
+                            InteractiveScreenTimeDonut(
+                                totalDurationFormatted = if (totalMillis > 0) totalFormatted else "0m",
+                                apps = topApps,
+                                selectedAppPackage = selectedPackageForDonut,
+                                onAppSelected = { pkg ->
+                                    selectedPackageForDonut = if (selectedPackageForDonut == pkg) null else pkg
+                                    if (pkg != null && pkg != "other_apps") {
+                                        val matchedStat = statsList.find { it.packageName == pkg }
+                                        if (matchedStat != null) {
+                                            activity?.supportFragmentManager?.beginTransaction()
+                                                ?.setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
+                                                ?.replace(R.id.fragment_holder, AppUsageBreakdown(matchedStat))
+                                                ?.addToBackStack(null)
+                                                ?.commit()
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    } else {
+                        if (!isWebTrackingOn) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "🔒 Website Usage Tracking Paused",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Enable Website Tracking in Settings to record domain durations on-device.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        } else {
+                            InteractiveScreenTimeDonut(
+                                totalDurationFormatted = if (totalWebMillis > 0) totalWebFormatted else "0m",
+                                apps = topWebsites,
+                                selectedAppPackage = selectedPackageForDonut,
+                                onAppSelected = { domain ->
+                                    selectedPackageForDonut = if (selectedPackageForDonut == domain) null else domain
+                                }
+                            )
                         }
                     }
-                )
+                }
             }
         }
     }

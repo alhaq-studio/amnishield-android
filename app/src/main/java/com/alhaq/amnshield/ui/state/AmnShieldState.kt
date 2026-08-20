@@ -102,6 +102,9 @@ data class AmnShieldState(
     val isWebFilterEnabled: Boolean = true,
     val isScheduleEnabled: Boolean = false,
     val isUsageLimitEnabled: Boolean = true,
+    val isAppUsageTrackingEnabled: Boolean = true,
+    val isWebsiteUsageTrackingEnabled: Boolean = true,
+    val isReelsTrackingEnabled: Boolean = true,
     val isFocusModeActive: Boolean = false,
 
     // Stats

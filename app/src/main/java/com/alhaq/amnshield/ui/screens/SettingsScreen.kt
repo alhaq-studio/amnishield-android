@@ -45,6 +45,9 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onToggleWebFilter: (Boolean) -> Unit,
     onToggleUsageLimit: (Boolean) -> Unit,
+    onToggleAppUsageTracking: (Boolean) -> Unit = {},
+    onToggleWebsiteUsageTracking: (Boolean) -> Unit = {},
+    onToggleReelsTracking: (Boolean) -> Unit = {},
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -328,14 +331,52 @@ fun SettingsScreen(
                     )
                 ) {
                     Column {
-                        // Feature Toggle: Usage Tracker
+                        // Feature Toggle: App Usage Tracker
                         SettingsToggleRow(
                             icon = Icons.Default.BarChart,
-                            title = "Usage Tracker",
-                            checked = state.isUsageLimitEnabled,
-                            onCheckedChange = { onToggleUsageLimit(it) }
+                            title = "App Usage Tracker",
+                            checked = state.isAppUsageTrackingEnabled,
+                            onCheckedChange = { onToggleAppUsageTracking(it) }
                         )
 
+                        Divider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        // Feature Toggle: Website Usage Tracker
+                        SettingsToggleRow(
+                            icon = Icons.Default.Language,
+                            title = "Website Usage Tracker",
+                            checked = state.isWebsiteUsageTrackingEnabled,
+                            onCheckedChange = { onToggleWebsiteUsageTracking(it) }
+                        )
+
+                        Divider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        // Feature Toggle: Reels Doom-Scroll Tracker
+                        SettingsToggleRow(
+                            icon = Icons.Default.PlayCircle,
+                            title = "Reels & Shorts Tracker",
+                            checked = state.isReelsTrackingEnabled,
+                            onCheckedChange = { onToggleReelsTracking(it) }
+                        )
+
+                        Divider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        // Feature Toggle: Web Filter Engine
+                        SettingsToggleRow(
+                            icon = Icons.Default.FilterAlt,
+                            title = "Web Filter & Protection",
+                            checked = state.isWebFilterEnabled,
+                            onCheckedChange = { onToggleWebFilter(it) }
+                        )
                     }
                 }
             }
