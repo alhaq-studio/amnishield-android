@@ -20,9 +20,11 @@ import com.alhaq.amnshield.blockers.AppBlocker
 import com.alhaq.amnshield.data.blockers.AppBlockScheduleRule
 import com.alhaq.amnshield.blockers.FocusModeBlocker
 import com.alhaq.amnshield.blockers.KeywordBlocker
+import com.alhaq.amnshield.blockers.HomeFeedNavigator
 import com.alhaq.amnshield.blockers.ReelBlocker
 import com.alhaq.amnshield.blockers.ViewBlocker
 import com.alhaq.amnshield.premium.PremiumManager
+import com.alhaq.amnshield.trackers.ReelDetectionEngine
 import com.alhaq.amnshield.ui.activity.MainActivity
 import com.alhaq.amnshield.ui.activity.WarningActivity
 import com.alhaq.amnshield.utils.BlockingStatsManager
@@ -64,6 +66,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private lateinit var premiumManager: PremiumManager
     private lateinit var crashLogger: CrashLogger
     private lateinit var handGestureOverlayManager: com.alhaq.amnshield.ui.overlay.HandGestureOverlayManager
+    private val homeFeedNavigator = HomeFeedNavigator()
 
     private var appBlockerWarningConfig = MainActivity.WarningData()
     private var viewBlockerWarningConfig = MainActivity.WarningData()
@@ -88,21 +91,75 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private var lastTrackedLaunchPackage: String? = null
 
     private var lastReelScrollTime = 0L
+    private var sessionReelsScrolled = 0
+    private var sessionReelsWatchSeconds = 0L
+    private var currentReelsPackage: String? = null
+    private val reelDetectionEngine = ReelDetectionEngine()
+    private var usageStatOverlayManager: com.alhaq.amnshield.ui.overlay.UsageStatOverlayManager? = null
+
     private val reelsTrackingHandler = Handler(Looper.getMainLooper())
     private val reelsTrackingRunnable = object : Runnable {
         override fun run() {
             try {
-                if (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) {
+                val isReelsTrackingEnabled = savedPreferencesLoader.isReelsTrackingEnabled(true)
+                val isReelsBlockerEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)
+
+                if (isReelsTrackingEnabled || isReelsBlockerEnabled) {
                     val root = rootInActiveWindow
                     if (root != null) {
                         val pkg = root.packageName?.toString().orEmpty()
-                        if (ReelBlocker.REEL_TARGET_PACKAGES.contains(pkg) || ReelBlocker.isBrowserPackage(pkg)) {
-                            val surfaceId = reelBlocker.detectReelSurfaceId(root, pkg)
-                            if (surfaceId != null) {
-                                savedPreferencesLoader.addReelsWatchTime(1L)
+                        if (ReelDetectionEngine.isReelCandidatePackage(pkg)) {
+                            val detection = reelDetectionEngine.detectReelSurface(root, pkg)
+                            if (detection != null && detection.isReelSurface) {
+                                if (currentReelsPackage != pkg) {
+                                    currentReelsPackage = pkg
+                                    sessionReelsWatchSeconds = 0L
+                                    sessionReelsScrolled = 0
+                                    reelDetectionEngine.resetSession(pkg)
+                                }
+                                sessionReelsWatchSeconds++
+                                savedPreferencesLoader.addReelsWatchTime(1L, pkg)
                                 reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+
+                                val comparator = reelDetectionEngine.extractReelComparator(root, pkg, null)
+                                val isProgression = reelDetectionEngine.checkReelProgression(pkg, comparator)
+                                if (isProgression) {
+                                    sessionReelsScrolled++
+                                    savedPreferencesLoader.incrementReelsScrolled(pkg)
+                                    reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                                }
+
+                                val isOverlayEnabled = savedPreferencesLoader.isReelsOverlayCounterEnabled(true)
+                                val overlayApps = savedPreferencesLoader.getReelsOverlayApps()
+                                if (isOverlayEnabled && (overlayApps.contains(pkg) || overlayApps.isEmpty())) {
+                                    val overlayMgr = usageStatOverlayManager ?: com.alhaq.amnshield.ui.overlay.UsageStatOverlayManager(this@AmnShieldAccessibilityService).also {
+                                        usageStatOverlayManager = it
+                                    }
+                                    if (!overlayMgr.isOverlayVisible) {
+                                        overlayMgr.startDisplaying()
+                                    }
+                                    val mode = savedPreferencesLoader.getOverlayCounterDisplayMode()
+                                    overlayMgr.updateCounter(sessionReelsScrolled, sessionReelsWatchSeconds, mode)
+                                }
+                            } else {
+                                if (currentReelsPackage != null) {
+                                    reelDetectionEngine.resetSession(currentReelsPackage)
+                                    currentReelsPackage = null
+                                }
+                                if (usageStatOverlayManager?.isOverlayVisible == true) {
+                                    usageStatOverlayManager?.removeOverlay()
+                                }
+                            }
+                        } else {
+                            if (currentReelsPackage != null) {
+                                reelDetectionEngine.resetSession(currentReelsPackage)
+                                currentReelsPackage = null
+                            }
+                            if (usageStatOverlayManager?.isOverlayVisible == true) {
+                                usageStatOverlayManager?.removeOverlay()
                             }
                         }
+                        @Suppress("DEPRECATION")
                         root.recycle()
                     }
                 }
@@ -231,22 +288,42 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 cachedDefaultLauncher = getDefaultLauncherPackage()
             }
 
-            if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
+                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
                 val activePackage = event.packageName?.toString().orEmpty()
-                val isReelsEnabled = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
-                if (isReelsEnabled && (ReelBlocker.REEL_TARGET_PACKAGES.contains(activePackage) || ReelBlocker.isBrowserPackage(activePackage))) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastReelScrollTime > 1500L) {
-                        val root = rootInActiveWindow
-                        if (root != null) {
-                            val surfaceId = reelBlocker.detectReelSurfaceId(root, activePackage)
-                            if (surfaceId != null) {
+                val isReelsTracking = savedPreferencesLoader.isReelsTrackingEnabled(true)
+                val isReelsBlocker = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
+                if ((isReelsTracking || isReelsBlocker) && ReelDetectionEngine.isReelCandidatePackage(activePackage)) {
+                    val root = rootInActiveWindow
+                    if (root != null) {
+                        val detection = reelDetectionEngine.detectReelSurface(root, activePackage)
+                        if (detection != null && detection.isReelSurface) {
+                            val comparator = reelDetectionEngine.extractReelComparator(root, activePackage, event)
+                            val isProgression = reelDetectionEngine.checkReelProgression(activePackage, comparator)
+
+                            if (isProgression) {
+                                val now = System.currentTimeMillis()
                                 lastReelScrollTime = now
+                                sessionReelsScrolled++
                                 savedPreferencesLoader.incrementReelsScrolled(activePackage)
                                 reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
                             }
-                            root.recycle()
+
+                            val isOverlayEnabled = savedPreferencesLoader.isReelsOverlayCounterEnabled(true)
+                            val overlayApps = savedPreferencesLoader.getReelsOverlayApps()
+                            if (isOverlayEnabled && (overlayApps.contains(activePackage) || overlayApps.isEmpty())) {
+                                val overlayMgr = usageStatOverlayManager ?: com.alhaq.amnshield.ui.overlay.UsageStatOverlayManager(this@AmnShieldAccessibilityService).also {
+                                    usageStatOverlayManager = it
+                                }
+                                if (!overlayMgr.isOverlayVisible) {
+                                    overlayMgr.startDisplaying()
+                                }
+                                val mode = savedPreferencesLoader.getOverlayCounterDisplayMode()
+                                overlayMgr.updateCounter(sessionReelsScrolled, sessionReelsWatchSeconds, mode)
+                            }
                         }
+                        @Suppress("DEPRECATION")
+                        root.recycle()
                     }
                 }
             }
@@ -424,9 +501,14 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
 
                 try {
-                    val reelBlockerResult = reelBlocker.doesReelNeedToBeBlocked(rootNode, packageName)
-                    if (reelBlockerResult != null && reelBlockerResult.isBlocked) {
-                        blockingStatsManager.recordViewBlock(packageName, reelBlockerResult.viewId)
+                    val rawResult = reelBlocker.doesReelNeedToBeBlocked(rootNode, packageName)
+                    if (rawResult != null && rawResult.isBlocked) {
+                        blockingStatsManager.recordViewBlock(packageName, rawResult.viewId)
+                        // Attach the user's chosen block response mode (loaded here rather than
+                        // inside ReelBlocker to keep the blocker class UI-agnostic).
+                        val reelBlockerResult = rawResult.copy(
+                            blockResponseMode = savedPreferencesLoader.getReelBlockerBlockResponseMode()
+                        )
                         handleReelBlockerResult(reelBlockerResult)
                         return
                     }
@@ -442,7 +524,30 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private fun handleReelBlockerResult(result: ReelBlocker.ReelBlockerResult?) {
         if (result == null || !result.isBlocked) return
 
-        pressBack()
+        when (result.blockResponseMode) {
+            ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT -> {
+                // Try to navigate to the platform home feed; fall back to GLOBAL_ACTION_BACK
+                val root = rootInActiveWindow
+                val navigated = if (root != null) {
+                    val pkg = root.packageName?.toString().orEmpty()
+                    @Suppress("DEPRECATION")
+                    val success = homeFeedNavigator.navigateToHomeFeed(root, pkg)
+                    root.recycle()
+                    success
+                } else false
+                if (!navigated) pressBack()
+                // Home Feed Redirect mode is silent — no warning overlay
+                return
+            }
+            ReelBlocker.BlockResponseMode.ANDROID_HOME -> {
+                pressHome()
+                // Silent — no warning overlay for Android Home mode
+                return
+            }
+            ReelBlocker.BlockResponseMode.HARD_BLOCK -> {
+                pressBack()
+            }
+        }
 
         if (viewBlockerWarningConfig.isWarningDialogHidden) return
         val dialogIntent = Intent(this, WarningActivity::class.java)
@@ -526,7 +631,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         when (feedbackMode) {
             Constants.KEYWORD_FEEDBACK_HAND_GESTURE -> {
                 if (::handGestureOverlayManager.isInitialized) {
-                    handGestureOverlayManager.showGestureOverlay(result.resultDetectWord) {
+                    handGestureOverlayManager.showGestureOverlay(result.resultDetectWord, isHomePress) {
                         if (isHomePress) pressHome() else pressBack()
                     }
                 } else {
@@ -642,6 +747,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun trackAppLaunch(packageName: String) {
+        if (!savedPreferencesLoader.isAppUsageTrackingEnabled(true)) return
         try {
             savedPreferencesLoader.trackAppLaunch(packageName)
         } catch (e: Exception) {
@@ -1290,6 +1396,8 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
             if (::handGestureOverlayManager.isInitialized) {
                 handGestureOverlayManager.dismissOverlay()
             }
+            usageStatOverlayManager?.removeOverlay()
+            usageStatOverlayManager = null
         } catch (_: Exception) {
         }
         eventChannel.close()

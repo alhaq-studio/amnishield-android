@@ -25,11 +25,11 @@
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="👑"
-                android:textSize="44sp" />
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:srcCompat="@drawable/ic_premium"
+                app:tint="?attr/colorPrimary" />
 
             <TextView
                 style="@style/TextAppearance.Material3.HeadlineMedium"
@@ -107,7 +107,7 @@
                             style="@style/TextAppearance.Material3.TitleMedium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="✨ Included in AmnShield Pro:"
+                            android:text="Included in AmnShield Pro:"
                             android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
 
@@ -117,7 +117,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:lineSpacingExtra="3dp"
-                            android:text="🔄 Cross-Platform Cloud Sync (Android, Windows, Web)\n🔒 Anti-Uninstall &amp; Removal Enforcement\n🔑 Passcode &amp; PIN Settings Protection\n💖 Support Open-Source AI Filter Development"
+                            android:text="• Cross-Platform Cloud Sync (Android, Windows, Web)\n• Anti-Uninstall &amp; Removal Enforcement\n• Passcode &amp; PIN Settings Protection\n• Support Open-Source AI Filter Development"
                             android:textColor="?attr/colorOnSurface" />
 
                     </LinearLayout>
@@ -242,7 +242,68 @@
 
                 </LinearLayout>
 
-                <!-- License Key Activation Card -->
+                <!-- Lifetime Pass Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_lifetime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#8B5CF6"
+                    app:strokeWidth="1.5dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/TextAppearance.Material3.LabelMedium"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="LIFETIME PASS (PAY ONCE)"
+                                android:textColor="#8B5CF6"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/txtLifetimePrice"
+                                style="@style/TextAppearance.Material3.HeadlineSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="$89.99"
+                                android:textColor="#8B5CF6"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                style="@style/TextAppearance.Material3.BodySmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Never pay again. 100-year validity."
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnBuyLifetime"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:backgroundTint="#8B5CF6"
+                            android:text="Get Lifetime"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- License Key & Email OTP Activation Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -262,16 +323,32 @@
                             style="@style/TextAppearance.Material3.TitleSmall"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Have a Pro License Key?"
+                            android:text="Already Purchased Pro?"
                             android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSignInEmailOtp"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Sign In with Email Code (OTP)" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodySmall"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Or activate with your offline license key:"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/til_key"
                             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginTop="6dp"
                             android:hint="Paste License Key">
 
                             <com.google.android.material.textfield.TextInputEditText

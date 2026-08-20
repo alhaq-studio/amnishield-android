@@ -21,65 +21,55 @@ Deno.serve(async (req) => {
   try {
     const { priceId, plan, customerEmail, successUrl, cancelUrl, mode } = await req.json();
 
+    const isLifetime = plan === "lifetime" || priceId === "lifetime" || mode === "payment";
+    const isAnnual = plan === "annual" || priceId === "annual" || String(priceId).includes("annual");
+
     let lineItem: any;
 
     if (priceId && priceId.startsWith("price_")) {
       lineItem = { price: priceId, quantity: 1 };
+    } else if (isLifetime) {
+      lineItem = {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: "AmniShield Pro (Lifetime Pass)",
+            description: "Unified Cross-Platform Digital Protection Suite — One-Time Purchase, Lifetime ECDSA Key",
+          },
+          unit_amount: 8999, // $89.99 one-time
+        },
+        quantity: 1,
+      };
     } else {
-      const isAnnual = plan === "annual" || priceId === "annual";
       lineItem = {
         price_data: {
           currency: "usd",
           product_data: {
             name: isAnnual ? "AmniShield Pro (Annual Pass)" : "AmniShield Pro (Monthly Subscription)",
-            description: "Unified Cross-Platform Digital Protection Suite (Android, Windows PC, Web Extensions)"
+            description: "Unified Cross-Platform Digital Protection Suite (Android, Windows PC, Web Extensions)",
           },
           unit_amount: isAnnual ? 3999 : 499,
           recurring: {
-            interval: isAnnual ? "year" : "month"
-          }
+            interval: isAnnual ? "year" : "month",
+          },
         },
-        quantity: 1
+        quantity: 1,
       };
     }
 
-    // Create Checkout Session with fallback handling
-    let session;
-    try {
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items: [lineItem],
-        mode: mode || "subscription",
-        customer_email: customerEmail || undefined,
-        success_url: successUrl || "https://app.amnishield.com/?checkout=success",
-        cancel_url: cancelUrl || "https://amnishield.com/#pricing",
-      });
-    } catch (createErr: any) {
-      if (createErr.message.includes("No such price")) {
-        const isAnnual = plan === "annual" || priceId === "annual" || String(priceId).includes("annual");
-        session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          line_items: [{
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: isAnnual ? "AmniShield Pro (Annual Pass)" : "AmniShield Pro (Monthly Subscription)",
-                description: "Unified Cross-Platform Digital Protection Suite"
-              },
-              unit_amount: isAnnual ? 3999 : 499,
-              recurring: { interval: isAnnual ? "year" : "month" }
-            },
-            quantity: 1
-          }],
-          mode: mode || "subscription",
-          customer_email: customerEmail || undefined,
-          success_url: successUrl || "https://app.amnishield.com/?checkout=success",
-          cancel_url: cancelUrl || "https://amnishield.com/#pricing",
-        });
-      } else {
-        throw createErr;
-      }
-    }
+    const sessionMode = isLifetime ? "payment" : (mode || "subscription");
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [lineItem],
+      mode: sessionMode,
+      customer_email: customerEmail || undefined,
+      metadata: {
+        plan: isLifetime ? "lifetime" : (isAnnual ? "annual" : "monthly"),
+      },
+      success_url: successUrl || "https://app.amnishield.com/?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      cancel_url: cancelUrl || "https://amnishield.com/#pricing",
+    });
 
     return new Response(
       JSON.stringify({

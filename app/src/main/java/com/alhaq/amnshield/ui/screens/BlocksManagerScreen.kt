@@ -10,6 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Launch
+import androidx.compose.material.icons.automirrored.outlined.Rule
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -40,7 +43,7 @@ fun BlocksManagerScreen(
     onEditRule: (ScheduleRule) -> Unit = {},
     onToggleRule: (String) -> Unit,
     onDeleteRule: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: (() -> Unit)? = null
 ) {
     var selectedFilter by remember { mutableStateOf(initialFilter) }
 
@@ -71,8 +74,13 @@ fun BlocksManagerScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -155,9 +163,9 @@ fun BlocksManagerScreen(
                             Icon(
                                 imageVector = when (selectedFilter) {
                                     "Schedules" -> Icons.Outlined.CalendarToday
-                                    "Limits" -> Icons.Outlined.Launch
+                                    "Limits" -> Icons.AutoMirrored.Outlined.Launch
                                     "Cheat Hours" -> Icons.Outlined.HourglassEmpty
-                                    else -> Icons.Outlined.Rule
+                                    else -> Icons.AutoMirrored.Outlined.Rule
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(36.dp),
@@ -359,7 +367,7 @@ fun RuleItemCard(
                     SuggestionChip(
                         onClick = {},
                         label = { Text("Launch: ${rule.launchLimitCount}x/day", fontSize = 11.sp) },
-                        icon = { Icon(imageVector = Icons.Outlined.Launch, contentDescription = null, modifier = Modifier.size(12.dp)) },
+                        icon = { Icon(imageVector = Icons.AutoMirrored.Outlined.Launch, contentDescription = null, modifier = Modifier.size(12.dp)) },
                         colors = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = Color(0xFF8B5CF6).copy(alpha = 0.08f),
                             labelColor = Color(0xFF8B5CF6),

@@ -48,7 +48,7 @@
                     android:id="@+id/radio_hand_gesture"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="✋ Animated Hand Gesture Overlay"
+                    android:text="Animated Hand Gesture Overlay"
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
@@ -59,6 +59,18 @@
                     android:layout_marginStart="32dp"
                     android:text="Displays a floating stop hand gesture with haptic vibration, auto-navigating away safely."
                     android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_preview_hand_gesture"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:layout_marginTop="4dp"
+                    android:text="Preview Hand Gesture"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_hand_gesture_stop"
+                    app:iconSize="16dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -82,7 +94,7 @@
                     android:id="@+id/radio_warning_screen"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🛑 Warning Screen Dialog"
+                    android:text="Warning Screen Dialog"
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
@@ -115,7 +127,7 @@
                     android:id="@+id/radio_silent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Silent / Instant Intercept"
+                    android:text="Silent / Instant Intercept"
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 

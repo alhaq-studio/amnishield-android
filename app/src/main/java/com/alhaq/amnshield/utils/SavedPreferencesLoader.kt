@@ -130,6 +130,17 @@ class SavedPreferencesLoader(val context: Context) {
         sharedPreferences.edit().putInt("daily_limit", limit).apply()
     }
 
+    fun getReelBlockerBlockResponseMode(): ReelBlocker.BlockResponseMode {
+        val raw = context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
+            .getInt("block_response_mode", ReelBlocker.BlockResponseMode.HARD_BLOCK.value)
+        return ReelBlocker.BlockResponseMode.fromInt(raw)
+    }
+
+    fun setReelBlockerBlockResponseMode(mode: ReelBlocker.BlockResponseMode) {
+        context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
+            .edit().putInt("block_response_mode", mode.value).apply()
+    }
+
     // -- Reel Blocker per-platform / browser toggles ---------------------------
     // All toggles default to `false` (opt-in model) so fresh installs have zero background rules.
 
@@ -763,7 +774,12 @@ class SavedPreferencesLoader(val context: Context) {
     }
 
     fun isKeywordBlockerFeatureEnabled(default: Boolean = false): Boolean {
-        return getFeatureTogglesPrefs().getBoolean("keyword_blocker_enabled", default)
+        val prefs = getFeatureTogglesPrefs()
+        if (prefs.contains("keyword_blocker_enabled")) {
+            return prefs.getBoolean("keyword_blocker_enabled", default)
+        }
+        val hasKeywords = loadBlockedKeywords().isNotEmpty() || isKeywordBlockerAdultPackEnabled()
+        return if (hasKeywords) true else default
     }
 
     fun setKeywordBlockerFeatureEnabled(enabled: Boolean, updateManual: Boolean = true) {
@@ -774,12 +790,92 @@ class SavedPreferencesLoader(val context: Context) {
         editor.apply()
     }
 
-    fun isUsageTrackerFeatureEnabled(default: Boolean = false): Boolean {
+    // ==================== Usage Tracker & Doom Scrolling ====================
+    companion object {
+        const val OVERLAY_MODE_COUNT = 0
+        const val OVERLAY_MODE_TIME = 1
+        const val OVERLAY_MODE_BOTH = 2
+
+        val DEFAULT_REELS_OVERLAY_APPS = setOf(
+            "com.instagram.android",
+            "com.google.android.youtube",
+            "com.zhiliaoapp.musically",
+            "com.facebook.katana",
+            "com.reddit.frontpage",
+            "com.twitter.android",
+            "com.snapchat.android"
+        )
+    }
+
+    fun isUsageTrackerFeatureEnabled(default: Boolean = true): Boolean {
         return getFeatureTogglesPrefs().getBoolean("usage_tracker_enabled", default)
     }
 
     fun setUsageTrackerFeatureEnabled(enabled: Boolean) {
         getFeatureTogglesPrefs().edit().putBoolean("usage_tracker_enabled", enabled).apply()
+    }
+
+    /**
+     * Master switch for global app usage screen-time recording.
+     * When disabled, app usage stats and charts across the UI are instantly blurred.
+     */
+    fun isAppUsageTrackingEnabled(default: Boolean = true): Boolean {
+        return getFeatureTogglesPrefs().getBoolean("app_usage_tracking_enabled", default)
+    }
+
+    fun setAppUsageTrackingEnabled(enabled: Boolean) {
+        getFeatureTogglesPrefs().edit().putBoolean("app_usage_tracking_enabled", enabled).apply()
+    }
+
+    /**
+     * Master switch for Reels & Shorts doom-scrolling tracking.
+     * When enabled, scrolling events in short-form video surfaces are tracked and synced to ReelsMetrics.
+     */
+    fun isReelsTrackingEnabled(default: Boolean = true): Boolean {
+        return getFeatureTogglesPrefs().getBoolean("reels_tracking_enabled", default)
+    }
+
+    fun setReelsTrackingEnabled(enabled: Boolean) {
+        getFeatureTogglesPrefs().edit().putBoolean("reels_tracking_enabled", enabled).apply()
+    }
+
+    /**
+     * Floating doom-scrolling counter overlay switch.
+     */
+    fun isReelsOverlayCounterEnabled(default: Boolean = true): Boolean {
+        return context.getSharedPreferences("config_tracker", Context.MODE_PRIVATE)
+            .getBoolean("reels_overlay_counter_enabled", default)
+    }
+
+    fun setReelsOverlayCounterEnabled(enabled: Boolean) {
+        context.getSharedPreferences("config_tracker", Context.MODE_PRIVATE)
+            .edit().putBoolean("reels_overlay_counter_enabled", enabled).apply()
+    }
+
+    /**
+     * Selected apps on which the floating doom-scrolling counter overlay should appear.
+     */
+    fun getReelsOverlayApps(): Set<String> {
+        val prefs = context.getSharedPreferences("config_tracker", Context.MODE_PRIVATE)
+        return prefs.getStringSet("reels_overlay_target_apps", null) ?: DEFAULT_REELS_OVERLAY_APPS
+    }
+
+    fun setReelsOverlayApps(apps: Set<String>) {
+        context.getSharedPreferences("config_tracker", Context.MODE_PRIVATE)
+            .edit().putStringSet("reels_overlay_target_apps", apps).apply()
+    }
+
+    /**
+     * Display mode for the floating overlay (0: Count, 1: Time, 2: Both)
+     */
+    fun getOverlayCounterDisplayMode(default: Int = OVERLAY_MODE_BOTH): Int {
+        return context.getSharedPreferences("config_tracker", Context.MODE_PRIVATE)
+            .getInt("overlay_counter_mode", default)
+    }
+
+    fun setOverlayCounterDisplayMode(mode: Int) {
+        context.getSharedPreferences("config_tracker", Context.MODE_PRIVATE)
+            .edit().putInt("overlay_counter_mode", mode).apply()
     }
 
     fun isFocusModeFeatureEnabled(default: Boolean = false): Boolean {
@@ -792,6 +888,11 @@ class SavedPreferencesLoader(val context: Context) {
             editor.putBoolean("focus_mode_enabled_manual", enabled)
         }
         editor.apply()
+    }
+
+    fun getProfileGoalMinutes(default: Int = 120): Int {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getInt("profile_goal_minutes", default)
     }
 
     // ==================== App Launch Limit Rules ====================

@@ -74,11 +74,60 @@
                 android:text="Block inappropriate content based on keywords"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
+            <!-- Master Switch Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="@dimen/padding_normal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.TitleMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/keyword_blocker"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodySmall"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Block search terms, explicit titles, and webpage content"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_keyword_blocker_enabled"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Manage Keyword Rules Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
@@ -95,24 +144,27 @@
                         style="@style/TextAppearance.Material3.TitleMedium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/keyword_blocker"
+                        android:text="Keyword Rules &amp; Wordlists"
                         android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/txt_selected_keywords_count"
                         style="@style/TextAppearance.Material3.BodySmall"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Block inappropriate content based on keywords"
+                        android:text="0 Active Keyword Rules"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_keyword_blocker_enabled"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_manage_keywords"
+                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="@string/enable_keyword_blocker" />
+                        android:text="Manage Keyword Rules"
+                        app:icon="@drawable/ic_keyword_blocker" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

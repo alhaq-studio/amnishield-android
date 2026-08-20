@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -124,7 +125,7 @@ fun CreateWebsiteBlockerRuleScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -138,6 +139,7 @@ fun CreateWebsiteBlockerRuleScreen(
                 onSave = {
                     if (saveEnabled) {
                         loader.saveBlockedWebsites(blockedWebsites.toSet())
+                        loader.setWebsiteBlockerEnabled(true, updateManual = true)
 
                         val newRule = ScheduleRule(
                             id = editingRule?.id ?: UUID.randomUUID().toString(),
@@ -335,9 +337,11 @@ fun CreateWebsiteBlockerRuleScreen(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = pack.iconEmoji,
-                                            style = MaterialTheme.typography.titleMedium
+                                        Icon(
+                                            imageVector = pack.icon,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                         Column {
                                             Text(

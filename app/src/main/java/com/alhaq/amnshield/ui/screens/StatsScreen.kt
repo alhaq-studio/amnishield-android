@@ -3,6 +3,7 @@ package com.alhaq.amnshield.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,20 +11,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Gamepad
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -49,6 +47,8 @@ fun StatsScreen(
     totalReelsWatched: Int,
     averageWatchSeconds: Int,
     topApps: List<AppUsageItem>,
+    isAppUsageTrackingEnabled: Boolean = true,
+    onEnableAppUsageTracking: () -> Unit = {},
     onRefresh: () -> Unit,
     onViewDetailedUsage: () -> Unit,
     onViewReelsMetrics: () -> Unit,
@@ -70,6 +70,8 @@ fun StatsScreen(
         ScreenTimeDay("Sun", 15)
     )
 
+    var selectedAppPackage by remember { mutableStateOf<String?>(null) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -90,66 +92,125 @@ fun StatsScreen(
         }
 
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (!isAppUsageTrackingEnabled) Modifier.blur(16.dp) else Modifier),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // Interactive ScreenTime Donut
+                        com.alhaq.amnshield.ui.components.InteractiveScreenTimeDonut(
+                            totalDurationFormatted = if (isAppUsageTrackingEnabled) totalScreenTime else "0m",
+                            apps = if (isAppUsageTrackingEnabled) topApps else emptyList(),
+                            selectedAppPackage = selectedAppPackage,
+                            onAppSelected = { selectedAppPackage = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Goal Progress Bar
                         Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Daily Limit Progress",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = if (isAppUsageTrackingEnabled) "$totalScreenTime / 2h 0m ($progressPctText)" else "Tracking Paused",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { if (isAppUsageTrackingEnabled) progressRatio else 0f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(6.dp)),
+                                color = if (progressRatio >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Embedded Weekly Bar Chart
+                        Text(
+                            text = "WEEKLY SCREEN TIME",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            letterSpacing = 0.05.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        WeeklyBarChart(days = mockWeeklyScreenTime)
+                    }
+                }
+
+                // Privacy Overlay when App Usage Tracking is Disabled
+                if (!isAppUsageTrackingEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.VisibilityOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = totalScreenTime,
-                                style = MaterialTheme.typography.displayMedium,
+                                text = "App Usage Tracking Paused",
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Screen Time Today",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Global app screen time logging is currently disabled.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
-
-                        // Circular goal meter
-                        Box(contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                progress = { progressRatio },
-                                modifier = Modifier.size(64.dp),
-                                strokeWidth = 6.dp,
-                                color = if (totalMinutes > userGoal) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
-                            Text(
-                                text = progressPctText,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (totalMinutes > userGoal) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            FilledTonalButton(
+                                onClick = onEnableAppUsageTracking,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Enable Usage Tracking")
+                            }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Embedded Weekly Bar Chart
-                    Text(
-                        text = "WEEKLY SCREEN TIME",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        letterSpacing = 0.05.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    WeeklyBarChart(days = mockWeeklyScreenTime)
                 }
             }
         }
@@ -360,7 +421,7 @@ fun StatsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("View Advanced Reels Metrics", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(imageVector = Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
                     }
                 }
             }
@@ -378,7 +439,45 @@ fun StatsScreen(
         }
 
         // App usage breakdown items
-        if (topApps.isEmpty()) {
+        if (!isAppUsageTrackingEnabled) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VisibilityOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "App Breakdown Hidden",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Individual app screen times are blurred while tracking is paused.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        } else if (topApps.isEmpty()) {
             item {
                 Text(
                     text = "No usage data available.",
@@ -389,16 +488,22 @@ fun StatsScreen(
             }
         } else {
             items(topApps) { app ->
+                val isSelected = selectedAppPackage == app.packageName
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clickable { onAppClick(app.packageName) },
+                        .clickable {
+                            selectedAppPackage = if (selectedAppPackage == app.packageName) null else app.packageName
+                        },
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    border = BorderStroke(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
                 ) {
                     Row(
                         modifier = Modifier

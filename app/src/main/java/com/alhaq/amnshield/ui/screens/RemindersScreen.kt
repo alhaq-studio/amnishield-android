@@ -17,9 +17,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DoNotDisturbOn
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -48,8 +50,12 @@ fun RemindersScreen(
         context.getSharedPreferences("reminder_settings", Context.MODE_PRIVATE)
     }
 
+    var masterNotificationsEnabled by remember {
+        mutableStateOf(sharedPreferences.getBoolean("master_notifications_enabled", true))
+    }
+
     var dailyReportEnabled by remember {
-        mutableStateOf(sharedPreferences.getBoolean("daily_report_enabled", false))
+        mutableStateOf(sharedPreferences.getBoolean("daily_report_enabled", true))
     }
     var reportHour by remember {
         mutableIntStateOf(sharedPreferences.getInt("daily_report_hour", 20))
@@ -67,6 +73,15 @@ fun RemindersScreen(
     var focusReminderEnabled by remember {
         mutableStateOf(sharedPreferences.getBoolean("focus_reminder_enabled", true))
     }
+    var achievementEnabled by remember {
+        mutableStateOf(sharedPreferences.getBoolean("achievement_enabled", true))
+    }
+    var wellnessTipsEnabled by remember {
+        mutableStateOf(sharedPreferences.getBoolean("wellness_tips_enabled", true))
+    }
+    var blockingAlertsEnabled by remember {
+        mutableStateOf(sharedPreferences.getBoolean("blocking_alerts_enabled", true))
+    }
 
     val scheduler = remember { SmartNotificationScheduler(context) }
     var hasNotifPermission by remember {
@@ -81,7 +96,7 @@ fun RemindersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Smart Notifications & Brain", fontWeight = FontWeight.Bold) },
+                title = { Text("Notifications & Reminders", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -101,6 +116,52 @@ fun RemindersScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Master Notification Switch Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (masterNotificationsEnabled) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    }
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("All Notifications", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(
+                                if (masterNotificationsEnabled) "Enabled • Granular control below" else "Paused • Zero notifications will be sent",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = masterNotificationsEnabled,
+                        onCheckedChange = { checked ->
+                            masterNotificationsEnabled = checked
+                            sharedPreferences.edit().putBoolean("master_notifications_enabled", checked).apply()
+                        }
+                    )
+                }
+            }
+
             // Permission Dashboard Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -110,7 +171,11 @@ fun RemindersScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("🛡️ OS Permission Status Dashboard", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("OS Permission Status", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
 
                     PermissionStatusRow(
                         title = "Push Notifications",
@@ -149,13 +214,14 @@ fun RemindersScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("🧠 Smart Behavioral Brain Alerts", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Smart Behavioral Alerts", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     SwitchSettingRow(
                         title = "Doomscroll Spike Alerts",
                         subtitle = "Notify when Reels/Shorts scrolling exceeds 25 mins with 1-tap Focus action",
-                        checked = doomscrollAlertsEnabled,
+                        checked = doomscrollAlertsEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             doomscrollAlertsEnabled = checked
                             sharedPreferences.edit().putBoolean("doomscroll_alerts_enabled", checked).apply()
@@ -167,7 +233,8 @@ fun RemindersScreen(
                     SwitchSettingRow(
                         title = "5-Minute Pre-Block Warnings",
                         subtitle = "Receive an alert 5 minutes before scheduled block rules take effect",
-                        checked = preBlockWarningsEnabled,
+                        checked = preBlockWarningsEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             preBlockWarningsEnabled = checked
                             sharedPreferences.edit().putBoolean("pre_block_warnings_enabled", checked).apply()
@@ -185,17 +252,18 @@ fun RemindersScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("📊 Scheduled Daily Report", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Scheduled Daily Report", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     SwitchSettingRow(
                         title = "Daily Summary Notification",
                         subtitle = "Receive exact daily report of time saved, reels scrolled & focus score",
-                        checked = dailyReportEnabled,
+                        checked = dailyReportEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             dailyReportEnabled = checked
                             sharedPreferences.edit().putBoolean("daily_report_enabled", checked).apply()
-                            if (checked) {
+                            if (checked && masterNotificationsEnabled) {
                                 scheduler.scheduleDailyReport(reportHour, reportMinute)
                             } else {
                                 scheduler.cancelDailyReport()
@@ -203,7 +271,7 @@ fun RemindersScreen(
                         }
                     )
 
-                    AnimatedVisibility(visible = dailyReportEnabled) {
+                    AnimatedVisibility(visible = dailyReportEnabled && masterNotificationsEnabled) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -243,19 +311,87 @@ fun RemindersScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("🎯 Focus Reminders", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Focus & Protection Nudges", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     SwitchSettingRow(
                         title = "Focus Reminders",
-                        subtitle = "Gentle nudges to stay focused during work windows",
-                        checked = focusReminderEnabled,
+                        subtitle = "Gentle nudges to stay focused during your set work windows",
+                        checked = focusReminderEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             focusReminderEnabled = checked
                             sharedPreferences.edit().putBoolean("focus_reminder_enabled", checked).apply()
                         }
                     )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    SwitchSettingRow(
+                        title = "Real-time Blocking Alerts",
+                        subtitle = "Show notification summary whenever apps or keywords are intercepted",
+                        checked = blockingAlertsEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
+                        onCheckedChange = { checked ->
+                            blockingAlertsEnabled = checked
+                            sharedPreferences.edit().putBoolean("blocking_alerts_enabled", checked).apply()
+                        }
+                    )
                 }
+            }
+
+            // Achievements & Digital Wellbeing Tips
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Milestones & Wellbeing Tips", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+
+                    SwitchSettingRow(
+                        title = "Productivity Milestones",
+                        subtitle = "Celebrate focus streaks and daily shield defense achievements",
+                        checked = achievementEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
+                        onCheckedChange = { checked ->
+                            achievementEnabled = checked
+                            sharedPreferences.edit().putBoolean("achievement_enabled", checked).apply()
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    SwitchSettingRow(
+                        title = "Daily Digital Wellbeing Tips",
+                        subtitle = "Receive mindful insights to reduce digital eye strain and habits",
+                        checked = wellnessTipsEnabled && masterNotificationsEnabled,
+                        enabled = masterNotificationsEnabled,
+                        onCheckedChange = { checked ->
+                            wellnessTipsEnabled = checked
+                            sharedPreferences.edit().putBoolean("wellness_tips_enabled", checked).apply()
+                        }
+                    )
+                }
+            }
+
+            // Android System Notification Channels Button
+            OutlinedButton(
+                onClick = {
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Open Android System Channel Settings", fontSize = 13.sp)
             }
 
             // Test Notification Button
@@ -263,7 +399,7 @@ fun RemindersScreen(
                 onClick = {
                     val notificationHelper = NotificationHelper.getInstance(context)
                     notificationHelper.showFocusReminder(
-                        "🚨 Test Doomscroll Alert",
+                        "Doomscroll Spike Alert",
                         "You've scrolled 42 Reels in 25 mins. Tap below to start 25m Focus Session!"
                     )
                     Toast.makeText(context, "Test notification sent!", Toast.LENGTH_SHORT).show()
@@ -271,7 +407,9 @@ fun RemindersScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("🚀 Send Test Smart Notification", fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Send Test Notification", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -282,6 +420,7 @@ private fun SwitchSettingRow(
     title: String,
     subtitle: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -290,11 +429,24 @@ private fun SwitchSettingRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                title,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            )
+            Text(
+                subtitle,
+                fontSize = 12.sp,
+                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
+        )
     }
 }
 

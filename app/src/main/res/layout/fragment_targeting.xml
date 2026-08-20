@@ -62,11 +62,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="👁️"
-                        android:textSize="28sp" />
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        app:srcCompat="@drawable/ic_focus_mode"
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -120,11 +120,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🛡️"
-                        android:textSize="28sp" />
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        app:srcCompat="@drawable/ic_shield"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -177,11 +177,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📱"
-                        android:textSize="28sp" />
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        app:srcCompat="@drawable/ic_reels_blocker"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -234,11 +234,11 @@
                     android:padding="16dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🎯"
-                        android:textSize="28sp" />
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        app:srcCompat="@drawable/ic_app_protection"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"

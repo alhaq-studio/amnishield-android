@@ -109,11 +109,13 @@ Deno.serve(async (req) => {
     ) {
       let email = "";
       let mode = "subscription";
+      let planMeta = "";
 
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
         email = session.customer_details?.email || session.customer_email || "";
         mode = session.mode || "payment";
+        planMeta = session.metadata?.plan || "";
       } else {
         const subscription = event.data.object as Stripe.Subscription;
         const customer = await stripe.customers.retrieve(subscription.customer as string);
@@ -123,16 +125,27 @@ Deno.serve(async (req) => {
       }
 
       if (email) {
-        // Expiry calculation: 100 years for lifetime, 1 year for annual/subscription
-        const isLifetime = mode === "payment";
-        const expiryTimestamp = isLifetime
-          ? Date.now() + 100 * 365 * 24 * 60 * 60 * 1000
-          : Date.now() + 365 * 24 * 60 * 60 * 1000;
+        const isLifetime = mode === "payment" || planMeta === "lifetime";
+        const isAnnual = planMeta === "annual" || (!isLifetime && mode === "subscription");
+
+        // Expiry calculation: 100 years for lifetime, 1 year for annual, 35 days for monthly
+        let expiryTimestamp: number;
+        let planTitle: string;
+        if (isLifetime) {
+          expiryTimestamp = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
+          planTitle = "Lifetime Pass (Never Expires)";
+        } else if (planMeta === "monthly") {
+          expiryTimestamp = Date.now() + 35 * 24 * 60 * 60 * 1000;
+          planTitle = "Monthly Subscription";
+        } else {
+          expiryTimestamp = Date.now() + 366 * 24 * 60 * 60 * 1000;
+          planTitle = "Annual Pass";
+        }
 
         // Construct signed JWT ECDSA payload
         const payload = {
-          email: email,
-          type: "premium",
+          email: email.toLowerCase().trim(),
+          type: isLifetime ? "lifetime" : "premium",
           expires: expiryTimestamp,
           version: 1,
         };
@@ -158,7 +171,7 @@ Deno.serve(async (req) => {
         
         if (serviceRoleKey) {
           try {
-            await fetch(`${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`, {
+            await fetch(`${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(email.toLowerCase().trim())}`, {
               method: "PATCH",
               headers: {
                 "Content-Type": "application/json",
@@ -179,6 +192,9 @@ Deno.serve(async (req) => {
 
         // 2. Deliver license key via Resend Email API
         if (RESEND_API_KEY) {
+          const deepLink = `amnishield://activate?key=${encodeURIComponent(licenseKey)}`;
+          const webActivateLink = `https://app.amnishield.com/?license=${encodeURIComponent(licenseKey)}`;
+
           await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
@@ -188,18 +204,32 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               from: "AmniShield Team <noreply@mail.alhaq.uk>",
               to: [email],
-              subject: "Your AmniShield Premium License Key",
+              subject: `Your AmniShield Pro ${planTitle} License Key`,
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h2 style="color: #0f172a;">Thank you for purchasing AmniShield Premium!</h2>
-                  <p>Your subscription is now active! Here is your offline license key. Copy and paste this directly into the app's Profile settings or log into your account:</p>
-                  <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; font-family: monospace; word-break: break-all; margin: 20px 0;">
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+                  <h2 style="color: #0f172a; margin-top: 0;">👑 Welcome to AmniShield Pro!</h2>
+                  <p>Thank you for supporting our mission of privacy, focus, and digital wellness. Your <b>${planTitle}</b> is now fully active.</p>
+                  
+                  <div style="text-align: center; margin: 24px 0;">
+                    <a href="${deepLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+                      ⚡ One-Click Mobile Activation
+                    </a>
+                  </div>
+
+                  <p>Or use your offline cryptographic license key below across Android, Windows, and Browser Extensions:</p>
+                  <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; margin: 16px 0; border: 1px solid #cbd5e1;">
                     ${licenseKey}
                   </div>
-                  <p>Valid until: <b>${new Date(expiryTimestamp).toLocaleDateString()}</b></p>
-                  <p>Log in to your account at <a href="https://app.amnishield.com" style="color: #3b82f6;">app.amnishield.com</a> to manage your protected devices.</p>
-                  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                  <p style="color: #64748b; font-size: 12px;">Al-Haq Studio &bull; <a href="https://alhaq.uk" style="color: #3b82f6;">alhaq.uk</a></p>
+                  
+                  <p><b>Plan:</b> ${planTitle}<br/>
+                  <b>Account Email:</b> ${email}<br/>
+                  <b>Valid Until:</b> ${new Date(expiryTimestamp).toLocaleDateString()}</p>
+                  
+                  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+                  <p style="font-size: 13px; color: #64748b;">
+                    Sign in to your Web Dashboard at <a href="${webActivateLink}" style="color: #2563eb;">app.amnishield.com</a> or use passwordless 6-digit email OTP in the app.
+                  </p>
+                  <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Al-Haq Studio &bull; <a href="https://alhaq.uk" style="color: #64748b;">alhaq.uk</a></p>
                 </div>
               `,
             }),

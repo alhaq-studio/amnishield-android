@@ -123,17 +123,31 @@ class ProfileFragment : Fragment() {
         val bio = sharedPrefs.getString("profile_bio", "") ?: ""
         val profileType = sharedPrefs.getString("profile_type", "Deep Focus") ?: "Deep Focus"
         
-        val isAdvanced = true
-        
+        val imageUri = sharedPrefs.getString("profile_image_uri", null)
+        val avatarId = sharedPrefs.getString("profile_avatar_id", "avatar_shield") ?: "avatar_shield"
+        val goalMinutes = sharedPrefs.getInt("profile_goal_minutes", 120)
+
+        // Compute production-ready dynamic guardian stats
+        val guardianStats = com.alhaq.amnshield.utils.GuardianStatsEngine.computeGuardianStats(requireContext().applicationContext)
+        viewModel.updateGuardianStats(
+            streakDays = guardianStats.focusStreakDays,
+            shieldScore = guardianStats.focusShieldScore,
+            threatsBlocked = guardianStats.totalThreatsBlocked
+        )
+
         viewModel.updateProfile(
             name = name,
             email = email,
             bio = bio,
-            goalMinutes = viewModel.state.value.userGoalMinutes,
+            goalMinutes = goalMinutes,
             profileType = profileType,
             pinEnabled = viewModel.state.value.isPinProtectionEnabled,
-            pin = viewModel.state.value.profilePin
+            pin = viewModel.state.value.profilePin,
+            imageUri = imageUri,
+            avatarId = avatarId
         )
+
+        val isAdvanced = true
 
         // Ensure ViewModel state has the correct premium status and advanced mode as well
         val isPremium = com.alhaq.amnshield.premium.PremiumManager.getInstance(requireContext().applicationContext).isPremium()

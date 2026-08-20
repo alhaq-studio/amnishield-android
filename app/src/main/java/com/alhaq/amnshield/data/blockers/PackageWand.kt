@@ -473,13 +473,13 @@ class PackageWand {
         
         fun getAllCategories(): List<Pair<String, String>> {
             return listOf(
-                "gaming" to "🎮 Games",
-                "social_media" to "📱 Social Media",
-                "entertainment" to "🎬 Entertainment",
-                "dating" to "❤️ Dating Apps",
-                "shopping" to "🛒 Shopping",
-                "news" to "📰 News & Media",
-                "productive" to "💼 Productive Apps"
+                "gaming" to "Games",
+                "social_media" to "Social Media",
+                "entertainment" to "Entertainment",
+                "dating" to "Dating Apps",
+                "shopping" to "Shopping",
+                "news" to "News & Media",
+                "productive" to "Productive Apps"
             )
         }
     }

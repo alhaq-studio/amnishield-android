@@ -364,7 +364,7 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         WidgetPinRow(
-                            icon = "📊",
+                            icon = Icons.Outlined.BarChart,
                             title = "Screen Time & Usage Widget",
                             description = "Track total screen time and top 3 used apps in real-time.",
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.ScreentimeWidgetProvider") }
@@ -373,7 +373,7 @@ fun SettingsScreen(
                         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         WidgetPinRow(
-                            icon = "🎬",
+                            icon = Icons.Outlined.Movie,
                             title = "Reels & Shorts Metrics Widget",
                             description = "Monitor daily Reels scrolled count, usage limit progress, and blocker status.",
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.ReelsMetricsWidgetProvider") }
@@ -382,7 +382,7 @@ fun SettingsScreen(
                         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         WidgetPinRow(
-                            icon = "⏱️",
+                            icon = Icons.Outlined.Timer,
                             title = "Quick Focus Space Widget",
                             description = "Start instant 15m, 30m, or 60m Focus sessions directly from your Home screen.",
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.QuickFocusWidgetProvider") }
@@ -391,7 +391,7 @@ fun SettingsScreen(
                         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         WidgetPinRow(
-                            icon = "🍃",
+                            icon = Icons.Outlined.SelfImprovement,
                             title = "Mindful Breathing Space Widget",
                             description = "Take quick mindful breathing breaks to clear your mind and restore focus.",
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.BreathingWidgetProvider") }
@@ -425,7 +425,12 @@ fun SettingsScreen(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-                        SettingsNavigationRow(icon = Icons.Outlined.Notifications, title = "Reminders", onClick = onReminders)
+                        SettingsNavigationRow(
+                            icon = Icons.Outlined.Notifications,
+                            title = "Notifications & Reminders",
+                            subtitle = "Daily reports, doomscroll alerts, wellbeing tips",
+                            onClick = onReminders
+                        )
                         Divider(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -532,6 +537,7 @@ fun SettingsToggleRow(
 fun SettingsNavigationRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
+    subtitle: String? = null,
     onClick: () -> Unit
 ) {
     Row(
@@ -542,7 +548,7 @@ fun SettingsNavigationRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -559,13 +565,24 @@ fun SettingsNavigationRow(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Text(
-                title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Icon(
             imageVector = Icons.Default.ChevronRight,
@@ -577,7 +594,7 @@ fun SettingsNavigationRow(
 
 @Composable
 fun WidgetPinRow(
-    icon: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     description: String,
     onPin: () -> Unit
@@ -594,7 +611,12 @@ fun WidgetPinRow(
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = icon, fontSize = 22.sp)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
         }
 
         Column(modifier = Modifier.weight(1f)) {

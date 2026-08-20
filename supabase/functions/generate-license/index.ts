@@ -7,8 +7,10 @@ const corsHeaders = {
 };
 
 const PRIVATE_KEY_PEM = (Deno.env.get("ECDSA_PRIVATE_KEY_PEM") ?? "").replace(/^["']|["']$/g, "").trim();
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "https://jrgpmcomvibgklmvnxud.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").replace(/^["']|["']$/g, "").trim();
 
-// Helper: Import ECDSA Private Key (Supports both JWK JSON and PKCS#8 PEM/Base64)
+// Helper: Import ECDSA Private Key
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
   const cleanPem = pem.replace(/^["']|["']$/g, "").trim();
 
@@ -42,7 +44,6 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -55,21 +56,71 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Missing Authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 1. Authenticate caller: Verify token against Supabase Auth or Service Role
+    let isServiceRole = (token === SUPABASE_SERVICE_ROLE_KEY && SUPABASE_SERVICE_ROLE_KEY.length > 0);
+    let callerUser: any = null;
+
+    if (!isServiceRole) {
+      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          "apikey": SUPABASE_SERVICE_ROLE_KEY || token,
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (!userResp.ok) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Invalid authentication token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      callerUser = await userResp.json();
+    }
+
     const body = await req.json();
     const { email, user_id, type = "premium", expires } = body;
 
-    if (!email) {
+    const targetEmail = (email || callerUser?.email || "").toLowerCase().trim();
+    const targetUserId = user_id || callerUser?.id;
+
+    if (!targetEmail) {
       return new Response(
         JSON.stringify({ error: "email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // If not service role, verify the user is requesting a license for themselves or is admin
+    if (!isServiceRole && callerUser) {
+      if (callerUser.email?.toLowerCase() !== targetEmail && callerUser.id !== targetUserId) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: Cannot generate license for another user account" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    if (!PRIVATE_KEY_PEM) {
+      return new Response(
+        JSON.stringify({ error: "Server Configuration Error: ECDSA_PRIVATE_KEY_PEM not set" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const expiryTimestamp = expires || (Date.now() + 100 * 365 * 24 * 60 * 60 * 1000);
 
     const payload = {
-      email,
-      ...(user_id ? { user_id } : {}),
+      email: targetEmail,
+      ...(targetUserId ? { user_id: targetUserId } : {}),
       type,
       expires: expiryTimestamp,
       version: 1,
@@ -80,71 +131,52 @@ Deno.serve(async (req) => {
     const payloadBytes = encoder.encode(payloadJson);
     const base64Payload = btoa(payloadJson);
 
-    let licenseKey = "";
+    const privateKey = await importPrivateKey(PRIVATE_KEY_PEM);
+    const signatureBytes = await crypto.subtle.sign(
+      { name: "ECDSA", hash: { name: "SHA-256" } },
+      privateKey,
+      payloadBytes
+    );
+    const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+    const licenseKey = `${base64Payload}.${base64Signature}`;
 
-    if (PRIVATE_KEY_PEM) {
+    // Update Supabase profile database
+    if (SUPABASE_SERVICE_ROLE_KEY && (targetUserId || targetEmail)) {
       try {
-        const privateKey = await importPrivateKey(PRIVATE_KEY_PEM);
-        const signatureBytes = await crypto.subtle.sign(
-          { name: "ECDSA", hash: { name: "SHA-256" } },
-          privateKey,
-          payloadBytes
-        );
-        const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
-        licenseKey = `${base64Payload}.${base64Signature}`;
-      } catch (signErr: any) {
-        console.error("ECDSA Signing failed, falling back to console signature format:", signErr);
-        licenseKey = `${base64Payload}.ECDSA_SIGNED_PRO_KEY`;
-      }
-    } else {
-      licenseKey = `${base64Payload}.ECDSA_SIGNED_PRO_KEY`;
-    }
-
-    // Update Supabase profile database if service role key is available
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "https://jrgpmcomvibgklmvnxud.supabase.co";
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-    if (serviceRoleKey && (user_id || email)) {
-      try {
-        const filter = user_id ? `id=eq.${user_id}` : `email=eq.${encodeURIComponent(email)}`;
-        await fetch(`${supabaseUrl}/rest/v1/profiles?${filter}`, {
+        const filter = targetUserId ? `id=eq.${targetUserId}` : `email=eq.${encodeURIComponent(targetEmail)}`;
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?${filter}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            apikey: serviceRoleKey,
-            Authorization: `Bearer ${serviceRoleKey}`,
-            Prefer: "return=minimal",
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "Prefer": "return=minimal"
           },
           body: JSON.stringify({
             is_premium: true,
             license_key: licenseKey,
-            updated_at: new Date().toISOString(),
-          }),
+            updated_at: new Date().toISOString()
+          })
         });
       } catch (dbErr: any) {
-        console.error("Failed to update profile in database:", dbErr.message);
+        console.error("Database profile update error:", dbErr.message);
       }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        licenseKey,
-        payload,
+        license_key: licenseKey,
+        email: targetEmail,
+        expires: expiryTimestamp,
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    console.error("Error in generate-license function:", err.message);
+    console.error("generate-license error:", err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

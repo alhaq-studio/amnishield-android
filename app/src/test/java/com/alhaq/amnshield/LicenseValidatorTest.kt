@@ -106,9 +106,23 @@ class LicenseValidatorTest {
     }
 
     @Test
-    fun testLicenseVerificationUserKey() {
+    fun testLicenseVerificationRejectsBypassKey() {
         val userKey = "eyJlbWFpbCI6ImhhYmlibXVraGxpczIwMDZAZ21haWwuY29tIiwidXNlcl9pZCI6IjU3Y2E1MTg4LTM0ZjYtNDc5Zi05MTZlLWEzNDRmOGMxYmU5OCIsInR5cGUiOiJwcmVtaXVtIiwiZXhwaXJlcyI6NDkzOTY3Nzg1MTQ4OCwidmVyc2lvbiI6MX0=.ECDSA_SIGNED_PRO_KEY"
         val payload = LicenseValidator.verifyLicense(userKey)
+        assertNull("Bypass string .ECDSA_SIGNED_PRO_KEY must be rejected unconditionally", payload)
+    }
+
+    @Test
+    fun testLicenseVerificationUserKey() {
+        val userPayload = LicensePayload(
+            email = "habibmukhlis2006@gmail.com",
+            user_id = "57ca5188-34f6-479f-916e-a344f8c1be98",
+            type = "premium",
+            expires = 4939677851488L,
+            version = 1
+        )
+        val validUserKey = generateLicenseString(userPayload)
+        val payload = LicenseValidator.verifyLicense(validUserKey)
 
         assertNotNull(payload)
         assertEquals("habibmukhlis2006@gmail.com", payload?.email)
@@ -120,8 +134,16 @@ class LicenseValidatorTest {
 
     @Test
     fun testLicenseVerificationWithWhitespaceAndQuotes() {
-        val rawKey = "  \"eyJlbWFpbCI6ImhhYmlibXVraGxpczIwMDZAZ21haWwuY29tIiwidXNlcl9pZCI6IjU3Y2E1MTg4LTM0ZjYtNDc5Zi05MTZlLWEzNDRmOGMxYmU5OCIsInR5cGUiOiJwcmVtaXVtIiwiZXhwaXJlcyI6NDkzOTY3Nzg1MTQ4OCwidmVyc2lvbiI6MX0=.ECDSA_SIGNED_PRO_KEY\"\n "
-        val payload = LicenseValidator.verifyLicense(rawKey)
+        val userPayload = LicensePayload(
+            email = "habibmukhlis2006@gmail.com",
+            user_id = "57ca5188-34f6-479f-916e-a344f8c1be98",
+            type = "premium",
+            expires = 4939677851488L,
+            version = 1
+        )
+        val validUserKey = generateLicenseString(userPayload)
+        val rawKeyWithWhitespace = "  \"$validUserKey\"\n "
+        val payload = LicenseValidator.verifyLicense(rawKeyWithWhitespace)
 
         assertNotNull(payload)
         assertEquals("habibmukhlis2006@gmail.com", payload?.email)

@@ -55,6 +55,12 @@
 
 
         <activity
+            android:name=".ui.activity.HandGestureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AmnShield.TransparentOverlay"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance" />
+        <activity
             android:name=".ui.activity.ManageKeywordsActivity"
             android:exported="false" />
         <activity
@@ -88,8 +94,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="amnishield" android:host="activate" />
                 <data android:scheme="amnishield" android:host="license" />
+                <data android:scheme="amnishield" android:host="auth" />
+                <data android:scheme="amnishield" android:host="verify" />
+                <data android:scheme="amnishield" android:host="login" />
                 <data android:scheme="amnshield" android:host="activate" />
                 <data android:scheme="amnshield" android:host="license" />
+                <data android:scheme="amnshield" android:host="auth" />
+                <data android:scheme="amnshield" android:host="verify" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -97,13 +108,11 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/activate" />
                 <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/activate" />
+                <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/app/activate" />
                 <data android:scheme="https" android:host="app.amnshield.com" android:pathPrefix="/activate" />
                 <data android:scheme="https" android:host="amnshield.com" android:pathPrefix="/activate" />
                 <data android:scheme="http" android:host="app.amnishield.com" android:pathPrefix="/activate" />
                 <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/activate" />
-            </intent-filter>
-            <intent-filter>
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity

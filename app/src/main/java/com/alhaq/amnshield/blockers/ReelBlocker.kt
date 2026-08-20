@@ -341,10 +341,32 @@ class ReelBlocker : BaseBlocker() {
 
 
 
+    /**
+     * How the service should respond when a reel surface is detected.
+     *
+     * - [HARD_BLOCK]        Show the AmniShield warning overlay (existing behaviour).
+     * - [ANDROID_HOME]      Fire GLOBAL_ACTION_HOME — exit to the Android launcher.
+     * - [HOME_FEED_REDIRECT] Stay inside the app and navigate to the platform's home/news-feed tab.
+     *                        Falls back to GLOBAL_ACTION_BACK when the home tab cannot be located.
+     */
+    enum class BlockResponseMode(val value: Int) {
+        HARD_BLOCK(0),
+        ANDROID_HOME(1),
+        HOME_FEED_REDIRECT(2);
+
+        companion object {
+            fun fromInt(value: Int): BlockResponseMode =
+                entries.firstOrNull { it.value == value } ?: HARD_BLOCK
+        }
+    }
+
     data class ReelBlockerResult(
         val isBlocked: Boolean = false,
+        /** Legacy field kept for backwards compatibility. True when ANDROID_HOME mode is active. */
         val requestHomePressInstead: Boolean = false,
         val isReelFoundInCooldownState: Boolean = false,
-        val viewId: String = ""
+        val viewId: String = "",
+        val blockResponseMode: BlockResponseMode = BlockResponseMode.HARD_BLOCK
     )
 }
+

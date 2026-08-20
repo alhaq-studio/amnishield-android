@@ -36,7 +36,7 @@ object SmartBehavioralBrain {
         if (count >= 35 || timeSeconds >= 1200) {
             val minutes = timeSeconds / 60
             return SmartNudge(
-                title = "🚨 Doomscroll Spike Detected!",
+                title = "Doomscroll Spike Detected",
                 message = "You've scrolled $count Reels ($minutes mins today). Take a 15-min Focus Break?",
                 actionType = ActionType.START_FOCUS
             )
@@ -75,6 +75,22 @@ object SmartBehavioralBrain {
             }
         }
         return null
+    }
+
+    /**
+     * Curated digital wellbeing tips for mindful screen habits
+     */
+    private val WELLNESS_TIPS = listOf(
+        Pair("Mindful Morning", "Avoid social media feeds during your first waking hour to prime deep focus."),
+        Pair("20-20-20 Rule", "Every 20 minutes of screen use, look at an object 20 feet away for 20 seconds."),
+        Pair("Focus Sprints", "Structure work in 25-minute uninterrupted blocks followed by physical stretches."),
+        Pair("Digital Sunset", "Dim brightness and switch off infinite feeds 1 hour prior to sleep for restorative rest."),
+        Pair("Friction Power", "Pause for 3 deep breaths before opening video feeds when feeling distracted."),
+        Pair("Monotasking Pride", "Close unused background apps and commit full presence to one task at a time.")
+    )
+
+    fun getRandomWellnessTip(): Pair<String, String> {
+        return WELLNESS_TIPS.random()
     }
 
     /**

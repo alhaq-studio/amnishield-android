@@ -169,6 +169,13 @@ Because the Google Play Store registry binds permanently to the `applicationId`,
 
 ---
 
+## Acknowledgments & Open-Source Credits
+
+- **[Curbox](https://github.com/curbox-app/curbox-android)** by **Nethical** (GPL-3.0-or-later):
+  Reel & short-form video surface detection patterns and floating WindowManager overlay mechanics are inspired by Curbox.
+
+---
+
 ## License
 
 This project is licensed under the **GNU General Public License v3.0**.

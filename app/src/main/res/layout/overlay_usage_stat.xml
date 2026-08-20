@@ -1,21 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tool="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="@dimen/padding_normal">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/overlay_pill_container"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_doom_scroll_pill"
+    android:elevation="12dp"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="7dp"
+    android:paddingBottom="7dp">
 
+    <ImageView
+        android:id="@+id/overlay_icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="6dp"
+        android:src="@drawable/ic_fire"
+        android:tint="#FFB300"
+        tools:ignore="UseAppTint" />
 
+    <TextView
+        android:id="@+id/overlay_counter_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        tools:text="🔥 12 Reels" />
+
+    <View
+        android:id="@+id/overlay_divider"
+        android:layout_width="1dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="#44FFFFFF" />
 
     <TextView
         android:id="@+id/time_elapsed_txt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="20sp"
-        android:alpha="0.8"
-        tool:text="13:33" />
+        android:textColor="#DDDDDD"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif"
+        tools:text="04:15" />
 
 </LinearLayout>

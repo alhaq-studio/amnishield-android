@@ -24,11 +24,11 @@
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="👑"
-                android:textSize="44sp" />
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:srcCompat="@drawable/ic_premium"
+                app:tint="?attr/colorPrimary" />
 
             <TextView
                 style="@style/TextAppearance.Material3.HeadlineMedium"
@@ -70,7 +70,7 @@
                         style="@style/TextAppearance.Material3.TitleMedium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="✨ Included in AmnShield Pro:"
+                        android:text="Included in AmnShield Pro:"
                         android:textColor="?attr/colorPrimary"
                         android:textStyle="bold" />
 
@@ -80,7 +80,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="3dp"
-                        android:text="🔄 Cross-Platform Cloud Sync (Android, Windows, Web)\n🔒 Anti-Uninstall &amp; Removal Enforcement\n🔑 Passcode &amp; PIN Settings Protection\n💖 Support Open-Source AI Filter Development"
+                        android:text="• Cross-Platform Cloud Sync (Android, Windows, Web)\n• Anti-Uninstall &amp; Removal Enforcement\n• Passcode &amp; PIN Settings Protection\n• Support Open-Source AI Filter Development"
                         android:textColor="?attr/colorOnSurface" />
 
                 </LinearLayout>

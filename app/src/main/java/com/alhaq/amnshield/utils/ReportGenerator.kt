@@ -262,19 +262,19 @@ class ReportGenerator(private val context: Context) {
         }
         
         if (summary.appBlocksCount > 0) {
-            builder.append("🚫 Apps blocked: ${summary.appBlocksCount}\n")
+            builder.append("• Apps blocked: ${summary.appBlocksCount}\n")
         }
         
         if (summary.focusSessionsCount > 0) {
-            builder.append("⏱️ Focus sessions: ${summary.focusSessionsCount} (${summary.totalFocusMinutes}m)\n")
+            builder.append("• Focus sessions: ${summary.focusSessionsCount} (${summary.totalFocusMinutes}m)\n")
         }
         
         if (summary.keywordBlocksCount > 0) {
-            builder.append("🔍 Keywords blocked: ${summary.keywordBlocksCount}\n")
+            builder.append("• Keywords blocked: ${summary.keywordBlocksCount}\n")
         }
         
         if (summary.viewBlocksCount > 0) {
-            builder.append("📱 Reels/Views blocked: ${summary.viewBlocksCount}\n")
+            builder.append("• Reels/Views blocked: ${summary.viewBlocksCount}\n")
         }
         
         builder.append("\nTap to view detailed report.")

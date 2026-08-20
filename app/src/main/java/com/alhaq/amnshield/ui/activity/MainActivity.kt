@@ -252,30 +252,96 @@ class MainActivity : AppCompatActivity() {
         val host = data.host?.lowercase().orEmpty()
         val path = data.path?.lowercase().orEmpty()
 
-        val isAmnScheme = scheme == "amnshield"
+        val isAmnScheme = scheme == "amnishield" || scheme == "amnshield"
         val isWebActivation = (scheme == "https" || scheme == "http") &&
-                (host.contains("amnshield.com") || host.contains("amnshield.org")) &&
-                (path.contains("activate") || path.contains("license") || data.getQueryParameter("key") != null)
+                (host.contains("amnishield.com") || host.contains("amnshield.com") || host.contains("amnshield.org")) &&
+                (path.contains("activate") || path.contains("license") || path.contains("auth") || path.contains("verify") || data.getQueryParameter("key") != null || data.getQueryParameter("token") != null || data.getQueryParameter("code") != null)
 
         if (isAmnScheme || isWebActivation) {
             val key = data.getQueryParameter("key")
                 ?: data.getQueryParameter("license")
-                ?: data.getQueryParameter("token")
-                ?: data.getQueryParameter("code")
-                ?: data.getQueryParameter("data")
+                ?: data.getQueryParameter("license_key")
 
+            val token = data.getQueryParameter("token")
+                ?: data.getQueryParameter("code")
+
+            val email = data.getQueryParameter("email")
+            val accessToken = data.getQueryParameter("access_token")
+
+            // 1. Direct ECDSA Signed License Key Redemption
             if (!key.isNullOrBlank()) {
                 val payload = com.alhaq.amnshield.premium.LicenseValidator.verifyLicense(key)
                 if (payload != null) {
                     val activated = premiumManager.redeemLicenseKey(key)
                     if (activated) {
-                        Toast.makeText(this, "👑 AmnShield Pro License Activated!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "AmnShield Pro License Activated!", Toast.LENGTH_LONG).show()
                         showProActivationSuccessDialog(payload)
-                        // Trigger bottom navigation refresh to update UI state
                         binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
                     }
                 } else {
                     Toast.makeText(this, "Invalid or expired license key.", Toast.LENGTH_LONG).show()
+                }
+            }
+            // 2. OTP 6-Digit Code / Token + Email Verification via Supabase
+            else if (!token.isNullOrBlank() && !email.isNullOrBlank()) {
+                Toast.makeText(this, "Verifying code for $email...", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
+                        val session = rest.verifyOtp(email, token, "email")
+                        val profile = rest.fetchProfile(session)
+                        withContext(Dispatchers.Main) {
+                            if (profile != null && !profile.licenseKey.isNullOrBlank()) {
+                                if (premiumManager.redeemLicenseKey(profile.licenseKey)) {
+                                    val verifiedPayload = com.alhaq.amnshield.premium.LicenseValidator.verifyLicense(profile.licenseKey)
+                                    if (verifiedPayload != null) {
+                                        showProActivationSuccessDialog(verifiedPayload)
+                                    } else {
+                                        Toast.makeText(this@MainActivity, "AmnShield Pro Activated!", Toast.LENGTH_LONG).show()
+                                    }
+                                    binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                                }
+                            } else if (profile?.isPremium == true) {
+                                premiumManager.updatePremiumStatus(true)
+                                Toast.makeText(this@MainActivity, "AmnShield Pro Activated!", Toast.LENGTH_LONG).show()
+                                binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                            } else {
+                                Toast.makeText(this@MainActivity, "Account verified! No active Pro license found for $email.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Verification failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            // 3. Direct Access Token / Session
+            else if (!accessToken.isNullOrBlank()) {
+                val refreshToken = data.getQueryParameter("refresh_token") ?: ""
+                val userId = data.getQueryParameter("user_id") ?: ""
+                val userEmail = data.getQueryParameter("email")
+                val session = com.alhaq.amnshield.data.sync.SupabaseRest.Session(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    userId = userId,
+                    email = userEmail,
+                    expiresAt = System.currentTimeMillis() + 3600_000L
+                )
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
+                        val profile = rest.fetchProfile(session)
+                        withContext(Dispatchers.Main) {
+                            if (profile != null && !profile.licenseKey.isNullOrBlank()) {
+                                premiumManager.redeemLicenseKey(profile.licenseKey)
+                                Toast.makeText(this@MainActivity, "AmnShield Pro Activated!", Toast.LENGTH_LONG).show()
+                                binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // ignore or log
+                    }
                 }
             }
         }
@@ -284,7 +350,7 @@ class MainActivity : AppCompatActivity() {
     private fun showProActivationSuccessDialog(payload: com.alhaq.amnshield.premium.LicensePayload) {
         val expiryDate = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(java.util.Date(payload.expires))
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("👑 Pro License Activated!")
+            .setTitle("Pro License Activated!")
             .setMessage("Welcome to AmnShield Pro!\n\n• Account: ${payload.email}\n• Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n• Valid Until: $expiryDate\n\nAll premium features, advanced rules, and cross-device sync are now fully unlocked on this device.")
             .setPositiveButton("Continue", null)
             .show()
@@ -1200,7 +1266,7 @@ class MainActivity : AppCompatActivity() {
             
             A comprehensive digital wellbeing app designed to help you maintain focus, develop healthy digital habits, and protect yourself from distracting content.
             
-            ✅ Free Core Features:
+            Free Core Features:
             • App Blocker - Block apps with schedules & custom controls
             • Reel Blocker - Limit endless scrolling on Reels, Shorts, and TikTok
             • Keyword & Website Blocker - Block inappropriate content & sites
@@ -1213,7 +1279,7 @@ class MainActivity : AppCompatActivity() {
             • 4-Digit Security PIN & App Lock - Master PIN lock for settings
             • Bypass PIN Lock - Require PIN to edit active blocks
             
-            🔒 Privacy First - 100% local processing, zero tracking
+            Privacy First - 100% local processing, zero tracking
             
             Built under: Al-Haq Studio (Al-Haq Digital Services & Solutions)
             Free Access Program: Provided by Al-Haq Initiative

@@ -244,10 +244,10 @@ class SettingsFragment : Fragment() {
     private fun showFAQDialog() {
         context?.let { ctx ->
             val faqs = """
-                ❓ FREQUENTLY ASKED QUESTIONS
+                FREQUENTLY ASKED QUESTIONS
                 
                 ═══════════════════════════
-                📱 GETTING STARTED
+                GETTING STARTED
                 ═══════════════════════════
                 
                 Q: Do I need to create an account?
@@ -260,7 +260,7 @@ class SettingsFragment : Fragment() {
                 A: Yes! AmnShield doesn't collect, store, or transmit any of your data. All AI processing happens locally on your device.
                 
                 ═══════════════════════════
-                🔒 CORE FEATURES (FREE)
+                CORE FEATURES (FREE)
                 ═══════════════════════════
                 
                 Q: What is App Blocker?
@@ -276,7 +276,7 @@ class SettingsFragment : Fragment() {
                 A: Anti-uninstall prevents you from removing AmnShield protection. Choose password mode (requires password) or timed mode (blocks until a future date). Premium feature.
                 
                 ═══════════════════════════
-                ⭐ PREMIUM FEATURES
+                PREMIUM FEATURES
                 ═══════════════════════════
                 
                 Q: What is App Blocker?
@@ -292,7 +292,7 @@ class SettingsFragment : Fragment() {
                 A: Keyword Blocker and Usage Statistics are free forever.
                 
                 ═══════════════════════════
-                💎 PREMIUM & BILLING
+                PREMIUM & BILLING
                 ═══════════════════════════
                 
                 Q: What premium plans are available?
@@ -308,7 +308,7 @@ class SettingsFragment : Fragment() {
                 A: Use "Restore Purchases" in Premium screen to restore your premium status.
                 
                 ═══════════════════════════
-                🛠️ TROUBLESHOOTING
+                TROUBLESHOOTING
                 ═══════════════════════════
                 
                 Q: Features not working?
@@ -329,7 +329,7 @@ class SettingsFragment : Fragment() {
                 A: Settings → Data Management → Backup to save all your configurations.
                 
                 ═══════════════════════════
-                🔐 PRIVACY & SECURITY
+                PRIVACY & SECURITY
                 ═══════════════════════════
                 
                 Q: Does AmnShield track my activity?
@@ -345,7 +345,7 @@ class SettingsFragment : Fragment() {
                 A: No. AmnShield's core protection engine is closed-source. We focus on clear privacy documentation, on-device processing, and selective transparency where appropriate.
                 
                 ═══════════════════════════
-                📞 SUPPORT & CONTACT
+                SUPPORT & CONTACT
                 ═══════════════════════════
                 
                 Q: How do I report bugs or request features?
@@ -384,7 +384,7 @@ class SettingsFragment : Fragment() {
                 
                 AmnShield is a privacy-first digital wellbeing app that helps users maintain a healthy, balanced digital lifestyle through practical protection, smart blocking, and focus habits.
                 
-                ✅ Free Features (100% Free for Everyone):
+                Free Features (100% Free for Everyone):
                 • App Blocker with schedules & category rules
                 • Focus Mode with timer & session tracking
                 • Reels & Shorts Blocker (YouTube Shorts, Instagram Reels, TikTok)
@@ -397,7 +397,7 @@ class SettingsFragment : Fragment() {
                 • 4-Digit Security PIN & App Lock (Master PIN lock for settings)
                 • Bypass PIN Lock (Require PIN confirmation to edit active blocks)
                 
-                🔒 Privacy First:
+                Privacy First:
                 • 100% On-Device Processing
                 • Zero Data Collection & Zero Telemetry
                 • No Internet required for core features

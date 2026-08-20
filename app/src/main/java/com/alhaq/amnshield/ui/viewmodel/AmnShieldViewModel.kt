@@ -156,7 +156,9 @@ class AmnShieldViewModel : ViewModel() {
         goalMinutes: Int,
         profileType: String,
         pinEnabled: Boolean,
-        pin: String
+        pin: String,
+        imageUri: String? = _state.value.profileImageUri,
+        avatarId: String = _state.value.profileAvatarId
     ) {
         _state.update {
             it.copy(
@@ -166,7 +168,18 @@ class AmnShieldViewModel : ViewModel() {
                 userGoalMinutes = goalMinutes,
                 focusProfileType = profileType,
                 isPinProtectionEnabled = pinEnabled,
-                profilePin = pin
+                profilePin = pin,
+                profileImageUri = imageUri,
+                profileAvatarId = avatarId
+            )
+        }
+    }
+
+    fun updateProfilePicture(imageUri: String?, avatarId: String) {
+        _state.update {
+            it.copy(
+                profileImageUri = imageUri,
+                profileAvatarId = avatarId
             )
         }
     }
@@ -189,5 +202,15 @@ class AmnShieldViewModel : ViewModel() {
 
     fun toggleSmartRecommendations() {
         _state.update { it.copy(smartRecommendationsEnabled = !it.smartRecommendationsEnabled) }
+    }
+
+    fun updateGuardianStats(streakDays: Int, shieldScore: Int, threatsBlocked: Int) {
+        _state.update {
+            it.copy(
+                focusStreakDays = streakDays,
+                focusShieldScore = shieldScore,
+                totalThreatsBlocked = threatsBlocked
+            )
+        }
     }
 }

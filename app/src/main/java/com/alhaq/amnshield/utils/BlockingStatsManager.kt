@@ -107,7 +107,7 @@ class BlockingStatsManager private constructor(private val context: Context) {
         val achievementsEnabled = reminderPrefs.getBoolean("achievement_enabled", true)
         
         if (achievementsEnabled) {
-            val notificationHelper = NotificationHelper(context)
+            val notificationHelper = NotificationHelper.getInstance(context)
             notificationHelper.checkAndNotifyAchievements()
         }
     }
@@ -188,6 +188,27 @@ class BlockingStatsManager private constructor(private val context: Context) {
      */
     fun getTodayStats(): StatsSummary {
         return getStatsSummaryForDate(LocalDate.now())
+    }
+
+    /**
+     * Get total count of all block events ever recorded (lifetime)
+     */
+    fun getTotalBlocksCount(): Int {
+        var total = 0
+        prefs.all.keys.forEach { key ->
+            if (key.startsWith(DATE_PREFIX)) {
+                try {
+                    val json = prefs.getString(key, null)
+                    if (json != null) {
+                        val jsonArray = JSONArray(json)
+                        total += jsonArray.length()
+                    }
+                } catch (e: Exception) {
+                    // Skip invalid
+                }
+            }
+        }
+        return total
     }
 
     /**

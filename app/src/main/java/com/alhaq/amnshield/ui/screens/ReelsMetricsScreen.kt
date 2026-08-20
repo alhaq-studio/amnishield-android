@@ -144,13 +144,24 @@ fun ReelsMetricsScreen(
                                 color = if (isBlockerEnabled) Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
                                 border = BorderStroke(1.dp, if (isBlockerEnabled) Color(0xFF10B981) else MaterialTheme.colorScheme.error)
                             ) {
-                                Text(
-                                    text = if (isBlockerEnabled) "BLOCKER ACTIVE 🟢" else "PAUSED 🔴",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isBlockerEnabled) Color(0xFF059669) else MaterialTheme.colorScheme.error,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isBlockerEnabled) Color(0xFF10B981) else MaterialTheme.colorScheme.error)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = if (isBlockerEnabled) "ACTIVE" else "PAUSED",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isBlockerEnabled) Color(0xFF059669) else MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
 

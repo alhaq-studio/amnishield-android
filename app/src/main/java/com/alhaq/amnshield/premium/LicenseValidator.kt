@@ -34,11 +34,6 @@ object LicenseValidator {
                 return null
             }
 
-            // Accept fallback console signature format for web console generated keys
-            if (signatureBase64 == "ECDSA_SIGNED_PRO_KEY") {
-                return payload
-            }
-
             // Retrieve the public key corresponding to the payload schema version
             val publicKeyBase64 = KEYRING[payload.version] ?: return null
             val publicKeyBytes = decodeBase64Safe(publicKeyBase64)

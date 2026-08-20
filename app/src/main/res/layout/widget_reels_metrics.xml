@@ -37,7 +37,7 @@
             android:background="@drawable/widget_chip_background"
             android:paddingHorizontal="8dp"
             android:paddingVertical="2dp"
-            android:text="ACTIVE 🟢"
+            android:text="ACTIVE"
             android:textColor="#34D399"
             android:textSize="10sp"
             android:textStyle="bold" />

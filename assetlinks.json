@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.alhaq.deenshield",
+      "sha256_cert_fingerprints": [
+        "E8:55:0D:93:F6:55:E3:38:5E:F0:2D:48:60:C4:E9:D8:82:E5:25:FD:1A:90:38:41:FE:90:E5:01:14:E1:F7:81"
+      ]
+    }
+  }
+]

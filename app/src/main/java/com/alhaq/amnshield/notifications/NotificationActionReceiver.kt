@@ -31,6 +31,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         val loader = SavedPreferencesLoader(context)
 
+        // Automatically dismiss the notification shade entry
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+        notificationManager?.cancel(com.alhaq.amnshield.utils.NotificationHelper.NOTIFICATION_ID_REMINDER)
+
         when (action) {
             ACTION_START_QUICK_FOCUS -> {
                 val minutes = intent.getIntExtra(EXTRA_MINUTES, 25)

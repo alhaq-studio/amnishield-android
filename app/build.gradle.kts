@@ -37,8 +37,8 @@ android {
         applicationId = "com.alhaq.deenshield"
         minSdk = 26
         targetSdk = 36
-        versionCode = 133
-        versionName = "1.0.3-closed.03 (2026.08.14)"
+        versionCode = 134
+        versionName = "1.0.4-closed.04 (2026.08.18)"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Fix for 16 KB page size devices (Android 15+)
@@ -147,6 +147,9 @@ dependencies {
 
    
     implementation(libs.gson)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -170,5 +173,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

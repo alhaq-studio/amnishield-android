@@ -25,6 +25,11 @@ class ChooseKeywordFeedbackDialog(
             else -> binding.radioHandGesture.isChecked = true
         }
 
+        binding.btnPreviewHandGesture.setOnClickListener {
+            val overlayManager = com.alhaq.amnshield.ui.overlay.HandGestureOverlayManager(requireContext())
+            overlayManager.showGestureOverlay(detectedKeyword = "gambling", isHomePress = false)
+        }
+
         return MaterialAlertDialogBuilder(requireContext())
             .setView(binding.root)
             .setPositiveButton(getString(R.string.save)) { dialog, _ ->

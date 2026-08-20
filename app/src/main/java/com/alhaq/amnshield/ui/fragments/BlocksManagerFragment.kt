@@ -138,10 +138,7 @@ class BlocksManagerFragment : Fragment() {
                                     }
                                 },
                                 onToggleRule = { id -> toggleScheduleRuleActive(id) },
-                                onDeleteRule = { id -> deleteScheduleRule(id) },
-                                onBack = {
-                                    safeOnBack()
-                                }
+                                onDeleteRule = { id -> deleteScheduleRule(id) }
                             )
 
                             if (showSelectBlockerDialog) {
@@ -375,8 +372,14 @@ class BlocksManagerFragment : Fragment() {
                     }.distinct()
 
                     val appOrCategory = when (targetBlocker) {
-                        "Keyword Blocker" -> "Keywords Blocker"
-                        "Website Blocker" -> "Website Blocker"
+                        "Keyword Blocker" -> {
+                            val kwCount = savedPreferencesLoader.loadBlockedKeywords().size
+                            if (kwCount > 0) "$kwCount Keywords" else "Keywords Blocker"
+                        }
+                        "Website Blocker" -> {
+                            val siteCount = savedPreferencesLoader.loadBlockedWebsites().size
+                            if (siteCount > 0) "$siteCount Websites" else "Website Blocker"
+                        }
                         "Reels Blocker" -> "Reels Blocker"
                         "Focus Mode" -> "Focus Mode Schedules"
                         else -> {
@@ -477,6 +480,8 @@ class BlocksManagerFragment : Fragment() {
                             targetBlockerType = targetBlocker,
                             selectedApps = apps,
                             selectedBlockers = listOf(targetBlocker),
+                            selectedKeywords = if (targetBlocker == "Keyword Blocker") savedPreferencesLoader.loadBlockedKeywords().toList() else emptyList(),
+                            selectedWebsites = if (targetBlocker == "Website Blocker") savedPreferencesLoader.loadBlockedWebsites().toList() else emptyList(),
                             
                             isAlwaysBlockEnabled = isAlwaysBlockEnabled,
                             isScheduleEnabled = isScheduleEnabled,
@@ -498,6 +503,233 @@ class BlocksManagerFragment : Fragment() {
             }
         } catch (e: Throwable) {
             android.util.Log.e("BlocksManagerFragment", "Error processing schedule rules", e)
+        }
+
+        // AUTO-DISCOVERY & SYNTHESIS: Ensure all configured blockers & lists appear on the Blocks Screen
+        try {
+            // 1. Keyword Blocker Auto-Discovery
+            val hasKeywordRule = rulesList.any { it.targetBlockerType == "Keyword Blocker" }
+            val blockedKeywords = savedPreferencesLoader.loadBlockedKeywords()
+            val isKwAdultPack = savedPreferencesLoader.isKeywordBlockerAdultPackEnabled()
+            val isKwEnabled = savedPreferencesLoader.isKeywordBlockerFeatureEnabled()
+            if (!hasKeywordRule && (blockedKeywords.isNotEmpty() || isKwAdultPack || isKwEnabled)) {
+                val kwRuleId = "keyword_blocker_default"
+                rulesList.add(
+                    com.alhaq.amnshield.ui.state.ScheduleRule(
+                        id = kwRuleId,
+                        name = "Keyword Blocker",
+                        appOrCategory = if (blockedKeywords.isNotEmpty()) "${blockedKeywords.size} Keywords" else "Keywords Blocker",
+                        restrictionType = "Keyword Blocker",
+                        startTime = "00:00",
+                        endTime = "23:59",
+                        days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                        limitValue = 0,
+                        isActive = isKwEnabled,
+                        targetBlockerType = "Keyword Blocker",
+                        selectedKeywords = blockedKeywords.toList(),
+                        selectedBlockers = listOf("Keyword Blocker"),
+                        isAlwaysBlockEnabled = true
+                    )
+                )
+                if (isKwEnabled && appSchedules.none { it.packageName == "keyword_blocker" }) {
+                    savedPreferencesLoader.upsertAppBlockerScheduleRule(
+                        AppBlockScheduleRule(
+                            id = UUID.randomUUID().toString(),
+                            title = "Block Always • Keyword Blocker",
+                            packageName = "keyword_blocker",
+                            type = AppBlockScheduleRule.RuleType.BLOCK,
+                            recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+                            startMinute = 0,
+                            endMinute = 0,
+                            selectedDays = emptySet(),
+                            createdAt = System.currentTimeMillis(),
+                            groupId = kwRuleId,
+                            groupTitle = "Keyword Blocker",
+                            isEnabled = true
+                        )
+                    )
+                }
+            }
+
+            // 2. Website Blocker Auto-Discovery
+            val hasWebsiteRule = rulesList.any { it.targetBlockerType == "Website Blocker" }
+            val blockedWebsites = savedPreferencesLoader.loadBlockedWebsites()
+            val isWebEnabled = savedPreferencesLoader.isWebsiteBlockerEnabled()
+            if (!hasWebsiteRule && (blockedWebsites.isNotEmpty() || isWebEnabled)) {
+                val webRuleId = "website_blocker_default"
+                rulesList.add(
+                    com.alhaq.amnshield.ui.state.ScheduleRule(
+                        id = webRuleId,
+                        name = "Website Blocker",
+                        appOrCategory = if (blockedWebsites.isNotEmpty()) "${blockedWebsites.size} Websites" else "Website Blocker",
+                        restrictionType = "Website Blocker",
+                        startTime = "00:00",
+                        endTime = "23:59",
+                        days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                        limitValue = 0,
+                        isActive = isWebEnabled,
+                        targetBlockerType = "Website Blocker",
+                        selectedWebsites = blockedWebsites.toList(),
+                        selectedBlockers = listOf("Website Blocker"),
+                        isAlwaysBlockEnabled = true
+                    )
+                )
+                if (isWebEnabled && appSchedules.none { it.packageName == "website_blocker" }) {
+                    savedPreferencesLoader.upsertAppBlockerScheduleRule(
+                        AppBlockScheduleRule(
+                            id = UUID.randomUUID().toString(),
+                            title = "Block Always • Website Blocker",
+                            packageName = "website_blocker",
+                            type = AppBlockScheduleRule.RuleType.BLOCK,
+                            recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+                            startMinute = 0,
+                            endMinute = 0,
+                            selectedDays = emptySet(),
+                            createdAt = System.currentTimeMillis(),
+                            groupId = webRuleId,
+                            groupTitle = "Website Blocker",
+                            isEnabled = true
+                        )
+                    )
+                }
+            }
+
+            // 3. Reels & Shorts Blocker Auto-Discovery
+            val hasReelsRule = rulesList.any { it.targetBlockerType == "Reels Blocker" }
+            val isReelsEnabled = savedPreferencesLoader.isReelBlockerEnabled()
+            val reelsLimit = savedPreferencesLoader.getReelBlockerDailyLimit()
+            if (!hasReelsRule && (isReelsEnabled || reelsLimit > 0)) {
+                val reelsRuleId = "reel_blocker_default"
+                rulesList.add(
+                    com.alhaq.amnshield.ui.state.ScheduleRule(
+                        id = reelsRuleId,
+                        name = "Reels & Shorts Blocker",
+                        appOrCategory = if (reelsLimit > 0) "$reelsLimit Reels/day" else "All Short Feeds",
+                        restrictionType = "Reels Blocker",
+                        startTime = "00:00",
+                        endTime = "23:59",
+                        days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                        limitValue = reelsLimit,
+                        isActive = isReelsEnabled,
+                        targetBlockerType = "Reels Blocker",
+                        selectedPlatforms = listOf("Instagram", "YouTube", "TikTok", "Facebook"),
+                        selectedBlockers = listOf("Reels Blocker"),
+                        isAlwaysBlockEnabled = true
+                    )
+                )
+                if (isReelsEnabled && appSchedules.none { it.packageName == "reel_blocker" }) {
+                    savedPreferencesLoader.upsertAppBlockerScheduleRule(
+                        AppBlockScheduleRule(
+                            id = UUID.randomUUID().toString(),
+                            title = "Block Always • Reels Blocker",
+                            packageName = "reel_blocker",
+                            type = AppBlockScheduleRule.RuleType.BLOCK,
+                            recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+                            startMinute = 0,
+                            endMinute = 0,
+                            selectedDays = emptySet(),
+                            createdAt = System.currentTimeMillis(),
+                            groupId = reelsRuleId,
+                            groupTitle = "Reels Blocker",
+                            isEnabled = true
+                        )
+                    )
+                }
+            }
+
+            // 4. Focus Mode Auto-Discovery
+            val hasFocusRule = rulesList.any { it.targetBlockerType == "Focus Mode" }
+            val focusData = savedPreferencesLoader.getFocusModeData()
+            if (!hasFocusRule && (focusData.isTurnedOn || focusData.selectedApps.isNotEmpty())) {
+                val focusRuleId = "focus_mode_default"
+                val isFocusActive = focusData.isTurnedOn
+                rulesList.add(
+                    com.alhaq.amnshield.ui.state.ScheduleRule(
+                        id = focusRuleId,
+                        name = "Focus Mode Space",
+                        appOrCategory = "${focusData.selectedApps.size} Apps Protected",
+                        restrictionType = "Focus Mode",
+                        startTime = "00:00",
+                        endTime = "23:59",
+                        days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                        limitValue = 0,
+                        isActive = isFocusActive,
+                        targetBlockerType = "Focus Mode",
+                        selectedApps = focusData.selectedApps.toList(),
+                        selectedBlockers = listOf("Focus Mode"),
+                        isAlwaysBlockEnabled = true
+                    )
+                )
+                if (isFocusActive && appSchedules.none { it.packageName == "FOCUS_MODE" || it.packageName == "focus_mode" }) {
+                    savedPreferencesLoader.upsertAppBlockerScheduleRule(
+                        AppBlockScheduleRule(
+                            id = UUID.randomUUID().toString(),
+                            title = "Block Always • Focus Mode",
+                            packageName = "FOCUS_MODE",
+                            type = AppBlockScheduleRule.RuleType.BLOCK,
+                            recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+                            startMinute = 0,
+                            endMinute = 0,
+                            selectedDays = emptySet(),
+                            createdAt = System.currentTimeMillis(),
+                            groupId = focusRuleId,
+                            groupTitle = "Focus Mode Space",
+                            isEnabled = true
+                        )
+                    )
+                }
+            }
+
+            // 5. Standalone Blocked Apps Auto-Discovery
+            val coveredAppPkgs = rulesList.flatMap { it.selectedApps }.toSet()
+            val allBlockedApps = savedPreferencesLoader.loadBlockedApps().filter {
+                it != "keyword_blocker" && it != "website_blocker" && it != "reel_blocker" && it != "FOCUS_MODE" && it != "focus_mode" && !coveredAppPkgs.contains(it)
+            }
+            if (allBlockedApps.isNotEmpty()) {
+                val directAppRuleId = "app_blocker_direct_default"
+                val isAppBlockerOn = savedPreferencesLoader.isAppBlockerFeatureEnabled()
+                rulesList.add(
+                    com.alhaq.amnshield.ui.state.ScheduleRule(
+                        id = directAppRuleId,
+                        name = "App Blocker",
+                        appOrCategory = "${allBlockedApps.size} Apps Blocked",
+                        restrictionType = "Always Block (24/7)",
+                        startTime = "00:00",
+                        endTime = "23:59",
+                        days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"),
+                        limitValue = 0,
+                        isActive = isAppBlockerOn,
+                        targetBlockerType = "App Blocker",
+                        selectedApps = allBlockedApps,
+                        selectedBlockers = listOf("App Blocker"),
+                        isAlwaysBlockEnabled = true
+                    )
+                )
+                if (isAppBlockerOn) {
+                    allBlockedApps.forEach { pkg ->
+                        if (appSchedules.none { it.packageName == pkg }) {
+                            savedPreferencesLoader.upsertAppBlockerScheduleRule(
+                                AppBlockScheduleRule(
+                                    id = UUID.randomUUID().toString(),
+                                    title = "Block Always • $pkg",
+                                    packageName = pkg,
+                                    type = AppBlockScheduleRule.RuleType.BLOCK,
+                                    recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+                                    startMinute = 0,
+                                    endMinute = 0,
+                                    selectedDays = emptySet(),
+                                    createdAt = System.currentTimeMillis(),
+                                    groupId = directAppRuleId,
+                                    groupTitle = "App Blocker",
+                                    isEnabled = true
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("BlocksManagerFragment", "Error auto-discovering blockers", e)
         }
 
         try {
@@ -551,7 +783,7 @@ class BlocksManagerFragment : Fragment() {
         savedPreferencesLoader.removeAppBlockerScheduleRule(rule.id)
 
         // Clean up launch limits for all of the group's packages
-        rule.selectedApps?.forEach { appPkg ->
+        rule.selectedApps.forEach { appPkg ->
             savedPreferencesLoader.removeAppLaunchLimitRule(appPkg)
         }
 
@@ -564,7 +796,7 @@ class BlocksManagerFragment : Fragment() {
             "Website Blocker" -> listOf("website_blocker")
             "Reels Blocker" -> listOf("reel_blocker")
             "Focus Mode" -> listOf("FOCUS_MODE")
-            else -> rule.selectedApps ?: emptyList()
+            else -> rule.selectedApps
         }
 
         // 1. Save Block Schedule Rules if enabled
@@ -653,13 +885,15 @@ class BlocksManagerFragment : Fragment() {
 
         // 3b. Focus Mode Specific Saving
         if (rule.targetBlockerType == "Focus Mode") {
-            savedPreferencesLoader.saveFocusModeSelectedApps(rule.selectedApps ?: emptyList())
+            savedPreferencesLoader.saveFocusModeSelectedApps(rule.selectedApps)
             val currentData = savedPreferencesLoader.getFocusModeData()
             val updatedData = currentData.copy(
                 modeType = rule.focusProtectionMode,
-                selectedApps = HashSet(rule.selectedApps ?: emptyList())
+                selectedApps = HashSet(rule.selectedApps),
+                isTurnedOn = rule.isActive
             )
             savedPreferencesLoader.saveFocusModeData(updatedData)
+            savedPreferencesLoader.setFocusModeFeatureEnabled(rule.isActive, updateManual = true)
 
             if (rule.isFocusLengthEnabled) {
                 val appRule = AppBlockScheduleRule(
@@ -679,6 +913,40 @@ class BlocksManagerFragment : Fragment() {
                 )
                 savedPreferencesLoader.upsertAppBlockerScheduleRule(appRule)
             }
+        }
+
+        // 3c. Keyword Blocker Specific Saving
+        if (rule.targetBlockerType == "Keyword Blocker") {
+            if (rule.selectedKeywords.isNotEmpty()) {
+                savedPreferencesLoader.saveBlockedKeywords(rule.selectedKeywords.toSet())
+            }
+            savedPreferencesLoader.setKeywordBlockerFeatureEnabled(rule.isActive, updateManual = true)
+        }
+
+        // 3d. Website Blocker Specific Saving
+        if (rule.targetBlockerType == "Website Blocker") {
+            if (rule.selectedWebsites.isNotEmpty()) {
+                savedPreferencesLoader.saveBlockedWebsites(rule.selectedWebsites.toSet())
+            }
+            savedPreferencesLoader.setWebsiteBlockerEnabled(rule.isActive, updateManual = true)
+        }
+
+        // 3e. Reels Blocker Specific Saving
+        if (rule.targetBlockerType == "Reels Blocker") {
+            if (rule.limitValue > 0) {
+                savedPreferencesLoader.setReelBlockerDailyLimit(rule.limitValue)
+            }
+            savedPreferencesLoader.setReelBlockerEnabled(rule.isActive, updateManual = true)
+        }
+
+        // 3f. App Blocker Specific List Syncing
+        if (rule.targetBlockerType == "App Blocker") {
+            savedPreferencesLoader.setAppBlockerFeatureEnabled(true, updateManual = true)
+            val currentBlocked = savedPreferencesLoader.loadBlockedApps().toMutableSet()
+            if (rule.isActive) {
+                rule.selectedApps.forEach { currentBlocked.add(it) }
+            }
+            savedPreferencesLoader.saveBlockedApps(currentBlocked)
         }
 
         // 4. Save Launch Limit Rules if App Blocker and enabled
@@ -722,6 +990,29 @@ class BlocksManagerFragment : Fragment() {
                     affectedPackages.add(item.packageName)
                 }
             }
+
+            if (targetState == null) {
+                // If it was an auto-discovered rule with custom ID
+                val currentRule = viewModel.state.value.scheduleRules.firstOrNull { it.id == id }
+                targetState = !(currentRule?.isActive ?: true)
+            }
+
+            // Sync with specific blocker toggles
+            if (id == "keyword_blocker_default" || affectedPackages.contains("keyword_blocker")) {
+                savedPreferencesLoader.setKeywordBlockerFeatureEnabled(targetState == true, updateManual = true)
+            }
+            if (id == "website_blocker_default" || affectedPackages.contains("website_blocker")) {
+                savedPreferencesLoader.setWebsiteBlockerEnabled(targetState == true, updateManual = true)
+            }
+            if (id == "reel_blocker_default" || affectedPackages.contains("reel_blocker")) {
+                savedPreferencesLoader.setReelBlockerEnabled(targetState == true, updateManual = true)
+            }
+            if (id == "focus_mode_default" || affectedPackages.contains("FOCUS_MODE") || affectedPackages.contains("focus_mode")) {
+                val focusData = savedPreferencesLoader.getFocusModeData()
+                savedPreferencesLoader.saveFocusModeData(focusData.copy(isTurnedOn = targetState == true))
+                savedPreferencesLoader.setFocusModeFeatureEnabled(targetState == true, updateManual = true)
+            }
+
             if (appModified) {
                 savedPreferencesLoader.saveAppBlockerScheduleRules(appRules)
 
@@ -770,6 +1061,26 @@ class BlocksManagerFragment : Fragment() {
             }
             savedPreferencesLoader.removeAppBlockerScheduleGroup(id)
             savedPreferencesLoader.removeAppBlockerScheduleRule(id)
+
+            // Deactivate and clear underlying blocker lists/states if rule is deleted
+            if (id == "keyword_blocker_default" || associatedApps.contains("keyword_blocker")) {
+                savedPreferencesLoader.setKeywordBlockerFeatureEnabled(false, updateManual = true)
+                savedPreferencesLoader.saveBlockedKeywords(emptySet())
+                savedPreferencesLoader.setKeywordBlockerAdultPackEnabled(false)
+            }
+            if (id == "website_blocker_default" || associatedApps.contains("website_blocker")) {
+                savedPreferencesLoader.setWebsiteBlockerEnabled(false, updateManual = true)
+                savedPreferencesLoader.saveBlockedWebsites(emptySet())
+            }
+            if (id == "reel_blocker_default" || associatedApps.contains("reel_blocker")) {
+                savedPreferencesLoader.setReelBlockerEnabled(false, updateManual = true)
+                savedPreferencesLoader.setReelBlockerDailyLimit(0)
+            }
+            if (id == "focus_mode_default" || associatedApps.contains("FOCUS_MODE") || associatedApps.contains("focus_mode")) {
+                val currentData = savedPreferencesLoader.getFocusModeData()
+                savedPreferencesLoader.saveFocusModeData(currentData.copy(isTurnedOn = false))
+                savedPreferencesLoader.setFocusModeFeatureEnabled(false, updateManual = true)
+            }
 
             // Remove associated apps from blocked_apps if no other enabled rule uses them
             val updatedRules = savedPreferencesLoader.loadAppBlockerScheduleRules()

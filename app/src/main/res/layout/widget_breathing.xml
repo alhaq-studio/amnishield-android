@@ -36,7 +36,7 @@
             android:background="@drawable/widget_chip_background"
             android:paddingHorizontal="8dp"
             android:paddingVertical="2dp"
-            android:text="CALM 🍃"
+            android:text="CALM"
             android:textColor="#34D399"
             android:textSize="10sp"
             android:textStyle="bold" />
@@ -70,7 +70,7 @@
         android:layout_height="34dp"
         android:background="@drawable/widget_accent_button"
         android:gravity="center"
-        android:text="Start Mindful Breath 🍃"
+        android:text="Start Mindful Breath"
         android:textColor="#FFFFFF"
         android:textSize="12sp"
         android:textStyle="bold" />

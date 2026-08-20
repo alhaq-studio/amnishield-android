@@ -57,7 +57,7 @@ class ReelsMetricsWidgetProvider : AppWidgetProvider() {
                 setTextViewText(R.id.txt_reels_scrolled_count, "$reelsCount Reels")
                 setTextViewText(R.id.txt_reels_limit_info, if (reelsLimit > 0) "Limit: $reelsLimit • $pct% Used" else "No Daily Limit Set")
 
-                setTextViewText(R.id.txt_reels_status_badge, if (isBlockerEnabled) "ACTIVE 🟢" else "PAUSED 🔴")
+                setTextViewText(R.id.txt_reels_status_badge, if (isBlockerEnabled) "ACTIVE" else "PAUSED")
 
                 // Refresh button
                 val refreshIntent = Intent(context, ReelsMetricsWidgetProvider::class.java).apply {

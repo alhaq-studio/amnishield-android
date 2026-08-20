@@ -58,6 +58,16 @@
 
     <style name="Theme.AmnShield" parent="Base.Theme.AmnShield" />
 
+    <style name="Theme.AmnShield.TransparentOverlay" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
     <!-- Modern Gradient Theme -->
     <!-- Pass 1 readability tune-up: full M3 token coverage so dialogs, sheets,
          chips, text fields, and icons all pick up legible colors on top of the

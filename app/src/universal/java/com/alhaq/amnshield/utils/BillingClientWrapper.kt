@@ -116,11 +116,15 @@ class BillingClientWrapper(private val context: Context) : PurchasesUpdatedListe
             onPurchaseFinished(false, "Product details not found or cached")
             return
         }
-        val productDetailsParamsList = listOf(
-            BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(realDetails)
-                .build()
-        )
+        val paramBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(realDetails)
+
+        val offerToken = realDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
+        if (offerToken != null) {
+            paramBuilder.setOfferToken(offerToken)
+        }
+
+        val productDetailsParamsList = listOf(paramBuilder.build())
         val billingFlowParams = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(productDetailsParamsList)
             .build()

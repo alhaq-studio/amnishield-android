@@ -9,9 +9,11 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.alhaq.amnshield.BuildConfig
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.data.AmnShieldProductDetails
+import com.alhaq.amnshield.data.sync.SupabaseRest
 import com.alhaq.amnshield.databinding.FragmentPremiumFeaturesBinding
 import com.alhaq.amnshield.premium.PaymentManager
 import com.alhaq.amnshield.premium.PremiumManager
@@ -21,6 +23,9 @@ import com.alhaq.amnshield.utils.SavedPreferencesLoader
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PremiumFeaturesFragment : Fragment() {
 
@@ -69,6 +74,12 @@ class PremiumFeaturesFragment : Fragment() {
         binding.btnBuyYearly.setOnClickListener {
             handlePlanSelection("annual", PremiumProducts.PRODUCT_YEARLY)
         }
+        binding.btnBuyLifetime.setOnClickListener {
+            handlePlanSelection("lifetime", PremiumProducts.PRODUCT_LIFETIME)
+        }
+        binding.btnSignInEmailOtp.setOnClickListener {
+            showEmailOtpSignInDialog()
+        }
         binding.btnRestore.setOnClickListener {
             restorePurchases()
         }
@@ -79,7 +90,7 @@ class PremiumFeaturesFragment : Fragment() {
             val key = binding.etKey.text?.toString()?.trim().orEmpty()
             if (key.isNotEmpty()) {
                 if (premiumManager.redeemLicenseKey(key)) {
-                    Toast.makeText(requireContext(), "Pro License Activated Successfully! 👑", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "Pro License Activated Successfully!", Toast.LENGTH_LONG).show()
                     binding.etKey.text?.clear()
                     updatePremiumState()
                 } else {
@@ -119,20 +130,18 @@ class PremiumFeaturesFragment : Fragment() {
                 }
             }
         } ?: run {
-            Toast.makeText(requireContext(), "Play Store purchase unavailable for this flavor", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Connecting to Google Play Store...", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun restorePurchases() {
-        Toast.makeText(requireContext(), R.string.premium_restore_in_progress, Toast.LENGTH_SHORT).show()
-        
         billingClientWrapper?.queryPurchases { purchases ->
             if (purchases.isNotEmpty()) {
                 premiumManager.updatePremiumStatus(true)
                 updatePremiumState()
                 Toast.makeText(requireContext(), R.string.premium_purchase_success, Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(requireContext(), R.string.premium_no_previous_purchases, Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.premium_no_previous_purchases, Toast.LENGTH_LONG).show()
             }
         } ?: run {
             Toast.makeText(requireContext(), "Use license key activation for non-Play builds.", Toast.LENGTH_LONG).show()
@@ -146,6 +155,7 @@ class PremiumFeaturesFragment : Fragment() {
         binding.premiumUpsellContainer.visibility = if (isPremium) View.GONE else View.VISIBLE
         binding.btnBuyMonthly.isEnabled = !isPremium
         binding.btnBuyYearly.isEnabled = !isPremium
+        binding.btnBuyLifetime.isEnabled = !isPremium
         binding.btnRestore.visibility = if (isPremium || !BuildConfig.IS_PLAYSTORE) View.GONE else View.VISIBLE
 
         val activeMessage = when (userType) {
@@ -173,6 +183,9 @@ class PremiumFeaturesFragment : Fragment() {
             }
             products[PremiumProducts.PRODUCT_YEARLY]?.let { product ->
                 binding.txtYearlyPrice.text = product.priceText
+            }
+            products[PremiumProducts.PRODUCT_LIFETIME]?.let { product ->
+                binding.txtLifetimePrice.text = product.priceText
             }
         }
     }
@@ -292,7 +305,7 @@ class PremiumFeaturesFragment : Fragment() {
                 if (premiumManager.redeemLicenseKey(licenseKey)) {
                     Toast.makeText(
                         requireContext(),
-                        "Pro License Activated Successfully! 👑",
+                        "Pro License Activated Successfully!",
                         Toast.LENGTH_LONG
                     ).show()
                     updatePremiumState()
@@ -306,5 +319,99 @@ class PremiumFeaturesFragment : Fragment() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun showEmailOtpSignInDialog() {
+        val emailInput = EditText(requireContext()).apply {
+            hint = "Enter your purchase email"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Sign In with Email (OTP)")
+            .setMessage("We will send a 6-digit one-time code to your email to verify your account and activate Pro.")
+            .setView(emailInput)
+            .setPositiveButton("Send Code") { _, _ ->
+                val email = emailInput.text.toString().trim()
+                if (email.isNotEmpty() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                    requestOtpCode(email)
+                } else {
+                    Toast.makeText(requireContext(), "Please enter a valid email address", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun requestOtpCode(email: String) {
+        Toast.makeText(requireContext(), "Sending 6-digit code to $email...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val rest = SupabaseRest()
+                rest.sendEmailOtp(email)
+                withContext(Dispatchers.Main) {
+                    showOtpVerificationDialog(email)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Failed to send code: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun showOtpVerificationDialog(email: String) {
+        val codeInput = EditText(requireContext()).apply {
+            hint = "Enter 6-digit code (e.g. 123456)"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            filters = arrayOf(android.text.InputFilter.LengthFilter(6))
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Enter 6-Digit Code")
+            .setMessage("We sent a verification email to $email.\n\n• Enter the 6-digit code below, OR\n• Tap the link in the email to verify and activate automatically.")
+            .setView(codeInput)
+            .setPositiveButton("Verify & Activate") { _, _ ->
+                val code = codeInput.text.toString().trim()
+                if (code.length == 6) {
+                    verifyOtpAndActivate(email, code)
+                } else {
+                    Toast.makeText(requireContext(), "Please enter the complete 6-digit code", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun verifyOtpAndActivate(email: String, code: String) {
+        Toast.makeText(requireContext(), "Verifying account...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val rest = SupabaseRest()
+                val session = rest.verifyOtp(email, code, "email")
+                val profile = rest.fetchProfile(session)
+
+                withContext(Dispatchers.Main) {
+                    if (profile != null && !profile.licenseKey.isNullOrBlank()) {
+                        if (premiumManager.redeemLicenseKey(profile.licenseKey)) {
+                            Toast.makeText(requireContext(), "AmnShield Pro Activated for $email!", Toast.LENGTH_LONG).show()
+                            updatePremiumState()
+                        } else {
+                            Toast.makeText(requireContext(), "License key found in profile was invalid or expired.", Toast.LENGTH_LONG).show()
+                        }
+                    } else if (profile?.isPremium == true) {
+                        premiumManager.updatePremiumStatus(true)
+                        updatePremiumState()
+                        Toast.makeText(requireContext(), "AmnShield Pro Status Restored!", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(requireContext(), "No active Pro license found for $email. Please check your purchase email.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Verification failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 }

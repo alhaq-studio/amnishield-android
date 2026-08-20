@@ -131,6 +131,7 @@ fun CreateKeywordBlockerRuleScreen(
                 onSave = {
                     if (saveEnabled) {
                         loader.saveBlockedKeywords(blockedKeywords.toSet())
+                        loader.setKeywordBlockerFeatureEnabled(true, updateManual = true)
 
                         val newRule = ScheduleRule(
                             id = editingRule?.id ?: UUID.randomUUID().toString(),
@@ -160,6 +161,10 @@ fun CreateKeywordBlockerRuleScreen(
                         val refreshIntent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
                         refreshIntent.setPackage(context.packageName)
                         context.sendBroadcast(refreshIntent)
+
+                        val refreshListIntent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                        refreshListIntent.setPackage(context.packageName)
+                        context.sendBroadcast(refreshListIntent)
 
                         onSaveRule(newRule)
                     }
@@ -326,9 +331,11 @@ fun CreateKeywordBlockerRuleScreen(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = pack.iconEmoji,
-                                            style = MaterialTheme.typography.titleMedium
+                                        Icon(
+                                            imageVector = pack.icon,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                         Column {
                                             Text(

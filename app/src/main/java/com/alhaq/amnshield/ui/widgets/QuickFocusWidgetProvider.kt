@@ -135,7 +135,7 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_quick_focus).apply {
                 if (isFocusActive) {
-                    setTextViewText(R.id.txt_focus_status_badge, "ACTIVE 🔥")
+                    setTextViewText(R.id.txt_focus_status_badge, "ACTIVE")
                     setTextViewText(R.id.txt_focus_timer_display, "${remainingMins}m Remaining")
                     setTextViewText(R.id.txt_focus_subtitle, "Focus session active")
 
@@ -147,7 +147,7 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
                         createActionIntent(context, widgetId, ACTION_STOP_FOCUS)
                     )
                 } else {
-                    setTextViewText(R.id.txt_focus_status_badge, "READY ⚡")
+                    setTextViewText(R.id.txt_focus_status_badge, "READY")
                     setTextViewText(R.id.txt_focus_timer_display, "Ready to Focus")
                     setTextViewText(R.id.txt_focus_subtitle, "Tap a preset to start instant session")
 

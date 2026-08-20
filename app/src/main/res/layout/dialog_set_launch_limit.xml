@@ -96,7 +96,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="⚠ When this limit is reached, the app will be automatically blocked until the next period."
+        android:text="When this limit is reached, the app will be automatically blocked until the next period."
         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginBottom="24dp" />

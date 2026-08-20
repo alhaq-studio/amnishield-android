@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -117,7 +118,7 @@ fun CreateReelsBlockerRuleScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -133,6 +134,7 @@ fun CreateReelsBlockerRuleScreen(
                         val modeToSave = if (isLimitByReelsScrolled) 1 else 2
                         loader.setReelBlockerMode(modeToSave)
                         loader.setReelBlockerDailyLimit(reelsLimitCount.roundToInt())
+                        loader.setReelBlockerEnabled(true, updateManual = true)
 
                         val newRule = ScheduleRule(
                             id = editingRule?.id ?: UUID.randomUUID().toString(),

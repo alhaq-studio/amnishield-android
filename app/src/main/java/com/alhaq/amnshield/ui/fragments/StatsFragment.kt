@@ -41,6 +41,7 @@ class StatsFragment : Fragment() {
     private lateinit var viewModel: AmnShieldViewModel
 
     // Compose States
+    private val isAppUsageTrackingState = mutableStateOf(true)
     private val totalScreenTimeState = mutableStateOf("0h 0m")
     private val distractionsBlockedState = mutableStateOf(0)
     private val focusTimeState = mutableStateOf("0m")
@@ -71,6 +72,12 @@ class StatsFragment : Fragment() {
                         totalReelsWatched = totalReelsWatchedState.value,
                         averageWatchSeconds = averageWatchSecondsState.value,
                         topApps = topAppsState,
+                        isAppUsageTrackingEnabled = isAppUsageTrackingState.value,
+                        onEnableAppUsageTracking = {
+                            savedPreferencesLoader.setAppUsageTrackingEnabled(true)
+                            isAppUsageTrackingState.value = true
+                            loadStats()
+                        },
                         onRefresh = { loadStats() },
                         onViewDetailedUsage = {
                             val intent = Intent(requireContext(), FragmentActivity::class.java)
@@ -134,6 +141,7 @@ class StatsFragment : Fragment() {
     }
 
     private fun loadStats() {
+        isAppUsageTrackingState.value = savedPreferencesLoader.isAppUsageTrackingEnabled(true)
         lifecycleScope.launch {
             context?.let { ctx ->
                 try {
