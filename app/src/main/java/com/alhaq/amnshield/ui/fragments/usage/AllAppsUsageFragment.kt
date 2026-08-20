@@ -55,6 +55,7 @@ import com.alhaq.amnshield.databinding.DialogPermissionInfoBinding
 import com.alhaq.amnshield.databinding.FragmentAllAppUsageBinding
 import com.alhaq.amnshield.ui.activity.FragmentActivity
 import com.alhaq.amnshield.ui.activity.SelectAppsActivity
+import com.alhaq.amnshield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 import com.alhaq.amnshield.utils.TimeTools
 import com.alhaq.amnshield.utils.UsageStatsHelper
@@ -535,19 +536,74 @@ class AllAppsUsageFragment : Fragment() {
         textView.text = "$domain • ${TimeTools.formatTime(entry.value, false)} • $riskText risk"
         row.visibility = View.VISIBLE
         row.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Control Website: $domain")
-                .setMessage("Manage rules or add a filter block for $domain.")
-                .setPositiveButton("Block / Add Rule") { _, _ ->
-                    val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                        putExtra("feature_type", "create_rule")
-                        putExtra("preset_keyword", domain)
+            showWebsiteControlDialog(domain, entry.value)
+        }
+    }
+
+    private fun showWebsiteControlDialog(domain: String, durationMillis: Long = 0L) {
+        val blockedWebsites = savedPreferencesLoader.loadBlockedWebsites()
+        val isAlreadyBlocked = blockedWebsites.contains(domain)
+        val hasExistingWebsiteRules = blockedWebsites.isNotEmpty() ||
+                savedPreferencesLoader.loadAppBlockerScheduleRules().any { it.packageName == "website_blocker" }
+
+        val timeSnippet = if (durationMillis > 0) {
+            "Browsing time today: ${TimeTools.formatTime(durationMillis, false)}\n\n"
+        } else ""
+
+        val dialogBuilder = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Control Website: $domain")
+
+        if (hasExistingWebsiteRules) {
+            if (isAlreadyBlocked) {
+                dialogBuilder.setMessage("${timeSnippet}This domain is currently in your active website blocklist.\n\nChoose an action:")
+                    .setPositiveButton("Create New Rule") { _, _ ->
+                        openCreateWebsiteRule(domain)
                     }
-                    startActivity(intent)
+                    .setNeutralButton("Remove from Blocklist") { _, _ ->
+                        val updated = blockedWebsites.toMutableSet()
+                        updated.remove(domain)
+                        savedPreferencesLoader.saveBlockedWebsites(updated)
+                        Toast.makeText(requireContext(), "Removed $domain from website blocklist", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancel", null)
+            } else {
+                dialogBuilder.setMessage("${timeSnippet}Choose how you would like to restrict $domain:")
+                    .setPositiveButton("Add to Existing Rule") { _, _ ->
+                        val updated = blockedWebsites.toMutableSet()
+                        updated.add(domain)
+                        savedPreferencesLoader.saveBlockedWebsites(updated)
+                        Toast.makeText(requireContext(), "Added $domain to active website blocklist", Toast.LENGTH_LONG).show()
+                    }
+                    .setNeutralButton("Create New Rule") { _, _ ->
+                        openCreateWebsiteRule(domain)
+                    }
+                    .setNegativeButton("Cancel", null)
+            }
+        } else {
+            dialogBuilder.setMessage("${timeSnippet}No website blocking rules are currently active.\n\nCreate a new schedule or always-block rule with $domain in the blocklist:")
+                .setPositiveButton("Create New Rule") { _, _ ->
+                    openCreateWebsiteRule(domain)
                 }
                 .setNegativeButton("Cancel", null)
-                .show()
         }
+
+        dialogBuilder.show()
+    }
+
+    private fun openCreateWebsiteRule(domain: String) {
+        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+            putExtra("fragment", BlocksManagerFragment.FRAGMENT_ID)
+            putExtra("action", "create")
+            putExtra("prefill_target", "WEBSITE_BLOCKER")
+            putExtra("prefill_website", domain)
+            putExtra("preset_keyword", domain)
+        }
+        val options = ActivityOptionsCompat.makeCustomAnimation(
+            requireContext(),
+            R.anim.fade_in,
+            R.anim.fade_out
+        )
+        startActivity(intent, options.toBundle())
     }
 
     private fun showDatePickerDialog(
@@ -802,18 +858,7 @@ class AllAppsUsageFragment : Fragment() {
                 binding.appUsage.text = TimeTools.formatTime(item.durationMillis)
 
                 binding.root.setOnClickListener {
-                    MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Website: ${item.title}")
-                        .setMessage("Browsing time: ${TimeTools.formatTime(item.durationMillis)}\n\nManage blocking rules or limits for ${item.title}.")
-                        .setPositiveButton("Block / Add Rule") { _, _ ->
-                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                                putExtra("feature_type", "create_rule")
-                                putExtra("preset_keyword", item.title)
-                            }
-                            startActivity(intent)
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
+                    showWebsiteControlDialog(item.title, item.durationMillis)
                 }
 
                 binding.root.setOnLongClickListener {

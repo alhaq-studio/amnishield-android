@@ -33,13 +33,14 @@ fun CreateWebsiteBlockerRuleScreen(
     viewModel: AmnShieldViewModel,
     initialType: String = "Block Schedule",
     editingRule: ScheduleRule? = null,
+    prefillWebsite: String? = null,
     onSaveRule: (ScheduleRule) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
 
-    val initialName = remember(editingRule) {
-        editingRule?.name ?: "Website Blocker Rule"
+    val initialName = remember(editingRule, prefillWebsite) {
+        editingRule?.name ?: if (!prefillWebsite.isNullOrBlank()) "Block $prefillWebsite" else "Website Blocker Rule"
     }
 
     var ruleName by remember { mutableStateOf(initialName) }
@@ -95,7 +96,14 @@ fun CreateWebsiteBlockerRuleScreen(
     val loader = remember { SavedPreferencesLoader(context) }
     val blockedWebsites = remember {
         mutableStateListOf<String>().apply {
-            addAll(loader.loadBlockedWebsites())
+            if (!prefillWebsite.isNullOrBlank()) {
+                add(prefillWebsite.trim().lowercase())
+            }
+            loader.loadBlockedWebsites().forEach {
+                if (!contains(it)) {
+                    add(it)
+                }
+            }
         }
     }
     var newWebsite by remember { mutableStateOf("") }

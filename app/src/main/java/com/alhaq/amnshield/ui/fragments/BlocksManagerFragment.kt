@@ -87,6 +87,7 @@ class BlocksManagerFragment : Fragment() {
                 val prefillTarget = remember { arguments?.getString("prefill_target") }
                 val prefillType = remember { arguments?.getString("prefill_type") }
                 val prefillApp = remember { arguments?.getString("prefill_app") }
+                val prefillWebsite = remember { arguments?.getString("prefill_website") ?: arguments?.getString("preset_keyword") }
 
                 val defaultScreen = remember(action, prefillTarget) {
                     if (action == "create") {
@@ -220,6 +221,7 @@ class BlocksManagerFragment : Fragment() {
                                 viewModel = viewModel,
                                 initialType = initialType,
                                 editingRule = editingRule,
+                                prefillWebsite = prefillWebsite,
                                 onSaveRule = { rule ->
                                     if (editingRule != null) {
                                         deleteScheduleRule(editingRule!!.id)
