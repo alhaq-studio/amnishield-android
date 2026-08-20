@@ -295,6 +295,8 @@ class AllAppsUsageFragment : Fragment() {
         }
     }
 
+    private var currentLoadedStats: List<Stat> = emptyList()
+
     private suspend fun setUsageStats(date : LocalDate = LocalDate.now()) {
         val usageStatsHelper = UsageStatsHelper(requireContext())
         val list = usageStatsHelper.getForegroundStatsByDay(date).filter {
@@ -304,14 +306,13 @@ class AllAppsUsageFragment : Fragment() {
 
         withContext(Dispatchers.Main) {
             try {
-                val adapter = binding.appUsageRecyclerView.adapter as AppUsageAdapter
+                currentLoadedStats = list
                 if(list.isEmpty()){
                     Toast.makeText(requireContext(),"No data available",Toast.LENGTH_SHORT).show()
                 }
                 updateDonutChart(list)
-                updateRecommendations(list)
-
-                adapter.updateData(list)
+                updateRecommendations(list, isWebsiteModeActive, selectedPackageForDonut)
+                updateUsageList(isWebsiteModeActive, list)
 
                 val targetPkg = activity?.intent?.getStringExtra("target_package_name")
                 if (!targetPkg.isNullOrEmpty()) {
@@ -331,6 +332,45 @@ class AllAppsUsageFragment : Fragment() {
             } catch (e: Exception) {
                 Log.e("AppUsageFragment", "Error updating UI with stats", e)
             }
+        }
+    }
+
+    private fun updateUsageList(isWebMode: Boolean, appStats: List<Stat> = currentLoadedStats) {
+        val adapter = binding.appUsageRecyclerView.adapter as? AppUsageAdapter ?: return
+        if (!isWebMode) {
+            val appItems = appStats.map { stat ->
+                val pm = requireContext().packageManager
+                val appLabel = try {
+                    val appInfo = pm.getApplicationInfo(stat.packageName, 0)
+                    appInfo.loadLabel(pm).toString()
+                } catch (e: Exception) {
+                    stat.packageName.substringAfterLast('.')
+                }
+                DisplayUsageItem(
+                    id = stat.packageName,
+                    title = appLabel,
+                    durationMillis = stat.totalTime,
+                    isWebsite = false,
+                    originalStat = stat
+                )
+            }
+            adapter.updateData(appItems)
+        } else {
+            val domainStatsMap = savedPreferencesLoader.loadWebsiteUsageStats()
+            val ignoredDomains = savedPreferencesLoader.loadIgnoredWebDomains()
+            val webItems = domainStatsMap.entries
+                .filter { it.key !in ignoredDomains }
+                .sortedByDescending { it.value }
+                .map { entry ->
+                    DisplayUsageItem(
+                        id = entry.key,
+                        title = entry.key,
+                        durationMillis = entry.value,
+                        isWebsite = true,
+                        originalStat = null
+                    )
+                }
+            adapter.updateData(webItems)
         }
     }
 
@@ -597,6 +637,7 @@ class AllAppsUsageFragment : Fragment() {
                                 isWebsiteModeActive = false
                                 selectedPackageForDonut = null
                                 updateRecommendations(statsList, false, null)
+                                updateUsageList(false, statsList)
                             },
                             label = { Text("📱 Apps", fontSize = 13.sp) },
                             shape = RoundedCornerShape(12.dp),
@@ -609,6 +650,7 @@ class AllAppsUsageFragment : Fragment() {
                                 isWebsiteModeActive = true
                                 selectedPackageForDonut = null
                                 updateRecommendations(statsList, true, null)
+                                updateUsageList(true, statsList)
                             },
                             label = { Text("🌐 Websites", fontSize = 13.sp) },
                             shape = RoundedCornerShape(12.dp)
@@ -697,59 +739,103 @@ class AllAppsUsageFragment : Fragment() {
         }
     }
 
+    data class DisplayUsageItem(
+        val id: String,
+        val title: String,
+        val durationMillis: Long,
+        val isWebsite: Boolean = false,
+        val originalStat: Stat? = null
+    )
+
     inner class AppUsageViewHolder(private val binding: AppUsageItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(stats: Stat, packageManager: PackageManager) {
-            binding.root.setOnClickListener{
-                activity?.supportFragmentManager?.beginTransaction()
-                    ?.setCustomAnimations(R.anim.fade_in,R.anim.fade_out)
-                    ?.replace(R.id.fragment_holder, AppUsageBreakdown(stats))
-                    ?.addToBackStack(null)
-                    ?.commit()
-            }
-            binding.root.setOnLongClickListener {
+        fun bind(item: DisplayUsageItem, packageManager: PackageManager) {
+            if (!item.isWebsite && item.originalStat != null) {
+                val stats = item.originalStat
+                binding.root.setOnClickListener {
+                    activity?.supportFragmentManager?.beginTransaction()
+                        ?.setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
+                        ?.replace(R.id.fragment_holder, AppUsageBreakdown(stats))
+                        ?.addToBackStack(null)
+                        ?.commit()
+                }
+                binding.root.setOnLongClickListener {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Add to ignored packages?")
+                        .setMessage("This action will cause the tracker to not display any stats from this app.")
+                        .setCancelable(true)
+                        .setPositiveButton("Okay") { _, _ ->
+                            val savedPreferencesLoader = SavedPreferencesLoader(requireContext())
+                            val ignoredAppsSP =
+                                savedPreferencesLoader.loadIgnoredAppUsageTracker().toMutableSet()
+                            ignoredAppsSP.add(stats.packageName)
+                            ignoredPackages.addAll(ignoredAppsSP)
+                            savedPreferencesLoader.saveIgnoredAppUsageTracker(ignoredAppsSP)
 
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Add to ignored packages?")
-                    .setMessage("This action will cause the tracker to not display any stats from this app.")
-                    .setCancelable(true)
-                    .setPositiveButton("Okay") { _, _ ->
-                        val savedPreferencesLoader = SavedPreferencesLoader(requireContext())
-                        val ignoredAppsSP =
-                            savedPreferencesLoader.loadIgnoredAppUsageTracker().toMutableSet()
-                        ignoredAppsSP.add(stats.packageName)
-                        ignoredPackages.addAll(ignoredAppsSP)
-                        savedPreferencesLoader.saveIgnoredAppUsageTracker(ignoredAppsSP)
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                val localDate = Instant.ofEpochMilli(selectedDate)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
 
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            val localDate = Instant.ofEpochMilli(selectedDate)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-
-                            setUsageStats(localDate)
+                                setUsageStats(localDate)
+                            }
                         }
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-                true
-            }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                    true
+                }
 
-            // Load app icon and label on the main thread
-            val appInfo = try {
-                packageManager.getApplicationInfo(stats.packageName, 0)
-            } catch (e: Exception) {
-                null
+                // Load app icon and label
+                val appInfo = try {
+                    packageManager.getApplicationInfo(stats.packageName, 0)
+                } catch (e: Exception) {
+                    null
+                }
+                binding.appIcon.setImageDrawable(appInfo?.loadIcon(packageManager))
+                binding.appName.text = item.title
+                binding.appUsage.text = TimeTools.formatTime(item.durationMillis)
+            } else {
+                // Website domain item
+                binding.appIcon.setImageResource(R.drawable.baseline_language_24)
+                binding.appName.text = item.title
+                binding.appUsage.text = TimeTools.formatTime(item.durationMillis)
+
+                binding.root.setOnClickListener {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Website: ${item.title}")
+                        .setMessage("Browsing time: ${TimeTools.formatTime(item.durationMillis)}\n\nManage blocking rules or limits for ${item.title}.")
+                        .setPositiveButton("Block / Add Rule") { _, _ ->
+                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                                putExtra("feature_type", "create_rule")
+                                putExtra("preset_keyword", item.title)
+                            }
+                            startActivity(intent)
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+
+                binding.root.setOnLongClickListener {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Ignore Website Domain?")
+                        .setMessage("Hide statistics for ${item.title} from web browsing tracking.")
+                        .setPositiveButton("Ignore Domain") { _, _ ->
+                            val ignored = savedPreferencesLoader.loadIgnoredWebDomains().toMutableSet()
+                            ignored.add(item.title)
+                            savedPreferencesLoader.saveIgnoredWebDomains(ignored)
+                            updateUsageList(true)
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                    true
+                }
             }
-            binding.appIcon.setImageDrawable(appInfo?.loadIcon(packageManager))
-            binding.appName.text = appInfo?.loadLabel(packageManager)
-                ?: stats.packageName.substringAfterLast('.')
-            binding.appUsage.text = TimeTools.formatTime(stats.totalTime)
         }
     }
 
     inner class AppUsageAdapter(
-        private var appUsageStats: List<Stat>
+        private var items: List<DisplayUsageItem>
     ) : RecyclerView.Adapter<AppUsageViewHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppUsageViewHolder {
@@ -758,17 +844,16 @@ class AllAppsUsageFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: AppUsageViewHolder, position: Int) {
-            holder.bind(appUsageStats[position], holder.itemView.context.packageManager)
+            holder.bind(items[position], holder.itemView.context.packageManager)
         }
 
         @SuppressLint("NotifyDataSetChanged")
-        fun updateData(newAppUsageStats: List<Stat>) {
-            appUsageStats = newAppUsageStats
-
+        fun updateData(newItems: List<DisplayUsageItem>) {
+            items = newItems
             notifyDataSetChanged()
         }
 
-        override fun getItemCount(): Int = appUsageStats.size
+        override fun getItemCount(): Int = items.size
     }
 
     fun hasUsageStatsPermission(context: Context): Boolean {
