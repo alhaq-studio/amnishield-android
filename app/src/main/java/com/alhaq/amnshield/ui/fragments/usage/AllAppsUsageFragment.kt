@@ -32,17 +32,16 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.github.mikephil.charting.animation.Easing
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.formatter.ValueFormatter
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.alhaq.amnshield.R
+import com.alhaq.amnshield.ui.components.InteractiveScreenTimeDonut
+import com.alhaq.amnshield.ui.screens.AppUsageItem
+import com.alhaq.amnshield.ui.theme.AmnShieldTheme
+import com.alhaq.amnshield.utils.ThemeUtils
 import com.alhaq.amnshield.databinding.AppUsageItemBinding
 import com.alhaq.amnshield.databinding.DialogPermissionInfoBinding
 import com.alhaq.amnshield.databinding.FragmentAllAppUsageBinding
@@ -73,6 +72,8 @@ class AllAppsUsageFragment : Fragment() {
 
     private var ignoredPackages: MutableSet<String> = mutableSetOf()
     private lateinit var savedPreferencesLoader: SavedPreferencesLoader
+
+    private var selectedPackageForDonut: String? = null
 
     val selectIgnoredAppsLauncher =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -298,9 +299,8 @@ class AllAppsUsageFragment : Fragment() {
                 if(list.isEmpty()){
                     Toast.makeText(requireContext(),"No data available",Toast.LENGTH_SHORT).show()
                 }
-                updatePieChart(list)
+                updateDonutChart(list)
                 updateRecommendations(list)
-                binding.totalUsage.text = totalTime
 
                 adapter.updateData(list)
 
@@ -420,101 +420,50 @@ class AllAppsUsageFragment : Fragment() {
         datePicker.show()
     }
 
-    private fun updatePieChart(statsList: List<Stat>) {
+    private fun updateDonutChart(statsList: List<Stat>) {
+        val totalMillis = calculateTotalScreenTimeInHours(statsList)
+        val totalFormatted = TimeTools.formatTime(totalMillis, false)
         val sortedStats = statsList.sortedByDescending { it.totalTime }
-        val topApps = sortedStats.take(3)
-        val othersTime = sortedStats.drop(3).sumOf { it.totalTime }
-
-        val entries = mutableListOf<PieEntry>()
         val pm = requireContext().packageManager
-        topApps.forEach { stats ->
-            val usageTime = stats.totalTime
+
+        val topApps = sortedStats.map { stat ->
             val label = try {
-                val appInfo = pm.getApplicationInfo(stats.packageName, 0)
+                val appInfo = pm.getApplicationInfo(stat.packageName, 0)
                 appInfo.loadLabel(pm).toString()
             } catch (e: Exception) {
-                stats.packageName.substringAfterLast('.')
+                stat.packageName.substringAfterLast('.')
             }
-            entries.add(PieEntry(usageTime.toFloat(), label))
+            val progressRatio = if (totalMillis > 0) stat.totalTime.toFloat() / totalMillis.toFloat() else 0f
+            AppUsageItem(
+                name = label,
+                packageName = stat.packageName,
+                timeFormatted = TimeTools.formatTime(stat.totalTime, false),
+                progress = progressRatio
+            )
         }
 
-        if (othersTime > 0) {
-            entries.add(PieEntry(othersTime.toFloat(), getString(R.string.app_usage_others_label)))
-        }
-
-        val pieDataSet = PieDataSet(entries, "").apply {
-            colors = listOf(
-                Color.parseColor("#2196F3"),
-                Color.parseColor("#F44336"),
-                Color.parseColor("#4CAF50"),
-                requireContext().getColor(R.color.md_theme_inverseSurface)
-            )
-            sliceSpace = 3f
-            selectionShift = 10f
-            yValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
-            xValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
-            valueLinePart1Length = 0.5f
-            valueLinePart2Length = 0.4f
-            valueLineColor = MaterialColors.getColor(
-                requireContext(),
-                com.google.android.material.R.attr.colorOutline,
-                Color.GRAY
-            )
-            valueTextColor = MaterialColors.getColor(
-                requireContext(),
-                com.google.android.material.R.attr.colorOnSurface,
-                Color.BLACK
-            )
-            valueTextSize = 12f
-        }
-
-        val pieData = PieData(pieDataSet)
-        val totalValue = pieData.yValueSum
-        pieData.setDrawValues(true)
-        pieData.setValueFormatter(object : ValueFormatter() {
-            override fun getPieLabel(value: Float, pieEntry: PieEntry?): String {
-                if (pieEntry == null || totalValue == 0f) {
-                    return ""
-                }
-                val percentage = (value / totalValue) * 100f
-                val formattedPercentage = String.format(Locale.getDefault(), "%.1f%%", percentage)
-                val entryLabel = pieEntry.label ?: ""
-                return if (entryLabel.isNotBlank()) {
-                    "$entryLabel $formattedPercentage"
-                } else {
-                    formattedPercentage
-                }
-            }
-        })
-        pieData.setValueTextColor(
-            MaterialColors.getColor(
-                requireContext(),
-                com.google.android.material.R.attr.colorOnSurface,
-                Color.BLACK
-            )
-        )
-        pieData.setValueTextSize(12f)
-
-        binding.pieChart.apply {
-            data = pieData
-            description.isEnabled = false
-            isRotationEnabled = true
-            isDrawHoleEnabled = true
-            holeRadius = 85f
-            transparentCircleRadius = 0f
-            setHoleColor(
-                MaterialColors.getColor(
-                    context,
-                    com.google.android.material.R.attr.colorSurface,
-                    Color.WHITE
+        binding.composeDonutChart.setContent {
+            val activeTheme = ThemeUtils.resolveAppTheme(requireContext())
+            AmnShieldTheme(appTheme = activeTheme) {
+                InteractiveScreenTimeDonut(
+                    totalDurationFormatted = if (totalMillis > 0) totalFormatted else "0m",
+                    apps = topApps,
+                    selectedAppPackage = selectedPackageForDonut,
+                    onAppSelected = { pkg ->
+                        selectedPackageForDonut = if (selectedPackageForDonut == pkg) null else pkg
+                        if (pkg != null && pkg != "other_apps") {
+                            val matchedStat = statsList.find { it.packageName == pkg }
+                            if (matchedStat != null) {
+                                activity?.supportFragmentManager?.beginTransaction()
+                                    ?.setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
+                                    ?.replace(R.id.fragment_holder, AppUsageBreakdown(matchedStat))
+                                    ?.addToBackStack(null)
+                                    ?.commit()
+                            }
+                        }
+                    }
                 )
-            )
-            legend.isEnabled = false
-            setDrawEntryLabels(false)
-            setUsePercentValues(false)
-            setExtraOffsets(12f, 12f, 12f, 12f)
-            animateY(1200, Easing.EaseInOutQuart)
-            invalidate()
+            }
         }
     }
 

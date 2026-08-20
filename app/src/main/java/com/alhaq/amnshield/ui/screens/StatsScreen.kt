@@ -70,8 +70,6 @@ fun StatsScreen(
         ScreenTimeDay("Sun", 15)
     )
 
-    var selectedAppPackage by remember { mutableStateOf<String?>(null) }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -107,19 +105,43 @@ fun StatsScreen(
                     ),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Interactive ScreenTime Donut
-                        com.alhaq.amnshield.ui.components.InteractiveScreenTimeDonut(
-                            totalDurationFormatted = if (isAppUsageTrackingEnabled) totalScreenTime else "0m",
-                            apps = if (isAppUsageTrackingEnabled) topApps else emptyList(),
-                            selectedAppPackage = selectedAppPackage,
-                            onAppSelected = { selectedAppPackage = it }
-                        )
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = if (isAppUsageTrackingEnabled) totalScreenTime else "–h –m",
+                                    style = MaterialTheme.typography.displayMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Screen Time Today",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Timer,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         // Goal Progress Bar
                         Column {
@@ -488,22 +510,16 @@ fun StatsScreen(
             }
         } else {
             items(topApps) { app ->
-                val isSelected = selectedAppPackage == app.packageName
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clickable {
-                            selectedAppPackage = if (selectedAppPackage == app.packageName) null else app.packageName
-                        },
+                        .clickable { onAppClick(app.packageName) },
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    border = BorderStroke(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                    )
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Row(
                         modifier = Modifier
