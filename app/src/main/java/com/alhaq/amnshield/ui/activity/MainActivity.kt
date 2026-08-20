@@ -255,9 +255,38 @@ class MainActivity : AppCompatActivity() {
         val isAmnScheme = scheme == "amnishield" || scheme == "amnshield"
         val isWebActivation = (scheme == "https" || scheme == "http") &&
                 (host.contains("amnishield.com") || host.contains("amnshield.com") || host.contains("amnshield.org")) &&
-                (path.contains("activate") || path.contains("license") || path.contains("auth") || path.contains("verify") || data.getQueryParameter("key") != null || data.getQueryParameter("token") != null || data.getQueryParameter("code") != null)
+                (path.contains("activate") || path.contains("license") || path.contains("auth") || path.contains("verify") || path.contains("pair") || host == "pair" || data.getQueryParameter("key") != null || data.getQueryParameter("token") != null || data.getQueryParameter("code") != null || data.getQueryParameter("pin") != null)
 
         if (isAmnScheme || isWebActivation) {
+            val isPairRequest = host == "pair" || path.contains("pair") || (data.getQueryParameter("owner") != null && data.getQueryParameter("token") != null)
+            val pairPin = data.getQueryParameter("token") ?: data.getQueryParameter("pin") ?: data.getQueryParameter("code")
+
+            // 0. Ephemeral Device Pairing via Web Console QR Code or PIN Link
+            if (isPairRequest && !pairPin.isNullOrBlank()) {
+                val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                Toast.makeText(this, "Linking device with PIN: $pairPin...", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
+                        val result = rest.claimPairingToken(pairPin, deviceName, "android")
+                        withContext(Dispatchers.Main) {
+                            if (result.success) {
+                                Toast.makeText(this@MainActivity, "Device Linked to Web Console!", Toast.LENGTH_LONG).show()
+                                showDevicePairingSuccessDialog(pairPin, deviceName, result.isManaged)
+                                binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                            } else {
+                                Toast.makeText(this@MainActivity, "Pairing Failed: ${result.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Pairing error: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                return
+            }
+
             val key = data.getQueryParameter("key")
                 ?: data.getQueryParameter("license")
                 ?: data.getQueryParameter("license_key")
@@ -353,6 +382,15 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Pro License Activated!")
             .setMessage("Welcome to AmnShield Pro!\n\n• Account: ${payload.email}\n• Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n• Valid Until: $expiryDate\n\nAll premium features, advanced rules, and cross-device sync are now fully unlocked on this device.")
             .setPositiveButton("Continue", null)
+            .show()
+    }
+
+    private fun showDevicePairingSuccessDialog(pin: String, deviceName: String, isManaged: Boolean) {
+        val modeText = if (isManaged) "Guardian / Parental Managed Mode" else "Personal Focus Mode"
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("📱 Device Linked Successfully!")
+            .setMessage("Your device is now securely connected to the AmniShield Web Admin Console.\n\n• Device: $deviceName\n• Pairing Token: $pin\n• Mode: $modeText\n\nRules, blocklists, and schedules configured in your web console will now automatically sync to this device.")
+            .setPositiveButton("Awesome", null)
             .show()
     }
     

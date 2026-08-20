@@ -77,6 +77,12 @@ fun ProfileScreen(
 
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showAvatarPickerSheet by remember { mutableStateOf(false) }
+    var showPairingDialog by remember { mutableStateOf(false) }
+    var pairingPinInput by remember { mutableStateOf("") }
+    var isPairingInProgress by remember { mutableStateOf(false) }
+    var pairingStatusMsg by remember { mutableStateOf<String?>(null) }
+    var isPairingSuccess by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Decode custom profile image if present
     val profileBitmap = remember(state.profileImageUri) {
@@ -730,6 +736,101 @@ fun ProfileScreen(
                 }
             }
 
+            // WEB ADMIN CONSOLE PAIRING CARD
+            item {
+                Text(
+                    text = "WEB ADMIN CONSOLE",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.8.sp
+                    )
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Devices,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Pair with Web Console",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "app.amnishield.com",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Link this phone to your Web Admin Dashboard using a 6-digit PIN or QR code to sync focus rules and remote blocklists.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Button(
+                            onClick = {
+                                pairingPinInput = ""
+                                pairingStatusMsg = null
+                                isPairingSuccess = false
+                                showPairingDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Enter 6-Digit Pairing PIN",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
             // SYNC & DATA PRIVACY TOGGLES
             item {
                 Text(
@@ -1009,5 +1110,94 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+
+    // PAIRING PIN DIALOG
+    if (showPairingDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isPairingInProgress) showPairingDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(imageVector = Icons.Default.PhonelinkSetup, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text("Pair Web Console", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter the 6-digit security PIN generated on app.amnishield.com to link this device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = pairingPinInput,
+                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) pairingPinInput = it },
+                        label = { Text("6-Digit PIN") },
+                        placeholder = { Text("e.g. 482910") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            letterSpacing = 4.sp
+                        )
+                    )
+
+                    if (pairingStatusMsg != null) {
+                        Text(
+                            text = pairingStatusMsg.orEmpty(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isPairingSuccess) Color(0xFF059669) else MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (pairingPinInput.length >= 6) {
+                            isPairingInProgress = true
+                            pairingStatusMsg = "Connecting to Supabase cloud..."
+                            val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
+                                val result = rest.claimPairingToken(pairingPinInput, deviceName, "android")
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    isPairingInProgress = false
+                                    if (result.success) {
+                                        isPairingSuccess = true
+                                        pairingStatusMsg = "🎉 Linked to Web Console successfully!"
+                                        kotlinx.coroutines.delay(1200)
+                                        showPairingDialog = false
+                                    } else {
+                                        isPairingSuccess = false
+                                        pairingStatusMsg = result.message
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    enabled = pairingPinInput.length >= 6 && !isPairingInProgress,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    if (isPairingInProgress) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Text("Connect", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showPairingDialog = false },
+                    enabled = !isPairingInProgress
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
