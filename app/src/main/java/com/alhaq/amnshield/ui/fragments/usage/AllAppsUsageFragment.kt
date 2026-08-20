@@ -340,23 +340,75 @@ class AllAppsUsageFragment : Fragment() {
         return totalTimeInMillis
     }
 
-    private fun updateRecommendations(statsList: List<Stat>) {
-        val topApps = statsList
-            .sortedByDescending { it.totalTime }
-            .take(3)
+    private fun updateRecommendations(
+        statsList: List<Stat>,
+        isWebMode: Boolean = isWebsiteModeActive,
+        selectedItem: String? = null
+    ) {
+        if (!isWebMode) {
+            val sorted = statsList.sortedByDescending { it.totalTime }
+            val topApps = if (selectedItem != null && selectedItem != "other_apps") {
+                val selectedStat = statsList.find { it.packageName == selectedItem }
+                if (selectedStat != null) {
+                    listOf(selectedStat) + sorted.filter { it.packageName != selectedItem }.take(2)
+                } else {
+                    sorted.take(3)
+                }
+            } else {
+                sorted.take(3)
+            }
 
-        if (topApps.isEmpty()) {
-            binding.recommendationSubtitle.text = "No usage data available for recommendations on this date."
-            setRecommendationRow(0, null)
-            setRecommendationRow(1, null)
-            setRecommendationRow(2, null)
-            return
+            binding.recommendationTitle.text = "Recommended apps to control"
+            if (topApps.isEmpty()) {
+                binding.recommendationSubtitle.text = "No usage data available for recommendations on this date."
+                setRecommendationRow(0, null)
+                setRecommendationRow(1, null)
+                setRecommendationRow(2, null)
+                return
+            }
+
+            binding.recommendationSubtitle.text = if (selectedItem != null && selectedItem != "other_apps") {
+                "Selected app highlighted from screen time chart"
+            } else {
+                "Based on your highest usage apps for this day"
+            }
+
+            setRecommendationRow(0, topApps.getOrNull(0))
+            setRecommendationRow(1, topApps.getOrNull(1))
+            setRecommendationRow(2, topApps.getOrNull(2))
+        } else {
+            val domainStatsMap = savedPreferencesLoader.loadWebsiteUsageStats()
+            val sortedWebsites = domainStatsMap.entries.sortedByDescending { it.value }
+            val topWebsites = if (selectedItem != null && selectedItem != "other_sites") {
+                val matched = sortedWebsites.find { it.key == selectedItem }
+                if (matched != null) {
+                    listOf(matched) + sortedWebsites.filter { it.key != selectedItem }.take(2)
+                } else {
+                    sortedWebsites.take(3)
+                }
+            } else {
+                sortedWebsites.take(3)
+            }
+
+            binding.recommendationTitle.text = "Recommended websites to control"
+            if (topWebsites.isEmpty()) {
+                binding.recommendationSubtitle.text = "No website usage recorded yet on this date."
+                setRecommendationWebRow(0, null)
+                setRecommendationWebRow(1, null)
+                setRecommendationWebRow(2, null)
+                return
+            }
+
+            binding.recommendationSubtitle.text = if (selectedItem != null && selectedItem != "other_sites") {
+                "Selected web domain highlighted from browsing chart"
+            } else {
+                "Based on your highest visited web domains"
+            }
+
+            setRecommendationWebRow(0, topWebsites.getOrNull(0))
+            setRecommendationWebRow(1, topWebsites.getOrNull(1))
+            setRecommendationWebRow(2, topWebsites.getOrNull(2))
         }
-
-        binding.recommendationSubtitle.text = "Based on your highest usage apps for this day"
-        setRecommendationRow(0, topApps.getOrNull(0))
-        setRecommendationRow(1, topApps.getOrNull(1))
-        setRecommendationRow(2, topApps.getOrNull(2))
     }
 
     private fun setRecommendationRow(index: Int, stat: Stat?) {
@@ -400,6 +452,62 @@ class AllAppsUsageFragment : Fragment() {
 
         textView.text = "$appName • ${TimeTools.formatTime(stat.totalTime, false)} • $riskText risk"
         row.visibility = View.VISIBLE
+        row.setOnClickListener {
+            activity?.supportFragmentManager?.beginTransaction()
+                ?.setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
+                ?.replace(R.id.fragment_holder, AppUsageBreakdown(stat))
+                ?.addToBackStack(null)
+                ?.commit()
+        }
+    }
+
+    private fun setRecommendationWebRow(index: Int, entry: Map.Entry<String, Long>?) {
+        val row = when (index) {
+            0 -> binding.recommendationItem1
+            1 -> binding.recommendationItem2
+            else -> binding.recommendationItem3
+        }
+        val iconView: ImageView = when (index) {
+            0 -> binding.recommendationIcon1
+            1 -> binding.recommendationIcon2
+            else -> binding.recommendationIcon3
+        }
+        val textView: TextView = when (index) {
+            0 -> binding.recommendationText1
+            1 -> binding.recommendationText2
+            else -> binding.recommendationText3
+        }
+
+        if (entry == null) {
+            row.visibility = View.GONE
+            return
+        }
+
+        iconView.setImageResource(R.drawable.baseline_language_24)
+        val domain = entry.key
+        val minutes = (entry.value / 60000L).toInt()
+        val riskText = when {
+            minutes >= 120 -> "High"
+            minutes >= 45 -> "Moderate"
+            else -> "Standard"
+        }
+
+        textView.text = "$domain • ${TimeTools.formatTime(entry.value, false)} • $riskText risk"
+        row.visibility = View.VISIBLE
+        row.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Control Website: $domain")
+                .setMessage("Manage rules or add a filter block for $domain.")
+                .setPositiveButton("Block / Add Rule") { _, _ ->
+                    val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                        putExtra("feature_type", "create_rule")
+                        putExtra("preset_keyword", domain)
+                    }
+                    startActivity(intent)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 
     private fun showDatePickerDialog(
@@ -487,6 +595,8 @@ class AllAppsUsageFragment : Fragment() {
                             onClick = {
                                 currentMode = "apps"
                                 isWebsiteModeActive = false
+                                selectedPackageForDonut = null
+                                updateRecommendations(statsList, false, null)
                             },
                             label = { Text("📱 Apps", fontSize = 13.sp) },
                             shape = RoundedCornerShape(12.dp),
@@ -497,6 +607,8 @@ class AllAppsUsageFragment : Fragment() {
                             onClick = {
                                 currentMode = "websites"
                                 isWebsiteModeActive = true
+                                selectedPackageForDonut = null
+                                updateRecommendations(statsList, true, null)
                             },
                             label = { Text("🌐 Websites", fontSize = 13.sp) },
                             shape = RoundedCornerShape(12.dp)
@@ -538,16 +650,7 @@ class AllAppsUsageFragment : Fragment() {
                                 selectedAppPackage = selectedPackageForDonut,
                                 onAppSelected = { pkg ->
                                     selectedPackageForDonut = if (selectedPackageForDonut == pkg) null else pkg
-                                    if (pkg != null && pkg != "other_apps") {
-                                        val matchedStat = statsList.find { it.packageName == pkg }
-                                        if (matchedStat != null) {
-                                            activity?.supportFragmentManager?.beginTransaction()
-                                                ?.setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                                                ?.replace(R.id.fragment_holder, AppUsageBreakdown(matchedStat))
-                                                ?.addToBackStack(null)
-                                                ?.commit()
-                                        }
-                                    }
+                                    updateRecommendations(statsList, false, selectedPackageForDonut)
                                 }
                             )
                         }
@@ -584,6 +687,7 @@ class AllAppsUsageFragment : Fragment() {
                                 selectedAppPackage = selectedPackageForDonut,
                                 onAppSelected = { domain ->
                                     selectedPackageForDonut = if (selectedPackageForDonut == domain) null else domain
+                                    updateRecommendations(statsList, true, selectedPackageForDonut)
                                 }
                             )
                         }
