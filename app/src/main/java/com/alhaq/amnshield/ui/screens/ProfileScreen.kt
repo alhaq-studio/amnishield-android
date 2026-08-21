@@ -1421,9 +1421,9 @@ fun ProfileScreen(
 
 private fun extractPinFromQr(content: String): String {
     val trimmed = content.trim()
-    if (trimmed.length == 6 && trimmed.all { it.isDigit() }) return trimmed
+    if (trimmed.length in 6..10 && trimmed.all { it.isDigit() }) return trimmed
 
-    // JSON payload check (e.g. {"token":"123456", ...})
+    // JSON payload check (e.g. {"token":"48139226", ...})
     if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
         try {
             val jsonObj = com.google.gson.JsonParser.parseString(trimmed).asJsonObject
@@ -1445,7 +1445,7 @@ private fun extractPinFromQr(content: String): String {
         if (!token.isNullOrBlank()) return token.trim()
     } catch (_: Exception) {}
 
-    // Regex fallback for any 6-digit number in the string
-    val regexMatch = Regex("\\b\\d{6}\\b").find(trimmed)
+    // Regex fallback for any 6-10 digit number in the string
+    val regexMatch = Regex("\\b\\d{6,10}\\b").find(trimmed)
     return regexMatch?.value ?: trimmed
 }

@@ -93,15 +93,25 @@ class OtpSignInAndActivationTest {
         assertEquals("buyer@example.com", otpBody.get("email").asString)
         assertTrue(otpBody.get("create_user").asBoolean)
 
-        val verifyBody = JsonObject().apply {
+        val verifyBody6 = JsonObject().apply {
             addProperty("email", cleanedEmail)
             addProperty("token", "123456")
             addProperty("type", "email")
         }
 
-        assertEquals("buyer@example.com", verifyBody.get("email").asString)
-        assertEquals("123456", verifyBody.get("token").asString)
-        assertEquals("email", verifyBody.get("type").asString)
+        assertEquals("buyer@example.com", verifyBody6.get("email").asString)
+        assertEquals("123456", verifyBody6.get("token").asString)
+        assertEquals("email", verifyBody6.get("type").asString)
+
+        val verifyBody8 = JsonObject().apply {
+            addProperty("email", cleanedEmail)
+            addProperty("token", "48139226")
+            addProperty("type", "email")
+        }
+
+        assertEquals("buyer@example.com", verifyBody8.get("email").asString)
+        assertEquals("48139226", verifyBody8.get("token").asString)
+        assertEquals("email", verifyBody8.get("type").asString)
     }
 
     @Test
