@@ -4,7 +4,10 @@ import android.content.Context
 import android.os.CountDownTimer
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.alhaq.amnshield.Constants
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.databinding.ActivityAntiUninstallPasswordBinding
@@ -33,8 +36,21 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         com.alhaq.amnshield.utils.ThemeUtils.applyTheme(this)
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         binding = ActivityAntiUninstallPasswordBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, windowInsets ->
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+            v.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                maxOf(systemBars.bottom, imeInsets.bottom)
+            )
+            WindowInsetsCompat.CONSUMED
+        }
 
         // Handle back button to close activity and return to Settings
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {

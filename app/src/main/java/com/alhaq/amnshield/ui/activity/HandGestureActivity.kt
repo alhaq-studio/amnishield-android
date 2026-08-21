@@ -16,7 +16,10 @@ import android.os.VibratorManager
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.alhaq.amnshield.databinding.OverlayHandGestureBinding
 
 /**
@@ -30,8 +33,20 @@ class HandGestureActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         binding = OverlayHandGestureBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, windowInsets ->
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                systemBars.bottom
+            )
+            WindowInsetsCompat.CONSUMED
+        }
 
         val detectedKeyword = intent.getStringExtra("detected_keyword")
         val isHomePress = intent.getBooleanExtra("is_home_press", true)

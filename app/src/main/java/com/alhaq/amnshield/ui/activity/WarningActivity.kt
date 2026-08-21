@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -21,6 +22,7 @@ class WarningActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         com.alhaq.amnshield.utils.ThemeUtils.applyTheme(this)
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val savedPreferencesLoader = SavedPreferencesLoader(this)
 
 

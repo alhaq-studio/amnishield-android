@@ -85,11 +85,8 @@ fun AmnShieldTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                // Set system status and navigation bar colors to match the theme background
-                window.statusBarColor = colorScheme.background.toArgb()
-                window.navigationBarColor = colorScheme.background.toArgb()
-
                 // Set light/dark system bar icons accordingly (Cosmic Night is dark theme, others light)
+                // Note: statusBarColor & navigationBarColor are transparent under edge-to-edge (Android 15+)
                 val insetsController = WindowCompat.getInsetsController(window, view)
                 val isDarkTheme = appTheme == AppTheme.COSMIC_NIGHT
                 insetsController.isAppearanceLightStatusBars = !isDarkTheme

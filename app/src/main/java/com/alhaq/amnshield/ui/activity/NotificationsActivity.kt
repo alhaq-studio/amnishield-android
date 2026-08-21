@@ -7,12 +7,14 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.ui.adapters.NotificationsAdapter
 import com.alhaq.amnshield.utils.NotificationInboxStore
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
@@ -32,7 +34,12 @@ class NotificationsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         com.alhaq.amnshield.utils.ThemeUtils.applyTheme(this)
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_notifications)
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        if (toolbar != null) {
+            setSupportActionBar(toolbar)
+        }
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         title = getString(R.string.notifications)
 

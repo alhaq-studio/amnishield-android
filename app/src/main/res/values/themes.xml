@@ -283,8 +283,8 @@
     <style name="Theme.AmnShield.Emerald" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:statusBarColor">@color/emerald_surface</item>
-        <item name="android:navigationBarColor">@color/emerald_surface</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
 
         <item name="colorPrimary">@color/emerald_primary</item>
         <item name="colorOnPrimary">@color/emerald_onPrimary</item>
@@ -348,8 +348,8 @@
     <style name="Theme.AmnShield.Sunset" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:statusBarColor">@color/sunset_surface</item>
-        <item name="android:navigationBarColor">@color/sunset_surface</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
 
         <item name="colorPrimary">@color/sunset_primary</item>
         <item name="colorOnPrimary">@color/sunset_onPrimary</item>
