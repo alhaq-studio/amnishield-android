@@ -24,112 +24,56 @@ object PolicySyncManager {
     private val client = OkHttpClient()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
-    /**
-     * Executes the sync cycle based on the current 3-Mode operation state:
-     * Mode 1 (Standalone): No remote sync.
-     * Mode 2 (Personal Cloud Sync): Syncs personal rules bidirectionally.
-     * Mode 3 (Console Enforced): Fetches remote policy_payload; on network failure, falls back to locally cached policy.
-     */
     suspend fun syncNow(context: Context): Boolean = withContext(Dispatchers.IO) {
-        val savedPrefs = SavedPreferencesLoader(context)
-        val mode = savedPrefs.getDeviceOperationMode()
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val deviceId = prefs.getString("paired_device_id", null)
+        val isPaired = prefs.getBoolean("is_paired_with_console", false)
 
-        when (mode) {
-            SavedPreferencesLoader.MODE_CONSOLE_ENFORCED -> {
-                return@withContext syncConsoleEnforcedMode(context, savedPrefs)
-            }
-            SavedPreferencesLoader.MODE_PERSONAL_SYNC -> {
-                return@withContext syncPersonalCloudMode(context, savedPrefs)
-            }
-            else -> {
-                Log.d(TAG, "[Mode 1: Standalone] Local operation only. Remote sync skipped.")
-                return@withContext true
-            }
-        }
-    }
-
-    /**
-     * Mode 3: Console-Enforced Policy Engine with Strict Offline Resilience Fallback
-     */
-    private fun syncConsoleEnforcedMode(context: Context, savedPrefs: SavedPreferencesLoader): Boolean {
-        val deviceId = savedPrefs.getPairedDeviceId()
-        if (deviceId.isNullOrBlank()) {
-            Log.w(TAG, "Device marked as managed but deviceId is missing.")
-            return false
+        if (!isPaired || deviceId.isNullOrBlank()) {
+            Log.d(TAG, "Device not paired with Web Console. Skipping remote policy pull.")
+            return@withContext false
         }
 
         try {
-            // 1. Attempt to fetch latest remote policy payload from Supabase
+            // 1. Fetch device record with latest policy_payload
             val req = Request.Builder()
-                .url("$BASE_URL/rest/v1/devices?id=eq.$deviceId&select=id,device_name,is_managed,policy_payload,last_policy_updated_at")
+                .url("$BASE_URL/rest/v1/devices?id=eq.$deviceId&select=id,device_name,is_managed,policy_payload")
                 .header("apikey", ANON_KEY)
                 .header("Authorization", "Bearer $ANON_KEY")
                 .get()
                 .build()
 
             val resp = client.newCall(req).execute()
-            if (resp.isSuccessful) {
-                val body = resp.body?.string().orEmpty()
-                val array = gson.fromJson(body, JsonArray::class.java)
-                if (array != null && array.size() > 0) {
-                    val devObj = array[0].asJsonObject
-                    if (devObj.has("policy_payload") && !devObj.get("policy_payload").isJsonNull) {
-                        val payload = devObj.getAsJsonObject("policy_payload")
-                        
-                        // Cache payload to encrypted storage for offline resilience
-                        savedPrefs.saveCachedPolicyPayload(payload.toString())
-                        applyPolicyPayload(context, payload)
-                        Log.d(TAG, "Successfully applied and cached remote policy payload.")
-                    }
-                }
+            if (!resp.isSuccessful) {
+                Log.e(TAG, "Failed to fetch device policy: HTTP ${resp.code}")
+                return@withContext false
+            }
 
-                // Send live heartbeat
-                sendHeartbeat(context, deviceId)
-                return true
+            val body = resp.body?.string() ?: return@withContext false
+            val array = gson.fromJson(body, JsonArray::class.java)
+            if (array == null || array.size() == 0) return@withContext false
+
+            val devObj = array[0].asJsonObject
+            val payload = if (devObj.has("policy_payload") && !devObj.get("policy_payload").isJsonNull) {
+                devObj.getAsJsonObject("policy_payload")
             } else {
-                Log.w(TAG, "Remote policy fetch failed (HTTP ${resp.code}). Falling back to cached policy.")
+                null
             }
+
+            if (payload != null) {
+                applyPolicyPayload(context, payload)
+            }
+
+            // 2. Send Heartbeat and Telemetry
+            sendHeartbeat(context, deviceId)
+
+            return@withContext true
         } catch (e: Exception) {
-            Log.w(TAG, "Network exception during policy sync: ${e.message}. Executing offline fallback.")
-        }
-
-        // OFFLINE RESILIENCE FALLBACK:
-        // Automatically load and re-enforce the locally cached policy. Never relax rules offline!
-        val cachedPayloadJson = savedPrefs.getCachedPolicyPayload()
-        if (!cachedPayloadJson.isNullOrBlank()) {
-            try {
-                val cachedObj = gson.fromJson(cachedPayloadJson, JsonObject::class.java)
-                applyPolicyPayload(context, cachedObj)
-                Log.d(TAG, "✅ [Offline Resilience] Enforced locally cached policy payload.")
-                return true
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse cached policy payload", e)
-            }
-        }
-
-        return false
-    }
-
-    /**
-     * Mode 2: Personal Cloud Sync (Bi-directional rule sync without locking local UI)
-     */
-    private fun syncPersonalCloudMode(context: Context, savedPrefs: SavedPreferencesLoader): Boolean {
-        try {
-            val deviceId = savedPrefs.getPairedDeviceId()
-            if (!deviceId.isNullOrBlank()) {
-                sendHeartbeat(context, deviceId)
-            }
-            Log.d(TAG, "Personal cloud sync cycle executed.")
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "Personal cloud sync exception", e)
-            return false
+            Log.e(TAG, "Policy sync exception", e)
+            return@withContext false
         }
     }
 
-    /**
-     * Translates a policy payload into local blocker rule sets and notifies running services.
-     */
     fun applyPolicyPayload(context: Context, payload: JsonObject) {
         val savedPrefs = SavedPreferencesLoader(context)
 

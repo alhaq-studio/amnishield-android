@@ -228,6 +228,16 @@ class MainActivity : AppCompatActivity() {
         // Schedule daily reports for premium users
         scheduleDailyReportsIfPremium()
 
+        // Schedule background policy & rules sync engine
+        try {
+            com.alhaq.amnshield.data.sync.SyncWorker.schedule(this)
+            lifecycleScope.launch(Dispatchers.IO) {
+                com.alhaq.amnshield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+            }
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "Failed to initialize SyncWorker", e)
+        }
+
         // Setup navigation drawer
         setupNavigationDrawer()
 
@@ -244,11 +254,6 @@ class MainActivity : AppCompatActivity() {
         }
         showDonationDialog()
         handleDeepLink(intent)
-
-        com.alhaq.amnshield.data.sync.SyncWorker.schedule(this)
-        lifecycleScope.launch(Dispatchers.IO) {
-            com.alhaq.amnshield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
-        }
     }
 
     private fun handleDeepLink(intent: Intent?) {
@@ -276,6 +281,12 @@ class MainActivity : AppCompatActivity() {
                         val result = rest.claimPairingToken(pairPin, deviceName, "android")
                         withContext(Dispatchers.Main) {
                             if (result.success) {
+                                val prefs = getSharedPreferences("AppPreferences", MODE_PRIVATE)
+                                prefs.edit()
+                                    .putString("paired_device_id", result.deviceId)
+                                    .putString("paired_owner_id", result.ownerId)
+                                    .putBoolean("is_paired_with_console", true)
+                                    .apply()
                                 Toast.makeText(this@MainActivity, "Device Linked to Web Console!", Toast.LENGTH_LONG).show()
                                 showDevicePairingSuccessDialog(pairPin, deviceName, result.isManaged)
                                 binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
@@ -375,33 +386,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     } catch (e: Exception) {
                         // ignore or log
-                    }
-                }
-            }
-            // 4. Console Device Pairing (PIN / QR code link)
-            else if (!token.isNullOrBlank() && (data.path?.contains("pair") == true || data.host == "pair" || intent.action == "amnshield.intent.action.PAIR")) {
-                Toast.makeText(this, "Pairing device with Web Console...", Toast.LENGTH_SHORT).show()
-                lifecycleScope.launch(Dispatchers.IO) {
-                    try {
-                        val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
-                        val res = rest.claimPairingToken(token, android.os.Build.MODEL, "android")
-                        withContext(Dispatchers.Main) {
-                            if (res.success) {
-                                val savedPrefs = SavedPreferencesLoader(this@MainActivity)
-                                savedPrefs.setConsoleManaged(true, res.deviceId, res.ownerId)
-                                if (res.policyPayload != null) {
-                                    savedPrefs.saveCachedPolicyPayload(res.policyPayload.toString())
-                                    com.alhaq.amnshield.data.sync.PolicySyncManager.applyPolicyPayload(this@MainActivity, res.policyPayload)
-                                }
-                                Toast.makeText(this@MainActivity, "🎉 Device Paired to Web Console Successfully!", Toast.LENGTH_LONG).show()
-                            } else {
-                                Toast.makeText(this@MainActivity, res.message, Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Pairing failed: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
                     }
                 }
             }
@@ -507,9 +491,6 @@ class MainActivity : AppCompatActivity() {
         // or user can access them through settings if needed.
         // checkPermissions() // Removed old permission check
         maybeShowPremiumReminder()
-        lifecycleScope.launch(Dispatchers.IO) {
-            com.alhaq.amnshield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
-        }
     }
 
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
