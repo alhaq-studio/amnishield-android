@@ -26,7 +26,9 @@ import com.alhaq.amnshield.ui.viewmodel.CreateRuleViewModel
 fun BoundaryHeader(
     title: String = "Define Protection Boundary",
     subtitle: String = "Configure restriction schedules, cheat hours, and protection rules.",
-    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.Shield
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.Shield,
+    onConfigure: (() -> Unit)? = null,
+    configureLabel: String = "Blocker Settings"
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -67,6 +69,19 @@ fun BoundaryHeader(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            if (onConfigure != null) {
+                FilledTonalIconButton(
+                    onClick = onConfigure,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tune,
+                        contentDescription = configureLabel,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
@@ -864,6 +879,8 @@ fun CreateRuleTopAppBar(
     onBack: () -> Unit,
     onReset: (() -> Unit)? = null,
     onHelp: (() -> Unit)? = null,
+    onConfigure: (() -> Unit)? = null,
+    configureLabel: String = "Configure Blocker",
     onDelete: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -886,7 +903,17 @@ fun CreateRuleTopAppBar(
             }
         },
         actions = {
-            if (onReset != null || onHelp != null || onDelete != null) {
+            if (onConfigure != null) {
+                IconButton(onClick = onConfigure) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tune,
+                        contentDescription = configureLabel,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            if (onReset != null || onHelp != null || onConfigure != null || onDelete != null) {
                 Box {
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
@@ -899,6 +926,22 @@ fun CreateRuleTopAppBar(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        if (onConfigure != null) {
+                            DropdownMenuItem(
+                                text = { Text(configureLabel) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Tune,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onConfigure()
+                                }
+                            )
+                        }
                         if (onReset != null) {
                             DropdownMenuItem(
                                 text = { Text("Reset to Default") },

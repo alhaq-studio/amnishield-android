@@ -108,12 +108,21 @@ fun CreateReelsBlockerRuleScreen(
 
     val saveEnabled = ruleName.isNotBlank() && (isAlwaysBlockEnabled || isScheduleEnabled || isCheatEnabled || isLimitByReelsScrolled)
 
+    val openReelsBlockerConfig = {
+        val intent = Intent(context, com.alhaq.amnshield.ui.activity.FragmentActivity::class.java).apply {
+            putExtra("feature_type", "reel_blocker")
+        }
+        context.startActivity(intent)
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             CreateRuleTopAppBar(
                 title = if (editingRule != null) "Edit Reels Rule" else "Create Reels Rule",
                 onBack = onBack,
+                onConfigure = openReelsBlockerConfig,
+                configureLabel = "Configure Reels Blocker",
                 onReset = {
                     ruleName = "Reels Blocker Rule"
                     isAlwaysBlockEnabled = true
@@ -188,7 +197,9 @@ fun CreateReelsBlockerRuleScreen(
             BoundaryHeader(
                 title = "Short-Form Video Protection",
                 subtitle = "Restrict addictive YouTube Shorts, Instagram Reels, TikTok, and Facebook Video feeds.",
-                icon = Icons.Outlined.Lock
+                icon = Icons.Outlined.Lock,
+                onConfigure = openReelsBlockerConfig,
+                configureLabel = "Reels Blocker Settings"
             )
 
             // Rule Name Card

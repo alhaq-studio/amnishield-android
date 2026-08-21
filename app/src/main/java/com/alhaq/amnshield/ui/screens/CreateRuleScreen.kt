@@ -158,12 +158,21 @@ fun CreateRuleScreen(
 
     val saveEnabled = ruleName.isNotBlank() && selectedApps.isNotEmpty()
 
+    val openAppBlockerConfig = {
+        val intent = Intent(context, com.alhaq.amnshield.ui.activity.FragmentActivity::class.java).apply {
+            putExtra("feature_type", "app_blocker")
+        }
+        context.startActivity(intent)
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             CreateRuleTopAppBar(
                 title = if (editingRule != null) "Edit App Rule" else "Create App Rule",
                 onBack = onBack,
+                onConfigure = openAppBlockerConfig,
+                configureLabel = "Configure App Blocker",
                 onReset = {
                     ruleName = "App Blocker Rule"
                     isAlwaysBlockEnabled = true
@@ -242,7 +251,9 @@ fun CreateRuleScreen(
             BoundaryHeader(
                 title = "App Protection Rules",
                 subtitle = "Schedule block windows, daily usage limits, and cheat hours for target apps.",
-                icon = Icons.Outlined.Lock
+                icon = Icons.Outlined.Lock,
+                onConfigure = openAppBlockerConfig,
+                configureLabel = "App Blocker Settings"
             )
 
             // Rule Name Card

@@ -123,12 +123,21 @@ fun CreateWebsiteBlockerRuleScreen(
 
     val saveEnabled = ruleName.isNotBlank() && (isAlwaysBlockEnabled || isScheduleEnabled || isCheatEnabled)
 
+    val openWebsiteBlockerConfig = {
+        val intent = Intent(context, com.alhaq.amnshield.ui.activity.FragmentActivity::class.java).apply {
+            putExtra("feature_type", "website_blocker")
+        }
+        context.startActivity(intent)
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             CreateRuleTopAppBar(
                 title = if (editingRule != null) "Edit Website Rule" else "Create Website Rule",
                 onBack = onBack,
+                onConfigure = openWebsiteBlockerConfig,
+                configureLabel = "Configure Website Blocker",
                 onReset = {
                     ruleName = "Website Blocker Rule"
                     isAlwaysBlockEnabled = true
@@ -204,7 +213,9 @@ fun CreateWebsiteBlockerRuleScreen(
             BoundaryHeader(
                 title = "Website & Domain Protection",
                 subtitle = "Block distractful web URLs, social domains, and explicit adult websites across browser sessions.",
-                icon = Icons.Outlined.Lock
+                icon = Icons.Outlined.Lock,
+                onConfigure = openWebsiteBlockerConfig,
+                configureLabel = "Website Blocker Settings"
             )
 
             // Rule Name Card

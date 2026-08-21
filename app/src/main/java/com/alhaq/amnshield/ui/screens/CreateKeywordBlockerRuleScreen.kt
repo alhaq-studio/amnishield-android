@@ -107,12 +107,21 @@ fun CreateKeywordBlockerRuleScreen(
 
     val saveEnabled = ruleName.isNotBlank() && (isAlwaysBlockEnabled || isScheduleEnabled || isCheatEnabled)
 
+    val openKeywordBlockerConfig = {
+        val intent = Intent(context, com.alhaq.amnshield.ui.activity.FragmentActivity::class.java).apply {
+            putExtra("feature_type", "keyword_blocker")
+        }
+        context.startActivity(intent)
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             CreateRuleTopAppBar(
                 title = if (editingRule != null) "Edit Keyword Rule" else "Create Keyword Rule",
                 onBack = onBack,
+                onConfigure = openKeywordBlockerConfig,
+                configureLabel = "Configure Keyword Blocker",
                 onReset = {
                     ruleName = "Keyword Blocker Rule"
                     isAlwaysBlockEnabled = true
@@ -192,7 +201,9 @@ fun CreateKeywordBlockerRuleScreen(
             BoundaryHeader(
                 title = "Keyword Protection Rules",
                 subtitle = "Filter explicit search queries, titles, and webpage content automatically.",
-                icon = Icons.Outlined.Lock
+                icon = Icons.Outlined.Lock,
+                onConfigure = openKeywordBlockerConfig,
+                configureLabel = "Keyword Blocker Settings"
             )
 
             // Rule Name Card

@@ -106,12 +106,21 @@ fun CreateFocusModeRuleScreen(
 
     val saveEnabled = ruleName.isNotBlank() && scheduleDays.isNotEmpty()
 
+    val openFocusModeConfig = {
+        val intent = Intent(context, com.alhaq.amnshield.ui.activity.FragmentActivity::class.java).apply {
+            putExtra("feature_type", "focus_mode")
+        }
+        context.startActivity(intent)
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             CreateRuleTopAppBar(
                 title = if (editingRule != null) "Edit Auto Focus Schedule" else "Create Auto Focus Schedule",
                 onBack = onBack,
+                onConfigure = openFocusModeConfig,
+                configureLabel = "Configure Focus Mode",
                 onReset = {
                     ruleName = "Auto Focus Schedule"
                     focusModeType = Constants.FOCUS_MODE_BLOCK_SELECTED
@@ -178,7 +187,9 @@ fun CreateFocusModeRuleScreen(
             BoundaryHeader(
                 title = "Auto Focus Schedule",
                 subtitle = "Automatically lock distractions during work hours, study sessions, or quiet time.",
-                icon = Icons.Outlined.Lock
+                icon = Icons.Outlined.Lock,
+                onConfigure = openFocusModeConfig,
+                configureLabel = "Focus Mode Settings"
             )
 
             // Schedule Name Card
