@@ -341,7 +341,11 @@ class SupabaseRest(
                 val expiresAtStr = dev.get("pairing_token_expires_at")?.takeIf { !it.isJsonNull }?.asString
                 if (expiresAtStr != null) {
                     try {
-                        val expiresInstant = java.time.Instant.parse(expiresAtStr)
+                        val expiresInstant = if (expiresAtStr.endsWith("Z", ignoreCase = true)) {
+                            java.time.Instant.parse(expiresAtStr)
+                        } else {
+                            java.time.OffsetDateTime.parse(expiresAtStr).toInstant()
+                        }
                         if (java.time.Instant.now().isAfter(expiresInstant)) {
                             return PairingResult(false, null, null, false, null, "Pairing PIN has expired. Please generate a new code.")
                         }
@@ -354,6 +358,9 @@ class SupabaseRest(
                     addProperty("platform", platform)
                     add("pairing_token", com.google.gson.JsonNull.INSTANCE)
                     addProperty("last_heartbeat", java.time.Instant.now().toString())
+                    addProperty("is_online", true)
+                    addProperty("is_managed", true)
+                    addProperty("sync_enabled", true)
                 }
 
                 val patchReq = Request.Builder()
