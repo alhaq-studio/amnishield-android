@@ -796,6 +796,10 @@ class SavedPreferencesLoader(val context: Context) {
         const val OVERLAY_MODE_TIME = 1
         const val OVERLAY_MODE_BOTH = 2
 
+        const val MODE_STANDALONE = 0
+        const val MODE_PERSONAL_SYNC = 1
+        const val MODE_CONSOLE_ENFORCED = 2
+
         val DEFAULT_REELS_OVERLAY_APPS = setOf(
             "com.instagram.android",
             "com.google.android.youtube",
@@ -1260,5 +1264,76 @@ class SavedPreferencesLoader(val context: Context) {
 
     fun setEnforcementMode(mode: String) {
         // Mode setting is deprecated and simple mode is removed.
+    }
+
+    // ==================== 3-Mode Architecture & Offline Resilience ====================
+
+    fun getDeviceOperationMode(): Int {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val isManaged = prefs.getBoolean("is_console_managed", false) || prefs.getBoolean("is_paired_with_console", false)
+        val pairedDeviceId = prefs.getString("paired_device_id", null)
+
+        if (isManaged && !pairedDeviceId.isNullOrBlank()) {
+            return MODE_CONSOLE_ENFORCED
+        }
+
+        val personalSync = prefs.getBoolean("personal_cloud_sync_enabled", false)
+        val licenseKey = prefs.getString("license_key", null)
+        if (personalSync || (!licenseKey.isNullOrBlank() && personalSync)) {
+            return MODE_PERSONAL_SYNC
+        }
+
+        return MODE_STANDALONE
+    }
+
+    fun isConsoleManaged(): Boolean {
+        return getDeviceOperationMode() == MODE_CONSOLE_ENFORCED
+    }
+
+    fun setConsoleManaged(managed: Boolean, deviceId: String? = null, ownerId: String? = null) {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).edit()
+        prefs.putBoolean("is_console_managed", managed)
+        prefs.putBoolean("is_paired_with_console", managed)
+        if (deviceId != null) prefs.putString("paired_device_id", deviceId)
+        if (ownerId != null) prefs.putString("paired_owner_id", ownerId)
+        if (!managed) {
+            prefs.remove("paired_device_id")
+            prefs.remove("paired_owner_id")
+            prefs.remove("cached_policy_payload")
+        }
+        prefs.apply()
+    }
+
+    fun isPersonalSyncEnabled(): Boolean {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getBoolean("personal_cloud_sync_enabled", false)
+    }
+
+    fun setPersonalSyncEnabled(enabled: Boolean) {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().putBoolean("personal_cloud_sync_enabled", enabled).apply()
+    }
+
+    fun getPairedDeviceId(): String? {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("paired_device_id", null)
+    }
+
+    fun saveCachedPolicyPayload(payloadJson: String) {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit()
+            .putString("cached_policy_payload", payloadJson)
+            .putLong("last_policy_sync_timestamp", System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getCachedPolicyPayload(): String? {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("cached_policy_payload", null)
+    }
+
+    fun getLastPolicySyncTimestamp(): Long {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getLong("last_policy_sync_timestamp", 0L)
     }
 }

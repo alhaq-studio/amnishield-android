@@ -13,6 +13,10 @@ import java.util.concurrent.TimeUnit
 
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        try {
+            PolicySyncManager.syncNow(applicationContext)
+        } catch (_: Exception) {}
+
         SyncGateway.init(applicationContext)
         val provider = SyncGateway.provider
         if (!provider.isAvailable) return Result.success()

@@ -37,6 +37,9 @@ import com.alhaq.amnshield.ui.components.AmnShieldButtonStyle
 import com.alhaq.amnshield.ui.components.AmnShieldInputField
 import com.alhaq.amnshield.ui.state.AmnShieldState
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -86,7 +89,54 @@ fun ProfileScreen(
     var isPairingInProgress by remember { mutableStateOf(false) }
     var pairingStatusMsg by remember { mutableStateOf<String?>(null) }
     var isPairingSuccess by remember { mutableStateOf(false) }
+    var isPairedWithConsole by remember { mutableStateOf(context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).getBoolean("is_paired_with_console", false)) }
+    var pairedDeviceId by remember { mutableStateOf(context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).getString("paired_device_id", null)) }
     val coroutineScope = rememberCoroutineScope()
+
+    val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) { scanResult ->
+        val rawContents = scanResult.contents
+        if (!rawContents.isNullOrBlank()) {
+            val extractedPin = extractPinFromQr(rawContents)
+            if (extractedPin.isNotBlank()) {
+                pairingPinInput = extractedPin
+                isPairingInProgress = true
+                pairingStatusMsg = "Linking device with PIN: $extractedPin..."
+                showPairingDialog = true
+                val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                coroutineScope.launch(Dispatchers.IO) {
+                    val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
+                    val result = rest.claimPairingToken(extractedPin, deviceName, "android")
+                    withContext(Dispatchers.Main) {
+                        isPairingInProgress = false
+                        if (result.success) {
+                            isPairingSuccess = true
+                            pairingStatusMsg = "🎉 Linked to Web Console successfully!"
+                            val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                            prefs.edit()
+                                .putString("paired_device_id", result.deviceId)
+                                .putString("paired_owner_id", result.ownerId)
+                                .putBoolean("is_paired_with_console", true)
+                                .apply()
+                            isPairedWithConsole = true
+                            pairedDeviceId = result.deviceId
+                            Toast.makeText(context, "🎉 Device Linked Successfully!", Toast.LENGTH_LONG).show()
+                            coroutineScope.launch(Dispatchers.IO) {
+                                com.alhaq.amnshield.data.sync.PolicySyncManager.syncNow(context)
+                            }
+                            delay(1200)
+                            showPairingDialog = false
+                        } else {
+                            isPairingSuccess = false
+                            pairingStatusMsg = result.message
+                            Toast.makeText(context, "Pairing Failed: ${result.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } else {
+                Toast.makeText(context, "Could not find a valid pairing code in QR", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Decode custom profile image if present
     val profileBitmap = remember(state.profileImageUri) {
@@ -786,11 +836,26 @@ fun ProfileScreen(
                                 )
                             }
                             Column {
-                                Text(
-                                    text = "Pair with Web Console",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = "Web Admin Console",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (isPairedWithConsole) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFF059669).copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = "CONNECTED",
+                                                color = Color(0xFF059669),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = "app.amnishield.com",
                                     style = MaterialTheme.typography.labelSmall,
@@ -800,36 +865,78 @@ fun ProfileScreen(
                         }
 
                         Text(
-                            text = "Link this phone to your Web Admin Dashboard using a 6-digit PIN or QR code to sync focus rules and remote blocklists.",
+                            text = if (isPairedWithConsole)
+                                "This phone is linked to your Web Admin Dashboard. Focus rules, schedules, and remote blocklists automatically synchronize."
+                            else
+                                "Link this phone to your Web Admin Dashboard using a 6-digit PIN or QR code to sync focus rules and remote blocklists.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        Button(
-                            onClick = {
-                                pairingPinInput = ""
-                                pairingStatusMsg = null
-                                isPairingSuccess = false
-                                showPairingDialog = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
+                        // Action buttons: Scan QR (Primary) + Enter PIN (Outlined)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Enter 6-Digit Pairing PIN",
-                                fontWeight = FontWeight.Bold
-                            )
+                            Button(
+                                onClick = {
+                                    val options = ScanOptions().apply {
+                                        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                        setPrompt("Align QR code from app.amnishield.com inside the frame")
+                                        setBeepEnabled(true)
+                                        setBarcodeImageEnabled(false)
+                                        setOrientationLocked(true)
+                                    }
+                                    qrScanLauncher.launch(options)
+                                },
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCodeScanner,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Scan QR Code",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    pairingPinInput = ""
+                                    pairingStatusMsg = null
+                                    isPairingSuccess = false
+                                    showPairingDialog = true
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Enter PIN",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -1157,6 +1264,28 @@ fun ProfileScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+
+                    OutlinedButton(
+                        onClick = {
+                            showPairingDialog = false
+                            val options = ScanOptions().apply {
+                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                setPrompt("Align QR code from app.amnishield.com inside the frame")
+                                setBeepEnabled(true)
+                                setBarcodeImageEnabled(false)
+                                setOrientationLocked(true)
+                            }
+                            qrScanLauncher.launch(options)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Or Scan QR Code with Camera", fontSize = 12.sp)
+                    }
                 }
             },
             confirmButton = {
@@ -1174,6 +1303,17 @@ fun ProfileScreen(
                                     if (result.success) {
                                         isPairingSuccess = true
                                         pairingStatusMsg = "🎉 Linked to Web Console successfully!"
+                                        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                                        prefs.edit()
+                                            .putString("paired_device_id", result.deviceId)
+                                            .putString("paired_owner_id", result.ownerId)
+                                            .putBoolean("is_paired_with_console", true)
+                                            .apply()
+                                        isPairedWithConsole = true
+                                        pairedDeviceId = result.deviceId
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            com.alhaq.amnshield.data.sync.PolicySyncManager.syncNow(context)
+                                        }
                                         kotlinx.coroutines.delay(1200)
                                         showPairingDialog = false
                                     } else {
@@ -1204,4 +1344,16 @@ fun ProfileScreen(
             }
         )
     }
+}
+
+private fun extractPinFromQr(content: String): String {
+    val trimmed = content.trim()
+    if (trimmed.length == 6 && trimmed.all { it.isDigit() }) return trimmed
+    try {
+        val uri = Uri.parse(trimmed)
+        val token = uri.getQueryParameter("token") ?: uri.getQueryParameter("pin") ?: uri.getQueryParameter("code")
+        if (!token.isNullOrBlank()) return token.trim()
+    } catch (_: Exception) {}
+    val regexMatch = Regex("\\b\\d{6}\\b").find(trimmed)
+    return regexMatch?.value ?: trimmed
 }
