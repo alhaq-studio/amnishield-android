@@ -470,6 +470,10 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
+    fun setToolbarVisible(visible: Boolean) {
+        binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

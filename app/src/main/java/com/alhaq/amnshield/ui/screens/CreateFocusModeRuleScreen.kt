@@ -38,9 +38,13 @@ fun CreateFocusModeRuleScreen(
     state: AmnShieldState,
     onSaveRule: (ScheduleRule) -> Unit,
     onBack: () -> Unit,
-    editingRule: ScheduleRule? = null
+    editingRule: ScheduleRule? = null,
+    onDeleteRule: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
+
+    var showGuideDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val initialName = remember(editingRule) {
         editingRule?.name ?: "Auto Focus Schedule"
@@ -105,23 +109,19 @@ fun CreateFocusModeRuleScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = {
-                    Text(
-                        text = if (editingRule != null) "Edit Auto Focus Schedule" else "Create Auto Focus Schedule",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+            CreateRuleTopAppBar(
+                title = if (editingRule != null) "Edit Auto Focus Schedule" else "Create Auto Focus Schedule",
+                onBack = onBack,
+                onReset = {
+                    ruleName = "Auto Focus Schedule"
+                    focusModeType = Constants.FOCUS_MODE_BLOCK_SELECTED
+                    scheduleStartTime = "09:00"
+                    scheduleEndTime = "17:00"
+                    scheduleDays.clear()
+                    scheduleDays.addAll(listOf("Mon", "Tue", "Wed", "Thu", "Fri"))
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                onHelp = { showGuideDialog = true },
+                onDelete = if (editingRule != null && onDeleteRule != null) { { showDeleteConfirmDialog = true } } else null
             )
         },
         bottomBar = {
@@ -467,6 +467,52 @@ fun CreateFocusModeRuleScreen(
                     scheduleEndTime = formatted
                 }
                 showTimePicker = false
+            }
+        )
+    }
+
+    if (showGuideDialog) {
+        RuleGuideDialog(
+            title = "Auto Focus Schedule Guide",
+            description = "Auto Focus rules turn on deep distraction blocking automatically on your chosen work hours and days.",
+            tips = listOf(
+                "Block Selected (Default): Blocks your selected blacklist apps while allowing productive apps.",
+                "Allow Only Selected (Whitelist): Blocks all apps on your device except your chosen essential apps.",
+                "Timed Auto Activation: Focus mode begins and ends automatically on scheduled days."
+            ),
+            onDismiss = { showGuideDialog = false }
+        )
+    }
+
+    if (showDeleteConfirmDialog && editingRule != null && onDeleteRule != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete Rule?") },
+            text = { Text("Are you sure you want to delete \"${editingRule.name}\"? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeleteRule(editingRule.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }

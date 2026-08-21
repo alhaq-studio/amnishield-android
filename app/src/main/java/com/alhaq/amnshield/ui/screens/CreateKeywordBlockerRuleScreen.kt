@@ -33,9 +33,13 @@ fun CreateKeywordBlockerRuleScreen(
     initialType: String = "Block Schedule",
     editingRule: ScheduleRule? = null,
     onSaveRule: (ScheduleRule) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDeleteRule: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
+
+    var showGuideDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val initialName = remember(editingRule) {
         editingRule?.name ?: "Keyword Blocker Rule"
@@ -106,23 +110,25 @@ fun CreateKeywordBlockerRuleScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = {
-                    Text(
-                        text = if (editingRule != null) "Edit Keyword Rule" else "Create Keyword Rule",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+            CreateRuleTopAppBar(
+                title = if (editingRule != null) "Edit Keyword Rule" else "Create Keyword Rule",
+                onBack = onBack,
+                onReset = {
+                    ruleName = "Keyword Blocker Rule"
+                    isAlwaysBlockEnabled = true
+                    isScheduleEnabled = false
+                    scheduleStartTime = "09:00"
+                    scheduleEndTime = "17:00"
+                    scheduleDays.clear()
+                    scheduleDays.addAll(listOf("Mon", "Tue", "Wed", "Thu", "Fri"))
+                    isCheatEnabled = false
+                    cheatStartTime = "12:00"
+                    cheatEndTime = "13:00"
+                    cheatDays.clear()
+                    cheatDays.addAll(listOf("Sat", "Sun"))
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                onHelp = { showGuideDialog = true },
+                onDelete = if (editingRule != null && onDeleteRule != null) { { showDeleteConfirmDialog = true } } else null
             )
         },
         bottomBar = {
@@ -786,6 +792,53 @@ fun CreateKeywordBlockerRuleScreen(
                     "cheat_end" -> cheatEndTime = formatted
                 }
                 showTimePicker = false
+            }
+        )
+    }
+
+    if (showGuideDialog) {
+        RuleGuideDialog(
+            title = "Keyword Blocker Rules Guide",
+            description = "Keyword Blocker inspects on-screen text and search inputs across web browsers, YouTube, and search engines in real-time.",
+            tips = listOf(
+                "Always Block: Matches and intercepts keywords continuously.",
+                "Block Schedule: Enforces keyword filtering only during configured schedule windows.",
+                "Cheat Hours: Pauses keyword blocking temporarily during allowed breaks.",
+                "Adult & Gambling Packs: You can enable pre-curated keyword packs in addition to custom keywords."
+            ),
+            onDismiss = { showGuideDialog = false }
+        )
+    }
+
+    if (showDeleteConfirmDialog && editingRule != null && onDeleteRule != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete Rule?") },
+            text = { Text("Are you sure you want to delete \"${editingRule.name}\"? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeleteRule(editingRule.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }

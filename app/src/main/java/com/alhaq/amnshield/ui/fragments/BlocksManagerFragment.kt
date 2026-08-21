@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -112,7 +113,27 @@ class BlocksManagerFragment : Fragment() {
                 var showSelectBlockerDialog by remember { mutableStateOf(false) }
 
                 LaunchedEffect(currentScreen) {
-                    (activity as? com.alhaq.amnshield.ui.activity.MainActivity)?.setBottomNavVisible(currentScreen == "manage")
+                    val isManage = currentScreen == "manage"
+                    val mainActivity = activity as? com.alhaq.amnshield.ui.activity.MainActivity
+                    mainActivity?.setBottomNavVisible(isManage)
+                    mainActivity?.setToolbarVisible(isManage)
+                }
+
+                DisposableEffect(Unit) {
+                    onDispose {
+                        val mainActivity = activity as? com.alhaq.amnshield.ui.activity.MainActivity
+                        mainActivity?.setBottomNavVisible(true)
+                        mainActivity?.setToolbarVisible(true)
+                    }
+                }
+
+                androidx.activity.compose.BackHandler(enabled = currentScreen != "manage") {
+                    editingRule = null
+                    if (action == "create") {
+                        safeOnBack()
+                    } else {
+                        currentScreen = "manage"
+                    }
                 }
 
                 AmnShieldTheme(appTheme = activeTheme) {
@@ -184,6 +205,15 @@ class BlocksManagerFragment : Fragment() {
                                     } else {
                                         currentScreen = "manage"
                                     }
+                                },
+                                onDeleteRule = { id ->
+                                    deleteScheduleRule(id)
+                                    editingRule = null
+                                    if (action == "create") {
+                                        safeOnBack()
+                                    } else {
+                                        currentScreen = "manage"
+                                    }
                                 }
                             )
                         }
@@ -206,6 +236,15 @@ class BlocksManagerFragment : Fragment() {
                                     }
                                 },
                                 onBack = {
+                                    editingRule = null
+                                    if (action == "create") {
+                                        safeOnBack()
+                                    } else {
+                                        currentScreen = "manage"
+                                    }
+                                },
+                                onDeleteRule = { id ->
+                                    deleteScheduleRule(id)
                                     editingRule = null
                                     if (action == "create") {
                                         safeOnBack()
@@ -241,6 +280,15 @@ class BlocksManagerFragment : Fragment() {
                                     } else {
                                         currentScreen = "manage"
                                     }
+                                },
+                                onDeleteRule = { id ->
+                                    deleteScheduleRule(id)
+                                    editingRule = null
+                                    if (action == "create") {
+                                        safeOnBack()
+                                    } else {
+                                        currentScreen = "manage"
+                                    }
                                 }
                             )
                         }
@@ -269,6 +317,15 @@ class BlocksManagerFragment : Fragment() {
                                     } else {
                                         currentScreen = "manage"
                                     }
+                                },
+                                onDeleteRule = { id ->
+                                    deleteScheduleRule(id)
+                                    editingRule = null
+                                    if (action == "create") {
+                                        safeOnBack()
+                                    } else {
+                                        currentScreen = "manage"
+                                    }
                                 }
                             )
                         }
@@ -289,6 +346,15 @@ class BlocksManagerFragment : Fragment() {
                                     }
                                 },
                                 onBack = {
+                                    editingRule = null
+                                    if (action == "create") {
+                                        safeOnBack()
+                                    } else {
+                                        currentScreen = "manage"
+                                    }
+                                },
+                                onDeleteRule = { id ->
+                                    deleteScheduleRule(id)
                                     editingRule = null
                                     if (action == "create") {
                                         safeOnBack()
