@@ -12,13 +12,41 @@
         android:paddingHorizontal="16dp"
         tools:context=".ui.activity.AppUsageActivity">
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_back"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="16dp"
+            app:icon="@drawable/baseline_arrow_back_24"
+            app:iconTint="?attr/colorOnSurface"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/screen_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="Detailed Usage Stats"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toBottomOf="@+id/btn_back"
+            app:layout_constraintEnd_toStartOf="@+id/open_menu"
+            app:layout_constraintStart_toEndOf="@+id/btn_back"
+            app:layout_constraintTop_toTopOf="@+id/btn_back" />
+
         <Button
             android:id="@+id/open_menu"
             style="@style/Widget.Material3.Button.IconButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginTop="16dp"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="8dp"
             app:icon="@drawable/baseline_edit_24"
             app:layout_constraintEnd_toStartOf="@+id/select_date"
             app:layout_constraintTop_toTopOf="parent" />
@@ -29,7 +57,6 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:layout_marginTop="16dp"
-            android:layout_marginEnd="8dp"
             android:text="Select date"
             app:icon="@drawable/baseline_date_range_24"
             app:layout_constraintEnd_toEndOf="parent"

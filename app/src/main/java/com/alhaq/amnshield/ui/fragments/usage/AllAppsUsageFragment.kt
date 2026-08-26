@@ -57,9 +57,9 @@ import com.alhaq.amnshield.ui.activity.FragmentActivity
 import com.alhaq.amnshield.ui.activity.SelectAppsActivity
 import com.alhaq.amnshield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
+import com.alhaq.amnshield.utils.AccessibilityUtils
 import com.alhaq.amnshield.utils.TimeTools
 import com.alhaq.amnshield.utils.UsageStatsHelper
-import com.alhaq.amnshield.utils.getDefaultLauncherPackageName
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -128,6 +128,9 @@ class AllAppsUsageFragment : Fragment() {
             setUsageStats()
 
             findDataAvailabilityRange()
+        }
+        binding.btnBack.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
         }
         binding.openMenu.setOnClickListener {
             val popupMenu = PopupMenu(requireContext(), binding.openMenu)
@@ -250,7 +253,7 @@ class AllAppsUsageFragment : Fragment() {
 
     private fun reloadIgnoredPackages() {
         ignoredPackages.clear()
-        getDefaultLauncherPackageName(requireContext().packageManager)?.let {
+        AccessibilityUtils.getDefaultLauncherPackageName(requireContext().packageManager)?.let {
             ignoredPackages.add(it)
         }
         ignoredPackages.addAll(savedPreferencesLoader.loadIgnoredAppUsageTracker())
@@ -275,7 +278,7 @@ class AllAppsUsageFragment : Fragment() {
             getString(R.string.enable_2, "Device Usage Access")
 
         dialogBinding.desc.text =
-            "AmnShield requires device usage access to monitor apps, helping you manage screen time effectively and stay focused on your goals. Rest assured, all data stays securely on your device and is never shared with anyone, ensuring your privacy is fully protected."
+            "AmniShield requires device usage access to monitor apps, helping you manage screen time effectively and stay focused on your goals. Rest assured, all data stays securely on your device and is never shared with anyone, ensuring your privacy is fully protected."
 
         dialogBinding.point1.text = "Track what apps you use"
         dialogBinding.point2.visibility = View.GONE
@@ -377,8 +380,8 @@ class AllAppsUsageFragment : Fragment() {
 
     private fun calculateTotalScreenTimeInHours(stats: List<Stat>): Long {
         val totalTimeInMillis = stats.sumOf { it.totalTime }
-
-        return totalTimeInMillis
+        val maxPossible = 24 * 60 * 60 * 1000L
+        return minOf(totalTimeInMillis, maxPossible)
     }
 
     private fun updateRecommendations(

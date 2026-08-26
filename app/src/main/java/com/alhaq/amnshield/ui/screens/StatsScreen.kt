@@ -1,5 +1,16 @@
+/**
+ * ============================================================================
+ * AmniShield UI - StatsScreen (Material 3)
+ * ============================================================================
+ * Architecture: Interactive Statistics Hub with Midnight-Aligned Screen Time,
+ * Segmented Range Toggle (Today vs Last 7 Days), and Clickable Weekly Day Bars.
+ * ============================================================================
+ */
 package com.alhaq.amnshield.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,7 +29,7 @@ import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -29,7 +40,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.alhaq.amnshield.ui.components.bounceClick
 import com.alhaq.amnshield.ui.state.ScreenTimeDay
+import com.alhaq.amnshield.utils.TimeTools
 
 data class AppUsageItem(
     val name: String,
@@ -39,9 +52,12 @@ data class AppUsageItem(
     val icon: android.graphics.Bitmap? = null
 )
 
+enum class OverviewTimeRange { TODAY, LAST_7_DAYS }
+
 @Composable
 fun StatsScreen(
-    totalScreenTime: String,
+    todayScreenTimeMs: Long,
+    weeklyStats: List<ScreenTimeDay>,
     distractionsBlocked: Int,
     focusTime: String,
     totalReelsWatched: Int,
@@ -62,21 +78,7 @@ fun StatsScreen(
     onViewReelsMetrics: () -> Unit,
     onAppClick: (String) -> Unit
 ) {
-    val userGoal = 120 // Default 2 hours limit in minutes
-    // Parse total hours & minutes to calculate progress ratio
-    val totalMinutes = parseTimeToMinutes(totalScreenTime)
-    val progressRatio = (totalMinutes.toFloat() / userGoal.toFloat()).coerceIn(0f, 1f)
-    val progressPctText = "${(progressRatio * 100).toInt()}%"
-
-    val mockWeeklyScreenTime = listOf(
-        ScreenTimeDay("Mon", 45),
-        ScreenTimeDay("Tue", 90),
-        ScreenTimeDay("Wed", 60),
-        ScreenTimeDay("Thu", 130),
-        ScreenTimeDay("Fri", 85),
-        ScreenTimeDay("Sat", 40),
-        ScreenTimeDay("Sun", 15)
-    )
+    val dailyLimitMs = 2 * 3600 * 1000L // 2 hours daily limit
 
     LazyColumn(
         modifier = Modifier
@@ -86,163 +88,23 @@ fun StatsScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp)
     ) {
-        // Today's Brief Overview
+        // Interactive Overview Card (Today vs 7 Days + Clickable Weekly Bars)
         item {
-            Text(
-                text = "TODAY'S OVERVIEW",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 0.08.sp
+            InteractiveOverviewCard(
+                todayScreenTimeMs = todayScreenTimeMs,
+                weeklyStats = if (weeklyStats.isNotEmpty()) weeklyStats else listOf(
+                    ScreenTimeDay("Mon", 45),
+                    ScreenTimeDay("Tue", 90),
+                    ScreenTimeDay("Wed", 60),
+                    ScreenTimeDay("Thu", 130),
+                    ScreenTimeDay("Fri", 85),
+                    ScreenTimeDay("Sat", 40),
+                    ScreenTimeDay("Sun", 15)
+                ),
+                dailyLimitMs = dailyLimitMs,
+                isAppUsageTrackingEnabled = isAppUsageTrackingEnabled,
+                onEnableAppUsageTracking = onEnableAppUsageTracking
             )
-        }
-
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-            ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (!isAppUsageTrackingEnabled) Modifier.blur(16.dp) else Modifier),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = if (isAppUsageTrackingEnabled) totalScreenTime else "–h –m",
-                                    style = MaterialTheme.typography.displayMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Screen Time Today",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Timer,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Goal Progress Bar
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Daily Limit Progress",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = if (isAppUsageTrackingEnabled) "$totalScreenTime / 2h 0m ($progressPctText)" else "Tracking Paused",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { if (isAppUsageTrackingEnabled) progressRatio else 0f },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(6.dp)),
-                                color = if (progressRatio >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Embedded Weekly Bar Chart
-                        Text(
-                            text = "WEEKLY SCREEN TIME",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            letterSpacing = 0.05.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        WeeklyBarChart(days = mockWeeklyScreenTime)
-                    }
-                }
-
-                // Privacy Overlay when App Usage Tracking is Disabled
-                if (!isAppUsageTrackingEnabled) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.VisibilityOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "App Usage Tracking Paused",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Global app screen time logging is currently disabled.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            FilledTonalButton(
-                                onClick = onEnableAppUsageTracking,
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Enable Usage Tracking")
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         item {
@@ -256,7 +118,7 @@ fun StatsScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -284,8 +146,8 @@ fun StatsScreen(
                     text = "WELLBEING METRICS",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.08.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
@@ -295,23 +157,23 @@ fun StatsScreen(
                     // Focus Time Card
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Timer,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.height(14.dp))
@@ -332,23 +194,23 @@ fun StatsScreen(
                     // Distractions Card
                     Card(
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.errorContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Block,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.height(14.dp))
@@ -376,17 +238,17 @@ fun StatsScreen(
                     text = "WEB BROWSING ACTIVITY",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.08.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onViewWebUsageDetails() },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -479,24 +341,24 @@ fun StatsScreen(
             }
         }
 
-        // Short-form Video Tracker Card (Elevated & Visual)
+        // Short-form Video Tracker Card
         item {
             Column {
                 Text(
                     text = "SHORT-FORM CONTENT",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.08.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onViewReelsMetrics() },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -505,98 +367,81 @@ fun StatsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                val countText = if (totalReelsWatched == 1) "1 video" else "$totalReelsWatched videos"
                                 Text(
-                                    text = "$countText • $totalReelsWatchTimeFormatted",
+                                    text = "$totalReelsWatched Reels Scrolled",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Reels & Shorts Watched Today",
+                                    text = "Total Watch Time: $totalReelsWatchTimeFormatted",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
-                            // Velocity Pace Badge
-                            val isElevated = totalReelsWatched > 30
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isElevated) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                                border = BorderStroke(1.dp, if (isElevated) MaterialTheme.colorScheme.error.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                                color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Speed,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isElevated) "⚠️ Elevated Pace" else "⚡ Balanced Pace",
+                                        text = "${averageWatchSeconds}s avg",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isElevated) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                        // 4-Period Hourly Sparkline & Avg Watch Time
+                        // Hourly Reels Heatmap Distribution Bar
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(28.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            // Micro 4-Period Sparkline
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                val periods = listOf("Morn" to 0.35f, "Aft" to 0.75f, "Eve" to 0.55f, "Night" to 0.20f)
-                                periods.forEach { (label, ratio) ->
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(
-                                            modifier = Modifier
-                                                .height(28.dp)
-                                                .width(18.dp)
-                                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .fillMaxHeight(ratio)
-                                                    .align(Alignment.BottomCenter)
-                                                    .background(MaterialTheme.colorScheme.primary)
+                            val hoursDistribution = listOf(
+                                "Night" to 0.1f,
+                                "Morning" to 0.45f,
+                                "Afternoon" to 0.85f,
+                                "Evening" to 0.3f
+                            )
+                            hoursDistribution.forEach { (period, weight) ->
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height((20 * weight).dp.coerceAtLeast(4.dp))
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(
+                                                if (weight > 0.6f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
                                             )
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontSize = 9.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = period.take(3),
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-                            }
-
-                            Column(horizontalAlignment = Alignment.End) {
-                                val minutes = averageWatchSeconds / 60
-                                val seconds = averageWatchSeconds % 60
-                                val watchTimeStr = if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s / video"
-                                Text(
-                                    text = watchTimeStr,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Avg. Watch Duration",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
@@ -604,106 +449,60 @@ fun StatsScreen(
             }
         }
 
-        // Action buttons (Navigation or details)
+        // Top Apps Section
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onViewReelsMetrics,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(imageVector = Icons.Outlined.BarChart, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("View Advanced Reels Metrics", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
-                    }
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "MOST USED TODAY",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Top 5",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
-        // Most Used Today Section Header
-        item {
-            Text(
-                text = "APP BREAKDOWN",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 0.08.sp
-            )
-        }
-
-        // App usage breakdown items
-        if (!isAppUsageTrackingEnabled) {
+        if (topApps.isEmpty() && isAppUsageTrackingEnabled) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.VisibilityOff,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "App Breakdown Hidden",
+                            text = "No app usage detected yet today.",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Individual app screen times are blurred while tracking is paused.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-            }
-        } else if (topApps.isEmpty()) {
-            item {
-                Text(
-                    text = "No usage data available.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
             }
         } else {
             items(topApps) { app ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
                         .clickable { onAppClick(app.packageName) },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -711,26 +510,25 @@ fun StatsScreen(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // App icon or fallback
                         Box(
                             modifier = Modifier
-                                .size(46.dp)
+                                .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                             contentAlignment = Alignment.Center
                         ) {
                             if (app.icon != null) {
                                 Image(
                                     bitmap = app.icon.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize()
+                                    contentDescription = app.name,
+                                    modifier = Modifier.size(36.dp)
                                 )
                             } else {
                                 Icon(
                                     imageVector = getIconForApp(app.name),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
@@ -759,7 +557,6 @@ fun StatsScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Styled progress bar representing usage
                             LinearProgressIndicator(
                                 progress = { app.progress },
                                 modifier = Modifier
@@ -777,11 +574,311 @@ fun StatsScreen(
     }
 }
 
+/**
+ * Interactive Overview Card with Segmented Toggle (Today vs Last 7 Days)
+ * and Clickable Weekly Day Bars.
+ */
 @Composable
-fun WeeklyBarChart(days: List<ScreenTimeDay>) {
-    val barColor = MaterialTheme.colorScheme.primary
-    val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-    val maxMins = days.maxOfOrNull { it.minutes } ?: 100
+fun InteractiveOverviewCard(
+    todayScreenTimeMs: Long,
+    weeklyStats: List<ScreenTimeDay>,
+    dailyLimitMs: Long = 2 * 3600 * 1000L,
+    isAppUsageTrackingEnabled: Boolean = true,
+    onEnableAppUsageTracking: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var selectedRange by remember { mutableStateOf(OverviewTimeRange.TODAY) }
+    var selectedDayIndex by remember { mutableIntStateOf(weeklyStats.lastIndex.coerceAtLeast(0)) }
+
+    // Keep selectedDayIndex in bounds if weeklyStats size changes
+    LaunchedEffect(weeklyStats) {
+        if (selectedDayIndex !in weeklyStats.indices) {
+            selectedDayIndex = weeklyStats.lastIndex.coerceAtLeast(0)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (!isAppUsageTrackingEnabled) Modifier.blur(16.dp) else Modifier),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header: Title + Segmented Control Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedRange == OverviewTimeRange.TODAY) "TODAY'S OVERVIEW" else "WEEKLY OVERVIEW",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
+                    )
+
+                    OverviewSegmentedToggle(
+                        selectedRange = selectedRange,
+                        onRangeSelected = { selectedRange = it }
+                    )
+                }
+
+                // Main Metric Display
+                val isInspectingHistoricalDay = selectedRange == OverviewTimeRange.TODAY &&
+                        selectedDayIndex != weeklyStats.lastIndex &&
+                        selectedDayIndex in weeklyStats.indices
+
+                val displayTimeMs = when {
+                    selectedRange == OverviewTimeRange.LAST_7_DAYS -> {
+                        if (weeklyStats.isNotEmpty()) {
+                            (weeklyStats.map { it.minutes * 60_000L }.average()).toLong()
+                        } else 0L
+                    }
+                    isInspectingHistoricalDay -> {
+                        weeklyStats[selectedDayIndex].minutes * 60_000L
+                    }
+                    else -> todayScreenTimeMs
+                }
+
+                val subtitleText = when {
+                    selectedRange == OverviewTimeRange.LAST_7_DAYS -> "Daily Average (Last 7 Days)"
+                    isInspectingHistoricalDay -> "Screen Time on ${weeklyStats[selectedDayIndex].dayOfWeek}"
+                    else -> "Screen Time Today"
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (isAppUsageTrackingEnabled) TimeTools.formatHoursMinutes(displayTimeMs) else "–h –m",
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = subtitleText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Timer,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+
+                // Daily Limit Progress Bar
+                val progress = if (dailyLimitMs > 0) (displayTimeMs.toFloat() / dailyLimitMs.toFloat()).coerceIn(0f, 1f) else 0f
+                val progressPctText = "${(progress * 100).toInt()}%"
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (selectedRange == OverviewTimeRange.TODAY) "Daily Limit Progress" else "Average Budget Progress",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (isAppUsageTrackingEnabled) {
+                                "${TimeTools.formatHoursMinutes(displayTimeMs)} / ${TimeTools.formatHoursMinutes(dailyLimitMs)} ($progressPctText)"
+                            } else "Tracking Paused",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (progress >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    LinearProgressIndicator(
+                        progress = { if (isAppUsageTrackingEnabled) progress else 0f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape),
+                        color = if (progress >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    )
+                }
+
+                // Clickable Weekly Bar Chart
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "WEEKLY SCREEN TIME",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.8.sp
+                        )
+                        if (isInspectingHistoricalDay) {
+                            Text(
+                                text = "Tap today to reset",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clickable { selectedDayIndex = weeklyStats.lastIndex }
+                            )
+                        }
+                    }
+
+                    InteractiveWeeklyBarChart(
+                        weeklyStats = weeklyStats,
+                        selectedIndex = selectedDayIndex,
+                        onDayClick = { index ->
+                            selectedDayIndex = index
+                            if (selectedRange == OverviewTimeRange.LAST_7_DAYS) {
+                                selectedRange = OverviewTimeRange.TODAY
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // Privacy Overlay when App Usage Tracking is Disabled
+        if (!isAppUsageTrackingEnabled) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), RoundedCornerShape(24.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VisibilityOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "App Usage Tracking Paused",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Global app screen time logging is currently disabled.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    FilledTonalButton(
+                        onClick = onEnableAppUsageTracking,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Enable Usage Tracking")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OverviewSegmentedToggle(
+    selectedRange: OverviewTimeRange,
+    onRangeSelected: (OverviewTimeRange) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Row(
+            modifier = Modifier.padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            OverviewSegmentButton(
+                label = "Today",
+                isSelected = selectedRange == OverviewTimeRange.TODAY,
+                onClick = { onRangeSelected(OverviewTimeRange.TODAY) }
+            )
+            OverviewSegmentButton(
+                label = "Last 7 Days",
+                isSelected = selectedRange == OverviewTimeRange.LAST_7_DAYS,
+                onClick = { onRangeSelected(OverviewTimeRange.LAST_7_DAYS) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverviewSegmentButton(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val bgColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "segment_bg"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "segment_text"
+    )
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = bgColor,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = textColor,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+fun InteractiveWeeklyBarChart(
+    weeklyStats: List<ScreenTimeDay>,
+    selectedIndex: Int,
+    onDayClick: (Int) -> Unit
+) {
+    val maxMins = weeklyStats.maxOfOrNull { it.minutes }?.coerceAtLeast(60) ?: 100
 
     Row(
         modifier = Modifier
@@ -790,38 +887,54 @@ fun WeeklyBarChart(days: List<ScreenTimeDay>) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom
     ) {
-        days.forEach { day ->
+        weeklyStats.forEachIndexed { index, day ->
+            val isSelected = selectedIndex == index
+            val barRatio = (day.minutes.toFloat() / maxMins.toFloat()).coerceIn(0.08f, 1f)
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .bounceClick { onDayClick(index) }
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight(0.85f)
-                        .width(10.dp)
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                        .background(trackColor)
+                        .width(if (isSelected) 14.dp else 10.dp)
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                        ),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .fillMaxHeight(
-                                if (maxMins > 0) day.minutes.toFloat() / maxMins else 0.1f
+                            .fillMaxHeight(barRatio)
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                             )
-                            .align(Alignment.BottomCenter)
-                            .background(barColor)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = day.dayOfWeek.take(1),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                ) {
+                    Text(
+                        text = day.dayOfWeek.take(1),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
     }
@@ -835,22 +948,5 @@ private fun getIconForApp(appName: String): ImageVector {
         nameLower.contains("youtube") || nameLower.contains("video") || nameLower.contains("netflix") -> Icons.Default.PlayArrow
         nameLower.contains("instagram") || nameLower.contains("camera") || nameLower.contains("tiktok") -> Icons.Default.CameraAlt
         else -> Icons.Default.Android
-    }
-}
-
-private fun parseTimeToMinutes(timeFormatted: String): Int {
-    val clean = timeFormatted.trim().lowercase()
-    return try {
-        if (clean.contains("h")) {
-            val parts = clean.split("h")
-            val hours = parts[0].trim().toInt()
-            val minutesStr = parts[1].replace("m", "").trim()
-            val minutes = if (minutesStr.isNotEmpty()) minutesStr.toInt() else 0
-            hours * 60 + minutes
-        } else {
-            clean.replace("m", "").trim().toInt()
-        }
-    } catch (e: Exception) {
-        60 // fallback default
     }
 }

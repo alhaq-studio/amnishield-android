@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.ComposeView
 import com.alhaq.amnshield.services.AmnShieldAccessibilityService
 import com.alhaq.amnshield.ui.activity.SelectAppsActivity
-import com.alhaq.amnshield.ui.dialogs.StartFocusMode
 import com.alhaq.amnshield.ui.screens.config.FocusModeConfigScreen
 import com.alhaq.amnshield.ui.theme.AmnShieldTheme
 import com.alhaq.amnshield.utils.ThemeUtils
@@ -30,7 +29,23 @@ class FocusModeConfigFragment : BaseFeatureFragment() {
             val selectedApps = result.data?.getStringArrayListExtra("SELECTED_APPS")
             selectedApps?.let {
                 savedPreferencesLoader.saveFocusModeSelectedApps(it)
-                Log.i(TAG, "Focus mode selected apps updated: ${it.size} apps")
+                Log.i(TAG, "Focus mode target apps updated: ${it.size} apps")
+                val intent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
+                    setPackage(requireContext().packageName)
+                }
+                requireContext().sendBroadcast(intent)
+            }
+        }
+    }
+
+    private val selectAlwaysWhitelistedLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val selectedApps = result.data?.getStringArrayListExtra("SELECTED_APPS")
+            selectedApps?.let {
+                savedPreferencesLoader.saveAlwaysWhitelistedApps(it)
+                Log.i(TAG, "Always-whitelisted emergency apps updated: ${it.size} apps")
                 val intent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
                     setPackage(requireContext().packageName)
                 }
@@ -53,7 +68,7 @@ class FocusModeConfigFragment : BaseFeatureFragment() {
                         isServiceEnabled = isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java),
                         onEnableServiceClick = {
                             showAccessibilityInfoDialog(
-                                "AmnShield Accessibility Service",
+                                "AmniShield Accessibility Service",
                                 AmnShieldAccessibilityService::class.java
                             )
                         },
@@ -71,11 +86,14 @@ class FocusModeConfigFragment : BaseFeatureFragment() {
                             }
                             selectAppsLauncher.launch(intent, activityOptions)
                         },
-                        onStartFocusModeClick = {
-                            StartFocusMode(savedPreferencesLoader) {
-                                // Focus mode session started
-                                Log.i(TAG, "Quick Focus session started")
-                            }.show(childFragmentManager, "start_focus_mode")
+                        onSelectAlwaysWhitelistedClick = {
+                            val intent = Intent(requireContext(), SelectAppsActivity::class.java).apply {
+                                putStringArrayListExtra(
+                                    "PRE_SELECTED_APPS",
+                                    ArrayList(savedPreferencesLoader.getAlwaysWhitelistedApps())
+                                )
+                            }
+                            selectAlwaysWhitelistedLauncher.launch(intent, activityOptions)
                         }
                     )
                 }

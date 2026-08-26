@@ -91,6 +91,10 @@ class AdminReceiver : DeviceAdminReceiver() {
         if (isAntiUninstallOn) {
             antiUninstallInfo.edit().putBoolean("is_anti_uninstall_on", false).apply()
             Toast.makeText(context, R.string.anti_uninstall_removed, Toast.LENGTH_SHORT).show()
+
+            val refreshIntent = Intent(com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+                .setPackage(context.packageName)
+            context.sendBroadcast(refreshIntent)
         }
     }
 }

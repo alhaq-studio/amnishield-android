@@ -5,45 +5,60 @@ import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
-open class BaseBlockingService : AccessibilityService() {
+abstract class BaseBlockingService : AccessibilityService() {
+
+    companion object {
+        const val DEFAULT_GLOBAL_ACTION_DEBOUNCE_MS = 1000L
+    }
+
     val savedPreferencesLoader: SavedPreferencesLoader by lazy {
         SavedPreferencesLoader(this)
     }
 
-    var lastBackPressTimeStamp: Long =
-        SystemClock.uptimeMillis() // prevents repetitive global actions
+    // Tracks the last execution of any system navigation action to prevent UI thrashing
+    private var lastGlobalActionTimestamp: Long = 0L
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // Implemented by child service
     }
 
     override fun onInterrupt() {
+        // Implemented by child service
     }
 
-    private fun isDelayOver(): Boolean {
-        return isDelayOver(1000)
+    /**
+     * Checks if enough time has elapsed since the last global action.
+     */
+    fun isDelayOver(delayMs: Long = DEFAULT_GLOBAL_ACTION_DEBOUNCE_MS): Boolean {
+        val now = SystemClock.uptimeMillis()
+        return (now - lastGlobalActionTimestamp) >= delayMs
     }
 
-    fun isDelayOver(delay: Int): Boolean {
-        val currentTime = SystemClock.uptimeMillis().toFloat()
-        return currentTime - lastBackPressTimeStamp > delay
-    }
-
-    fun isDelayOver(lastTimestamp: Long, delay: Int): Boolean {
-        val currentTime = SystemClock.uptimeMillis().toFloat()
-        return currentTime - lastTimestamp > delay
-    }
-
-    fun pressHome() {
-        if (isDelayOver()) {
-            performGlobalAction(GLOBAL_ACTION_HOME)
-            lastBackPressTimeStamp = SystemClock.uptimeMillis()
+    /**
+     * Executes GLOBAL_ACTION_HOME with automatic debouncing.
+     */
+    fun pressHome(debounceMs: Long = DEFAULT_GLOBAL_ACTION_DEBOUNCE_MS): Boolean {
+        if (isDelayOver(debounceMs)) {
+            val success = performGlobalAction(GLOBAL_ACTION_HOME)
+            if (success) {
+                lastGlobalActionTimestamp = SystemClock.uptimeMillis()
+            }
+            return success
         }
+        return false
     }
 
-    fun pressBack() {
-        if (isDelayOver()) {
-            performGlobalAction(GLOBAL_ACTION_BACK)
-            lastBackPressTimeStamp = SystemClock.uptimeMillis()
+    /**
+     * Executes GLOBAL_ACTION_BACK with automatic debouncing.
+     */
+    fun pressBack(debounceMs: Long = DEFAULT_GLOBAL_ACTION_DEBOUNCE_MS): Boolean {
+        if (isDelayOver(debounceMs)) {
+            val success = performGlobalAction(GLOBAL_ACTION_BACK)
+            if (success) {
+                lastGlobalActionTimestamp = SystemClock.uptimeMillis()
+            }
+            return success
         }
+        return false
     }
 }

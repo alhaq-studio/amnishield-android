@@ -44,6 +44,9 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
         setupLineChart(binding.lineChart)
         plotUsageData()
 
@@ -118,17 +121,40 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
         val loader = SavedPreferencesLoader(requireContext())
         val blocked = loader.loadBlockedApps().toMutableSet()
         val isCurrentlyBlocked = blocked.contains(stat.packageName)
+        val appName = getAppName()
 
         if (isCurrentlyBlocked) {
             blocked.remove(stat.packageName)
             loader.saveBlockedApps(blocked)
+            // Remove any direct schedule rules for this app
+            val appRules = loader.loadAppBlockerScheduleRules().toMutableList()
+            appRules.removeAll { it.packageName == stat.packageName }
+            loader.saveAppBlockerScheduleRules(appRules)
+            loader.removeAppLaunchLimitRule(stat.packageName)
             sendAppBlockerRefresh()
-            Toast.makeText(requireContext(), "${getAppName()} removed from blocked apps", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "$appName removed from blocked apps", Toast.LENGTH_SHORT).show()
         } else {
             blocked.add(stat.packageName)
             loader.saveBlockedApps(blocked)
+            val directRuleId = UUID.randomUUID().toString()
+            loader.upsertAppBlockerScheduleRule(
+                AppBlockScheduleRule(
+                    id = UUID.randomUUID().toString(),
+                    title = "Block Always • $appName",
+                    packageName = stat.packageName,
+                    type = AppBlockScheduleRule.RuleType.BLOCK,
+                    recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+                    startMinute = 0,
+                    endMinute = 0,
+                    selectedDays = emptySet(),
+                    createdAt = System.currentTimeMillis(),
+                    groupId = directRuleId,
+                    groupTitle = "Quick Block • $appName",
+                    isEnabled = true
+                )
+            )
             sendAppBlockerRefresh()
-            Toast.makeText(requireContext(), "${getAppName()} added to blocked apps", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "$appName added to blocked apps", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -369,6 +395,8 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                         // Send refresh to accessibility service so it can track launches
                         sendAppBlockerRefresh()
                     } else {
+                        SavedPreferencesLoader(requireContext()).removeAppLaunchLimitRule(stat.packageName)
+                        sendAppBlockerRefresh()
                         Toast.makeText(
                             requireContext(),
                             "Launch limit removed",

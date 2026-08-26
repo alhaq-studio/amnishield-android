@@ -116,7 +116,7 @@ class FocusFragment : BaseFeatureFragment() {
                             checkNotificationPermissionAndStart(durationMinutes, mode, selectedApps)
                         },
                         onStopFocusSession = { stopFocusSession() },
-                        onConfigureApps = { configureApps() },
+                        onOpenFocusConfig = { openFocusConfig() },
                         onConfigureSchedules = { configureSchedules() },
                         onEnableService = { enableService() }
                     )
@@ -248,11 +248,11 @@ class FocusFragment : BaseFeatureFragment() {
         }
     }
 
-    private fun configureApps() {
-        val intent = Intent(requireContext(), SelectAppsActivity::class.java).apply {
-            putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(loader.getFocusModeSelectedApps()))
+    private fun openFocusConfig() {
+        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+            putExtra("fragment", com.alhaq.amnshield.ui.fragments.features.FocusModeConfigFragment.FRAGMENT_ID)
         }
-        selectAppsLauncher.launch(intent, activityOptions)
+        startActivity(intent, activityOptions.toBundle())
     }
 
     private fun configureSchedules() {
@@ -264,6 +264,6 @@ class FocusFragment : BaseFeatureFragment() {
     }
 
     private fun enableService() {
-        showAccessibilityInfoDialog("AmnShield Accessibility Service", AmnShieldAccessibilityService::class.java)
+        showAccessibilityInfoDialog("AmniShield Accessibility Service", AmnShieldAccessibilityService::class.java)
     }
 }

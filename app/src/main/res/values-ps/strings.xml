@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name" translatable="false">AmnShield</string>
+    <string name="app_name" translatable="false">AmniShield</string>
     <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
     <string name="launcher_options">د لانچر اختیارونه</string>
     <string name="focus_mode">د تمرکز حالت</string>
@@ -10,25 +10,25 @@
     <string name="usage_tracker">د کارونې څارونکی</string>
     <string name="disabled">غیرفعال</string>
     <string name="select_pinned_apps">پن شوي اپونه وټاکئ</string>
-    <string name="warning_launcher_settings">Set AmnShield as the default launcher to access this option</string>
+    <string name="warning_launcher_settings">د دې اختیار کارولو لپاره AmniShield د ډیفالټ لانچر په توګه تنظیم کړئ</string>
     <string name="select_blocked_apps">بند شوي اپونه وټاکئ</string>
     <string name="start_focus_mode">د تمرکز حالت پیل کړئ</string>
-    <string name="warning_general_settings">Enable General Accessibility Service to access this option</string>
+    <string name="warning_general_settings">د دې اختیار لپاره د عمومي لاسرسي خدمت فعال کړئ</string>
     <string name="manage_warning_screen">د خبرتیا سکرین اداره کړئ</string>
     <string name="enable_app_blocker">د اپ بندونکی فعال کړئ</string>
     <string name="enable_keyword_blocker">د کلیدي کلمو بندونکی فعال کړئ</string>
     <string name="enable_usage_tracker">د کارونې څارونکی فعال کړئ</string>
     <string name="manage_cheat_hours">د استثنا ساعتونه اداره کړئ</string>
-    <string name="warning_app_blocker_settings">Enable App Blocker Accessibility Service to manage app blocking</string>
-    <string name="warning_view_blocker_settings">Enable Shorts Blocker Accessibility Service to manage shorts blocking</string>
+    <string name="warning_app_blocker_settings">د اپلیکیشن بلاک کولو لپاره د لاسرسي خدمت فعال کړئ</string>
+    <string name="warning_view_blocker_settings">د Shorts بلاک کولو لپاره د لاسرسي خدمت فعال کړئ</string>
     <string name="add_custom_keywords">دودیزې کلیدي کلمې اضافه کړئ</string>
     <string name="manage_keyword_packs">د کلیدي کلمو بستې اداره کړئ</string>
-    <string name="warning_keywords_settings">Enable Keyword Blocker Accessibility Service to manage blocked keywords</string>
+    <string name="warning_keywords_settings">د کلیدي کلمو بلاک کولو لپاره د لاسرسي خدمت فعال کړئ</string>
     <string name="grayscale_filter">د خړ رنګ فلټر</string>
     <string name="setup_filter">فلټر تنظیم کړئ</string>
     <string name="usage_stats">د کارونې احصایه</string>
     <string name="manage_overlay_trackers">د ریښتیني وخت اوورلې اداره کړئ</string>
-    <string name="warning_usage_tracker_settings">Enable Usage Tracker Accessibility Service to manage trackers</string>
+    <string name="warning_usage_tracker_settings">د کارونې تعقیب لپاره د لاسرسي خدمت فعال کړئ</string>
     <string name="remove_anti_uninstall">د اپ ساتنه غیرفعاله کړئ</string>
     <string name="add_cheat_hours">د استثنا ساعتونه اضافه کړئ</string>
     <string name="add">اضافه کول</string>
@@ -48,49 +48,40 @@
     <string name="invalid_pack">د بستې فایل ناسم دی</string>
     <string name="select_export_location">د صادرولو ځای وټاکئ</string>
     <string name="select_import_file">د بستې فایل وټاکئ</string>
-    <string name="todays_stats">د نن ورځې احصایه</string>
-    <string name="you_scrolled_2_d_reels">تاسو %2$d ریلز سکرول کړل</string>
-    <string name="your_average_attention_span_was_2_d_mins">Your average attention span was %2$d mins</string>
-    <string name="view_more">نور وګورئ</string>
-    
-    <string name="number_of_reels_scrolled">د سکرول شویو ریلز شمیر</string>
-    <string name="average_attention_span">د پاملرنې اوسط</string>
-    <string name="apps">اپونه:</string>
+    <string name="todays_stats">د نن ورځې احصایه</string>    <string name="view_more">نور وګورئ</string>    <string name="apps">اپلیکیشنونه:</string>
     <string name="remove">لرې کول</string>
     <string name="write_down_a_keyword">یوه کلیدي کلمه ولیکئ</string>
     <string name="select_start_time">د پیل وخت وټاکئ</string>
     <string name="select_end_time">د پای وخت وټاکئ</string>
     <string name="select_apps_to_unblock">د خلاصولو لپاره اپونه وټاکئ</string>
     <string name="disable_proceed_button">د دوام تڼۍ غیرفعاله کړئ </string>
-    <string name="display_time_elapsed">تېر شوی وخت ښکاره کړئ</string>
-    <string name="display_number_of_reels_scrolled">د سکرول شویو ریلز شمیر ښکاره کړئ</string>
-    <string name="specify_duration_of_focus_mode_in_mins">د تمرکز موده په دقیقو کې</string>
+    <string name="display_time_elapsed">تېر شوی وخت ښکاره کړئ</string>    <string name="specify_duration_of_focus_mode_in_mins">د تمرکز موده په دقیقو کې</string>
     <string name="block_adult_keywords">د لویانو کلمې بندې کړئ</string>
     <string name="password">پټنوم</string>
     <string name="specify_cooldown_interval_in_minutes">د انتظار موده په دقیقو کې</string>
     <string name="warning_message">د خبرتیا پیغام</string>
-    <string name="allow_viewing_instagram_reels_sent_in_instagram_inbox">Allow viewing instagram reels sent in Instagram inbox</string>
+    <string name="allow_viewing_instagram_reels_sent_in_instagram_inbox">په انسټاګرام ان باکس کې د ریلز ویډیوګانو لیدلو اجازه ورکړئ</string>
     <string name="allow_opening_the_first_reel_in_feed">د لومړي ریل خلاصولو اجازه</string>
     <string name="in_warning_changeable_cooldown">په خبرتیا کې بدلون منونکی انتظار</string>
     <string name="timed_mode">وخت‌ټاکلی حالت</string>
-    <string name="block_all_uninstall_attempts_for_a_set_amount_of_days">Block all uninstall attempts for a specified number of days.</string>
+    <string name="block_all_uninstall_attempts_for_a_set_amount_of_days">د ټاکل شوې مودې لپاره د ډیلیټ کولو ټولې هڅې بلاک کړئ.</string>
     <string name="password_mode">د پټنوم حالت</string>
-    <string name="block_all_uninstall_attempts_until_you_remove_anti_uninstall_with_a_password">Block uninstall attempts until App Protection is removed with a password</string>
+    <string name="block_all_uninstall_attempts_until_you_remove_anti_uninstall_with_a_password">د پاسورډ په واسطه د محافظت لرې کولو پورې د ډیلیټ هڅې بلاک کړئ</string>
     <string name="next">بل</string>
-    <string name="password_mode_desc">Make sure not to forget this password. You may not be able to exit anti-uninstall without it.</string>
+    <string name="password_mode_desc">ډاډ ترلاسه کړئ چې دا پاسورډ هیر نه کړئ. د دې پرته تاسو نشئ کولی محافظت بند کړئ.</string>
     <string name="turn_on">فعالول</string>
-    <string name="timed_mode_desc">How long would you like to keep anti-uninstall enabled?</string>
+    <string name="timed_mode_desc">تاسو څومره وخت غواړئ د لرې کولو محافظت فعال وساتئ؟</string>
     <string name="turn_on_anti_uninstall">د اپ ساتنه فعاله کړئ</string>
     <string name="minutes">دقیقې</string>
     <string name="app_icon">د اپ آیکن</string>
 
-    <string name="accessibility_service_description">
-        AmnShield requires the Accessibility Service to power its core features. The service allows the app to:
-        \n\n- See which app you are using: This is necessary to enforce your App Blocker and Focus Mode rules.
-        \n- Read on-screen content: This is used by the Keyword Blocker to identify and block unwanted content in real-time.
-        \n- Perform actions: The service can perform \"back\" or \"home\" gestures to block apps and close distracting content.
-        \n\n**Your privacy is our top priority.** All data processing is done entirely on your device. Your on-screen content and app usage are never logged, stored, or shared with us or any third party.
-    </string>
+    <string name="accessibility_service_description">AmniShield د خپلو اساسي دندو لپاره د لاسرسي خدمت ته اړتیا لري:
+
+- د کارول شوي اپلیکیشن پیژندل د بلاک مقرراتو پلي کولو لپاره.
+- د ناغوښتل شوي مینځپانګې سمدستي بلاک کولو لپاره د سکرین لوستل.
+- د ګډوډیو بندولو لپاره د شاته یا کور ته تګ اشارې کول.
+
+**ستاسو محرمیت زموږ لومړیتوب دی.** ټول معلومات یوازې ستاسو په موبایل کې پروسس کیږي.</string>
 
     <string name="admin_permission_desc">د امن شیلډ ضد ړنګولو ساتنه</string>
     <string name="title">سرلیک</string>
@@ -98,11 +89,11 @@
     <string name="proceed">دوام</string>
     <string name="warning_title_app_blocker">د اپ بندونکي ساتنه</string>
     <string name="warning_title_reels_blocker">د ریلز/شارټس ساتنه</string>
-    <string name="warning_default_message_app">This app is currently blocked to help you stay focused.</string>
-    <string name="warning_default_message_reels">Reels/Shorts were blocked to protect your focus and time.</string>
+    <string name="warning_default_message_app">دا اپلیکیشن اوس مهال بلاک دی ترڅو تاسو سره په تمرکز کې مرسته وکړي.</string>
+    <string name="warning_default_message_reels">شارټس/ریلز ستاسو د وخت او تمرکز د ساتنې لپاره بلاک شوي.</string>
     <string name="warning_cancel_go_home">کور</string>
     <string name="warning_cancel_stay_safe">بندول</string>
-    <string name="please_enable_device_admin">Please provide device admin permission to access this feature</string>
+    <string name="please_enable_device_admin">مهرباني وکړئ د دې بڼې لپاره د وسیلې اداره اجازه ورکړئ</string>
     <string name="setup_complete">تنظیم بشپړ شو</string>
     <string name="enter_setup">تنظیم پیل کړئ</string>
     <string name="enabled">فعال</string>
@@ -111,55 +102,54 @@
     <string name="manage_keyword_blockers">د کلیدي کلمو بندونکي اداره کړئ</string>
     <string name="ok">سمه ده</string>
     <string name="anti_uninstall_removed">د ضد ړنګولو ساتنه لرې شوه</string>
-    <string name="anti_uninstall_is_protected_by_password">Anti-Uninstall is protected by password. Remove it from the app settings.</string>
-    <string name="anti_uninstall_is_active_cannot_remove">Anti-Uninstall is currently active and cannot be removed.</string>
-    <string name="anti_uninstall_password_mode_warning">[Warning] Anti-Uninstall is protected by password.\n\nYou must enter the correct password in the AmnShield app to disable this protection.</string>
-    <string name="anti_uninstall_timed_mode_warning">[Warning] Anti-Uninstall is active for %1$d more days.\n\nYou cannot disable this protection until the time period expires.</string>
-    <string name="anti_uninstall_timed_mode_expired">[OK] The time period has expired. You can now disable Anti-Uninstall.</string>
-    <string name="anti_uninstall_is_active">[Warning] Anti-Uninstall protection is currently active.</string>
+    <string name="anti_uninstall_is_protected_by_password">محافظت په پاسورډ خوندي دی. د اپلیکیشن ترتیباتو څخه یې لرې کړئ.</string>
+    <string name="anti_uninstall_is_active_cannot_remove">محافظت اوس فعال دی او نشي لرې کیدی.</string>
+    <string name="anti_uninstall_password_mode_warning">[خبرداری] د لرې کولو محافظت په پاسورډ خوندي دی.
+
+د غیر فعالولو لپاره سم پاسورډ دننه کړئ.</string>
+    <string name="anti_uninstall_timed_mode_warning">[خبرداری] محافظت د نورو %1$d ورځو لپاره فعال دی.
+
+تاسو نشئ کولی دا د مودې تر پای پورې بند کړئ.</string>
+    <string name="anti_uninstall_timed_mode_expired">[سمه ده] ټاکل شوې موده پای ته ورسیده. اوس کولی شئ محافظت بند کړئ.</string>
+    <string name="anti_uninstall_is_active">[خبرداری] د لرې کولو محافظت اوس مهال فعال دی.</string>
     
     <!-- Anti-Uninstall UI Strings -->
-    <string name="anti_uninstall_description">Prevent unauthorized uninstalls and optionally block configuration changes using password or timed protection</string>
+    <string name="anti_uninstall_description">د پاسورډ یا وخت محافظت له لارې د اپلیکیشن د غیر مجاز ډیلیټ کیدو مخه ونیسئ</string>
     <string name="enable_anti_uninstall_protection">د ضد ړنګولو ساتنه فعاله کړئ</string>
-    <string name="anti_uninstall_disabled">Anti-uninstall protection is currently disabled</string>
+    <string name="anti_uninstall_disabled">د لرې کولو محافظت غیر فعال دی</string>
     <string name="anti_uninstall_enabled">د ضد ړنګولو ساتنه فعاله ده</string>
     <string name="anti_uninstall_mode_password_active">د پټنوم ساتنه فعاله ده</string>
     <string name="anti_uninstall_mode_timed_active">وخت‌ټاکلې ساتنه تر %1$s پورې</string>
     <string name="configure_anti_uninstall">ساتنه تنظیم کړئ</string>
     <string name="choose_anti_uninstall_mode">د ساتنې حالت وټاکئ</string>
     <string name="disable_anti_uninstall">د ضد ړنګولو ساتنه غیرفعاله کړئ</string>
-    <string name="are_you_sure_disable_anti_uninstall">Are you sure you want to disable anti-uninstall protection?</string>
+    <string name="are_you_sure_disable_anti_uninstall">ایا تاسو ډاډه یاست چې د لرې کولو محافظت غیر فعال کړئ؟</string>
     <string name="disable">غیرفعالول</string>
     <string name="enter_password">پټنوم ولیکئ</string>
-    <string name="enter_password_to_disable">Enter your password to disable anti-uninstall protection</string>
+    <string name="enter_password_to_disable">د محافظت بندولو لپاره پاسورډ دننه کړئ</string>
     <string name="incorrect_password">ناسم پټنوم</string>
-    <string name="anti_uninstall_disabled_successfully">Anti-uninstall protection disabled successfully</string>
+    <string name="anti_uninstall_disabled_successfully">د لرې کولو محافظت په بریالیتوب سره بند شو</string>
     
     <!-- Anti-Uninstall Password Verification -->
     <string name="anti_uninstall_password_required">د اپ ساتنې تایید</string>
-    <string name="enter_password_to_proceed_settings">Enter your password to continue, or use the 5-minute recovery fallback if you forgot it</string>
+    <string name="enter_password_to_proceed_settings">د پرمخ تللو لپاره پاسورډ ولیکئ، یا د هیرولو په صورت کې ۵ دقیقې بیا رغونه وکاروئ</string>
     <string name="password_verified">پټنوم تایید شو. د لاسرسي اجازه ورکړل شوه.</string>
     <string name="verify">تایید</string>
     <string name="anti_uninstall_timed_mode_active">وخت‌ټاکلې ساتنه فعاله</string>
-    <string name="anti_uninstall_timed_mode_days_remaining">Anti-Uninstall protection is active for %1$d more days.\n\nYou cannot access this Settings screen until the time period expires.</string>
+    <string name="anti_uninstall_timed_mode_days_remaining">محافظت د نورو %1$d ورځو لپاره فعال دی.
+
+د وخت تر پای پورې ترتیباتو ته لاسرسی نشته.</string>
     
     <string name="failed">ناکام</string>
     <string name="incorrect_password_please_try_again">ناسم پټنوم. بیا هڅه وکړئ.</string>
     <string name="retry">بیا هڅه</string>
     <string name="start_time">د پیل وخت: %1$d:%2$d</string>
-    <string name="end_time_must_be_after_start_time_has_passed">End time must be after start time has passed!</string>
+    <string name="end_time_must_be_after_start_time_has_passed">د پای وخت باید د پیل له وخت څخه وروسته وي!</string>
     <string name="end_time">د پای وخت: %1$02d:%2$02d</string>
     <string name="start_time_02d_02d">د پیل وخت: %1$02d:%2$02d</string>
     <string name="specify_cheat_hours">د استثنا ساعتونه وټاکئ</string>
-    <string name="remaining_time_anti_uninstall">You still have %1$d days to go before unlocking anti-uninstall</string>
-    <string name="add_a_new_keyword">نوې کلیدي کلمه اضافه کړئ</string>
-    <string name="you_scrolled_reels">تاسو %1$d ریلز سکرول کړل</string>
-    <string name="you_had_an_attention_span_of_seconds_video">You had an attention span of %1$.2f seconds/video</string>
-    <string name="failed_to_launch_system_digital_wellbeing">Failed to launch system digital wellbeing</string>
-    <string name="reel_count">د ریلز شمیر</string>
-    <string name="short_videos_scrolled">لنډې ویډیوګانې وکتل شوې</string>
-    <string name="seconds_video">ثانیې/ویډیو</string>
-    <string name="app_s_selected">%1$d اپونه وټاکل شول</string>
+    <string name="remaining_time_anti_uninstall">د محافظت د انلاک کیدو لپاره %1$d ورځې پاتې دي</string>
+    <string name="add_a_new_keyword">نوې کلیدي کلمه اضافه کړئ</string>    <string name="failed_to_launch_system_digital_wellbeing">د ډیجیټل هوساینې پرانیستل ناکام شول</string>    <string name="app_s_selected">%1$d اپونه وټاکل شول</string>
     <string name="please_specify_start_time_first">لومړی د پیل وخت وټاکئ</string>
     <string name="please_type_a_title">مهرباني وکړئ سرلیک ولیکئ</string>
     <string name="please_select_a_start_time">مهرباني وکړئ د پیل وخت وټاکئ</string>
@@ -167,13 +157,13 @@
     <string name="please_select_a_few_apps">مهرباني وکړئ څو اپونه وټاکئ</string>
     <string name="cheat_timings">%1$d:%2$d تر %3$d:%4$d</string>
     <string name="configure_warning_screen">د خبرتیا سکرین</string>
-    <string name="proceed_in">Please wait %1$d seconds before pressing proceed</string>
+    <string name="proceed_in">مهرباني وکړئ د دوام ورکولو دمخه %1$d ثانیې انتظار وکړئ</string>
     <string name="to">تر</string>
     <string name="please_specify_time">مهرباني وکړئ وخت وټاکئ</string>
     <string name="from">له</string>
     <string name="end">پای</string>
     <string name="accept">منل</string>
-    <string name="accessibility_perm_desc">AmnShield uses the Accessibility permission to provide features like app monitoring and usage tracking to enhance your experience. This permission allows AmnShield to detect app activities and help manage device usage effectively. Rest assured, all data is processed locally on your device and is never sent to any server or third party. Your privacy and data security are our top priorities.     By pressing Accept, you acknowledge and agree to the above .</string>
+    <string name="accessibility_perm_desc">AmniShield د کارونې تعقیب لپاره لاسرسی کاروي. ټول معلومات ستاسو په موبایل کې پروسس کیږي.</string>
     <string name="reject">ردول</string>
     <string name="peel_the_onions">د پیازو پوست کول</string>
     <string name="fix_your_life">خپل ژوند سم کړئ</string>
@@ -181,27 +171,27 @@
     <string name="read_content_on_screen">د سکرین منځپانګه لوستل</string>
     <string name="this_will_allow_amnshield_to">دا به امن شیلډ ته اجازه ورکړي چې:</string>
     <string name="enable_2">%1$s فعال کړئ</string>
-    <string name="device_admin_perm">AmnShield uses Device Admin permission to enhance security and block uninstalling AmnShield until a specific period. All data remains securely stored on your device and is never shared externally.</string>
-    <string name="prevent_uninstallation_attempts_until_a_set_condition_is_met">Prevent uninstallation attempts until a set condition is met</string>
+    <string name="device_admin_perm">AmniShield د وسیلې ادارې اجازه د ډیلیټ مخنیوي لپاره کاروي ترڅو امنیت ډاډمن کړي.</string>
+    <string name="prevent_uninstallation_attempts_until_a_set_condition_is_met">د ټاکل شوي شرط تر پوره کیدو پورې د ډیلیټ هڅې بندې کړئ</string>
 
-    <string name="device_perm_draw_over_other_apps">AmnShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay tracks the number of reels watched and the time spent, helping users be more aware of their usage in real time.</string>
+    <string name="device_perm_draw_over_other_apps">AmniShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay tracks the number of reels watched and the time spent, helping users be more aware of their usage in real time.</string>
     <string name="show_time_elapsed_on_phone">په ګرځنده کې تېر شوی وخت ښکاره کړئ</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Calculate how many reels/ tiktok/ short videos you scroll per day</string>
     <string name="plan_a_robbery">د غلا پلان</string>
-    <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Please provide display over other apps permission to access this feature</string>
+    <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">مهرباني وکړئ په نورو اپلیکیشنونو د ښودلو اجازه ورکړئ</string>
     <string name="find_amnshield_and_press_enable">امن شیلډ ومومئ او فعالول کېکاږئ</string>
     <string name="discard_changes">بدلونونه پریږدئ؟</string>
-    <string name="are_you_sure_you_want_to_discard_all_changes_and_exit">Are you sure you want to discard all changes and exit?</string>
+    <string name="are_you_sure_you_want_to_discard_all_changes_and_exit">ایا تاسو ډاډه یاست چې بدلونونه لغوه او ووځئ؟</string>
     <string name="yes">هو</string>
     <string name="join_discord">ډیسکورډ سره یوځای شئ</string>
     <string name="follow_us_on_instagram">په انسټاګرام کې مو تعقیب کړئ</string>
     <string name="support">ملاتړ</string>
-    <string name="if_you_enable_this_you_won_t_be_able_to_change_configurations_such_as_adding_blocked_apps_keywords_and_more">If you enable this, you won\'t be able to change configurations such as adding blocked apps, keywords, and more until you remove anti-uninstall. Your existing changes will be used for the entire period.</string>
+    <string name="if_you_enable_this_you_won_t_be_able_to_change_configurations_such_as_adding_blocked_apps_keywords_and_more">که دا فعال کړئ، تاسو نشئ کولی ترتیبات بدل کړئ تر هغه چې محافظت بند نشي.</string>
     <string name="alert">خبرداری!!</string>
     <string name="i_understand">پوه شوم</string>
-    <string name="are_you_sure_you_want_to_turn_on_anti_uninstall_there_is_no_turning_back">ARE YOU SURE YOU WANT TO TURN ON ANTI UNINSTALL? There is no turning back...</string>
+    <string name="are_you_sure_you_want_to_turn_on_anti_uninstall_there_is_no_turning_back">ایا تاسو ډاډه یاست چې دا فعال کړئ؟ دا بیرته نشي اخیستل کیدی...</string>
     <string name="about_view_blocker">د شارټس بندونکي په اړه</string>
-    <string name="this_option_has_the_ability_to_block_youtube_shorts_and_instagram_reels_while_allowing_access_to_other_app_features">This option has the ability to block YouTube Shorts and Instagram Reels while allowing access to other app features.</string>
+    <string name="this_option_has_the_ability_to_block_youtube_shorts_and_instagram_reels_while_allowing_access_to_other_app_features">دا اختیار کولی شي شارټس او ریلز بلاک کړي پداسې حال کې چې نورې برخې خلاصې وي.</string>
     <string name="configure_blocker">بندونکی تنظیم کړئ</string>
     <string name="select_apps">اپونه وټاکئ</string>
     <string name="setup_auto_focus">اتومات تمرکز تنظیم کړئ</string>
@@ -229,7 +219,7 @@
     
     <!-- Home Screen -->
     <string name="welcome_to_amnshield">امن شیلډ ته ښه راغلاست</string>
-    <string name="protect_your_digital_wellbeing">Protect your digital wellbeing with powerful tools</string>
+    <string name="protect_your_digital_wellbeing">د قوي وسیلو سره د خپل ډیجیټل هوساینې ساتنه وکړئ</string>
     <string name="quick_actions">ګړندۍ کړنې</string>
     <string name="hide_welcome_card">د هرکلي کارت پټ کړئ</string>
     <string name="welcome_card_hidden">د هرکلي کارت پټ شو</string>
@@ -245,11 +235,7 @@
     <!-- Stats Screen -->
     <string name="today_screen_time">د نن د سکرین وخت</string>
     <string name="total_time_today">د نن ټول وخت</string>
-    <string name="view_detailed_stats">تفصیلي احصایه وګورئ</string>
-    <string name="reels_today">د نن لیدل شوي ریلز</string>
-    <string name="vs_yesterday">د پرون په پرتله</string>
-    <string name="view_reels_metrics">د ریلز معیارونه وګورئ</string>
-    <string name="most_used_apps">تر ټولو ډېر کارېدلي اپونه</string>
+    <string name="view_detailed_stats">تفصیلي احصایه وګورئ</string>    <string name="most_used_apps">تر ټولو ډېر کارېدلي اپونه</string>
     
     <!-- Settings Screen -->
     <string name="appearance">بڼه</string>
@@ -274,9 +260,9 @@
     <string name="continue_anyway">بیا هم دوام</string>
     <string name="manage_view_blocker">د شارټس بندونکی تنظیم کړئ</string>
     <string name="open_accessibility_settings">د لاسرسي تنظیمات خلاص کړئ</string>
-    <string name="welcome_message">Welcome to AmnShield! We\'re here to help you build healthier digital habits. This quick setup guide will walk you through the key features and permissions needed to get the most out of the app. Updates are delivered automatically through the Play Store.</string>
+    <string name="welcome_message">AmniShield ته ښه راغلاست! موږ دلته یو ترڅو تاسو سره د صحي ډیجیټل عادتونو په جوړولو کې مرسته وکړو.</string>
     <string name="terms_and_conditions">شرایط او ضوابط</string>
-    <string name="agree_to_terms">I have read and agree to the Terms and Privacy Policy</string>
+    <string name="agree_to_terms">ما شرایط او د محرمیت تګلاره لوستې او ورسره موافق یم</string>
     <string name="privacy_policy">د محرمیت تګلاره</string>
 
     <!-- Navigation Drawer -->
@@ -295,12 +281,12 @@
     <string name="signed_in_as">د %1$s په توګه ننوتي</string>
     <string name="send_feedback">نظر ولیږئ</string>
     <string name="feedback_subject">د امن شیلډ نظر</string>
-    <string name="feedback_hint">Share your thoughts, suggestions, or report issues...</string>
+    <string name="feedback_hint">خپل نظرونه شریک کړئ یا د ستونزو راپور ورکړئ...</string>
     <string name="feedback_sent">ستاسو د نظر څخه مننه!</string>
-    <string name="feedback_error">Could not send feedback. Please try again.</string>
+    <string name="feedback_error">د فیډبیک په لیږلو کې تېروتنه وشوه. مهرباني وکړئ بیا هڅه وکړئ.</string>
     <string name="notification_permission_title">خبرتیاوې فعالې کړئ</string>
-    <string name="notification_permission_rationale">Focus Mode uses notifications to show the countdown timer. Please enable them to continue.</string>
-    <string name="notification_permission_required">Notifications are required to show the Focus Mode timer.</string>
+    <string name="notification_permission_rationale">د فوکس حالت د وخت حساب لپاره خبرتیاو ته اړتیا لري.</string>
+    <string name="notification_permission_required">د فوکس موډ ښودلو لپاره خبرتیاوې اړینې دي.</string>
     <string name="open_settings">تنظیمات خلاص کړئ</string>
     <string name="app_usage_others_label">نور</string>
     <string name="premium_required_title">پریمیم اړین دی</string>
@@ -312,7 +298,7 @@
     <string name="premium_locked">پریمیم</string>
     <string name="premium_unlock_chip">خلاصول</string>
     <string name="premium_reminder_title">د پریمیم ځانګړنې خلاصې کړئ</string>
-    <string name="premium_reminder_message">Upgrade to AmnShield Premium to unlock App Blocker, Focus Mode, Reel Blocker, Anti-Uninstall Protection, and more. Support the project while protecting your digital wellbeing.</string>
+    <string name="premium_reminder_message">Upgrade to AmniShield Premium to unlock App Blocker, Focus Mode, Reel Blocker, Anti-Uninstall Protection, and more. Support the project while protecting your digital wellbeing.</string>
     <string name="premium_features_title">د امن شیلډ پریمیم خلاص کړئ</string>
     <string name="premium_features_subtitle">Unlock App Blocker, Focus Mode, Reel Blocker, Anti-Uninstall protection, and advanced digital wellbeing tools.</string>
     <string name="premium_features_includes">پریمیم لري:</string>
@@ -335,55 +321,55 @@
     <string name="premium_price_yearly_value" tools:ignore="MissingTranslation">2.5 پاونډ/میاشت (کلنی)</string>
     <string name="premium_cta_yearly">کلنی پلان پیل کړئ</string>
     <string name="premium_restore">پیرودنې بیرته راوړل</string>
-    <string name="premium_disclaimer">Prices shown are indicative. Final pricing, taxes, and billing are handled securely by Google Play. Subscriptions auto-renew unless canceled. Cancel anytime from Google Play.</string>
-    <string name="premium_active_message">Premium protection is active on this device.</string>
+    <string name="premium_disclaimer">ښودل شوي قیمتونه اټکلي دي. تادیات د Google Play له لارې په خوندي ډول ترسره کیږي.</string>
+    <string name="premium_active_message">پریمیم محافظت په دې وسیله کې فعال دی.</string>
     <string name="premium_restore_in_progress">ستاسو د پریمیم حالت چک کېږي...</string>
     <string name="premium_already_active">پریمیم له مخکې فعال دی.</string>
-    <string name="premium_purchase_success">Premium unlocked! Additional protection features are now enabled.</string>
+    <string name="premium_purchase_success">پریمیم انلاک شو! اضافي امنیتي بڼې فعالې شوې.</string>
     <string name="premium_no_previous_purchases">پخوانۍ پیرودنه ونه موندل شوه.</string>
     <string name="premium_card_title">د پریمیم لاسرسی</string>
     <string name="premium_card_status_premium">پریمیم</string>
     <string name="premium_card_status_compassionate">وړیا لاسرسی</string>
     <string name="premium_card_status_special">ځانګړی</string>
     <string name="reel_blocker">د ریلز/شارټس بندونکی</string>
-    <string name="block_changes_during_protection">Block changes to blockers while protection is active</string>
+    <string name="block_changes_during_protection">د محافظت د فعالیدو پرمهال د ترتیباتو بدلون بند کړئ</string>
     <string name="enable_block_changes_guard">د بندونې بدلون ساتونکی فعال کړئ</string>
     <string name="forgot_password_recovery">پټنوم مو هېر دی؟ ۵ دقیقه‌ای بیا رغونه پیل کړئ</string>
     <string name="recovery_countdown_message">بیا رغونه به په %1$02d:%2$02d کې خلاصه شي</string>
-    <string name="recovery_started">Recovery started. Wait 5 minutes to unlock settings.</string>
-    <string name="recovery_ready">Recovery complete. Settings are unlocked for 5 minutes.</string>
+    <string name="recovery_started">بیا رغونه پیل شوه. ترتیباتو د خلاصولو لپاره ۵ دقیقې انتظار وکړئ.</string>
+    <string name="recovery_ready">بیا رغونه بشپړه شوه. ترتیبات د ۵ دقیقو لپاره خلاص دي.</string>
     <string name="start_recovery">بیا رغونه پیل کړئ</string>
     <string name="enable_reel_blocker">د ریل بندونکی فعال کړئ</string>
-    <string name="reel_blocker_toggle_description">Toggle dedicated reel blocking behavior independently of general view blocking.</string>
-    <string name="reel_blocker_full_description">Block Instagram Reels, YouTube Shorts reels feed, and TikTok with dedicated reel controls.</string>
+    <string name="reel_blocker_toggle_description">د عمومي شارټس بلاک کولو څخه په جلا توګه د ریلز بلاکر فعال کړئ.</string>
+    <string name="reel_blocker_full_description">د انسټاګرام ریلز، یوټیوب شارټس او ټیک ټاک په اسانۍ بلاک کړئ.</string>
     <string name="reel_blocker_platforms_title">د بندولو پلیټفارمونه</string>
-    <string name="reel_blocker_platforms_description">Choose where Reel Blocker should actively block short-form feeds.</string>
+    <string name="reel_blocker_platforms_description">وټاکئ چې لنډې ویډیوګانې چیرته بلاک شي.</string>
     <string name="reel_blocker_platform_youtube">یوټیوب شارټس</string>
     <string name="reel_blocker_platform_instagram">انسټاګرام ریلز</string>
     <string name="reel_blocker_platform_tiktok">ټیک ټاک</string>
     <string name="reel_blocker_platform_browser">د براوزر شارټس/ریلز پاڼې</string>
-    <string name="reel_blocker_platform_browser_hint">Helps block web-based shorts and reels pages inside supported browsers.</string>
+    <string name="reel_blocker_platform_browser_hint">په براوزرونو کې د ویډیوګانو په بلاک کولو کې مرسته کوي.</string>
     <string name="reel_blocker_mode">د بندولو حالت</string>
     <string name="reel_block_after_count">یوازې د ورځني حد وروسته بندول</string>
     <string name="reel_daily_limit_hint">د ورځني ریل حد</string>
     <string name="reel_daily_limit_validation">لږ تر لږه ۱ ریل ورځنی حد ولیکئ.</string>
-    <string name="shorts_blocker_description">Blocks YouTube Shorts and Instagram Reels surfaces in the Shorts Blocker flow.</string>
+    <string name="shorts_blocker_description">د یوټیوب شارټس او انسټاګرام ریلز بندوي.</string>
     <string name="compassionate_access_title">زه نه شم تادیه کولی</string>
     <string name="compassionate_access_description">Islamic Rahmah (Mercy): digital protection should be available to everyone. We trust you to be honest about your situation (amanah).</string>
     <string name="compassionate_access_button">د وړیا لاسرسي غوښتنه</string>
-    <string name="compassionate_access_intro_message">This program is for people who are genuinely in financial need. We ask you to be truthful about your situation. If you proceed, AmnShield will grant 1 year of free premium access on this device.</string>
+    <string name="compassionate_access_intro_message">This program is for people who are genuinely in financial need. We ask you to be truthful about your situation. If you proceed, AmniShield will grant 1 year of free premium access on this device.</string>
     <string name="compassionate_access_intro_positive">زه په مالي اړتیا کې یم</string>
     <string name="compassionate_access_form_title">د وړیا پریمیم لاسرسي غوښتنه</string>
-    <string name="compassionate_access_form_message">Enter your details below. Name is required, email is optional for account recovery, and an App ID will be generated automatically.</string>
+    <string name="compassionate_access_form_message">لاندې خپل معلومات ولیکئ. نوم اړین دی، بریښنالیک اختیاري دی.</string>
     <string name="compassionate_access_name_hint">ستاسو نوم</string>
     <string name="compassionate_access_email_hint">بریښنالیک (اختیاري)</string>
     <string name="compassionate_access_proceed">دوام</string>
     <string name="compassionate_access_name_required">مهرباني وکړئ خپل نوم ولیکئ.</string>
-    <string name="compassionate_access_email_invalid">Enter a valid email address or leave it blank.</string>
+    <string name="compassionate_access_email_invalid">یو باوري بریښنالیک دننه کړئ یا یې خالي پریږدئ.</string>
     <string name="compassionate_access_success_title">وړیا لاسرسی فعال شو</string>
-    <string name="compassionate_access_success_message">Your 1-year AmnShield premium access is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amn.alhaq-initiative.org/support/ or email support@alhaq-initiative.org with your App ID.</string>
+    <string name="compassionate_access_success_message">Your 1-year AmniShield premium access is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit alhaq.uk/support.html or email support@alhaq.uk with your App ID.</string>
     <string name="compassionate_access_no_email_value">نه دی ورکړل شوی</string>
-    <string name="compassionate_access_error">Could not activate free access. Please contact support@alhaq-initiative.org.</string>
+    <string name="compassionate_access_error">د وړیا لاسرسي فعالول ناکام شول. له support@alhaq.uk سره اړیکه ونیسئ.</string>
     <string name="compassionate_access_active">وړیا لاسرسی فعال</string>
     <string name="compassionate_access_active_description">You currently have a compassionate-access premium grant on this device.</string>
     <string name="compassionate_access_active_until">Compassionate access is active until %1$s.</string>
@@ -396,11 +382,11 @@
     <string name="special_user">ځانګړی کارن</string>
     <string name="special_access_hint">ځانګړی لاسرسی ID ولیکئ</string>
     <string name="special_access_title">ځانګړی لاسرسی</string>
-    <string name="special_access_message">If you\'ve contacted contact@alhaq-initiative.org and received a special access ID, enter it below. This grants one year of premium access.</string>
+    <string name="special_access_message">که تاسو ځانګړی ایډي ترلاسه کړی وي، لاندې یې دننه کړئ ترڅو ۱ کلن پریمیم ترلاسه کړئ.</string>
     <string name="special_access_activate">فعالول</string>
     <string name="premium_special_access_button">د ځانګړي لاسرسي ID وکاروئ</string>
     <string name="special_access_success">ځانګړی لاسرسی فعال شو.</string>
-    <string name="special_access_invalid">Invalid access ID. Please check it and try again, or contact contact@alhaq-initiative.org.</string>
+    <string name="special_access_invalid">د لاسرسي ایډي ناسمه ده. مهرباني وکړئ بیا هڅه وکړئ.</string>
     
     <!-- Profile Screen -->
     <string name="account">حساب</string>
@@ -430,7 +416,7 @@
     <string name="language_portuguese">پرتګالي</string>
     <string name="language_turkish">ترکي</string>
     <string name="language_chinese">چینایي</string>
-    <string name="restart_required">Restart required to apply language changes</string>
+    <string name="restart_required">د ژبې د بدلون لپاره بیا پیل کول اړین دي</string>
     <string name="reports">راپورونه</string>
     <string name="daily_report_title">ورځنی راپور</string>
     <string name="daily_report_summary">د نن د فعالیت لنډ لنډیز.</string>
@@ -448,18 +434,18 @@
     <string name="accessibility_permission_keyword_blocker">د کلیدي کلمو بندونکی</string>
     <string name="accessibility_permission_general_features">عمومي ځانګړنې</string>
     <string name="permissions_required">اړینې اجازې</string>
-    <string name="permissions_disclosure">To provide you with the best experience, we need you to grant the following permissions. Your privacy is our top priority, and we will never use your data for any other purpose.</string>
+    <string name="permissions_disclosure">د غوره تجربې لپاره مهرباني وکړئ اړینې اجازې ومنئ. محرمیت خوندي دی.</string>
     <string name="accessibility_service">د لاسرسي خدمت</string>
     <string name="display_over_other_apps">د نورو اپونو پر سر ښکارېدل</string>
     <string name="device_admin">د وسیلې اډمین</string>
     <string name="permission_status">د اجازې حالت</string>
     <string name="notifications">خبرتیاوې</string>
     <string name="notifications_empty_title">تاسو ټول لوستلي دي</string>
-    <string name="notifications_empty_subtitle">In-app alerts from AmnShield will appear here.</string>
+    <string name="notifications_empty_subtitle">د AmniShield خبرتیاوې به دلته ښکاره شي.</string>
     <string name="notifications_open_settings">د خبرتیا تنظیمات</string>
     <string name="notifications_mark_all_read">ټول د لوستل شویو په توګه نښه کړئ</string>
     <string name="notifications_clear_all">ټول پاک کړئ</string>
-    <string name="notifications_clear_all_confirm">Remove all notifications from your inbox? This won\'t change your reminder settings.</string>
+    <string name="notifications_clear_all_confirm">ایا ټولې خبرتیاوې پاکې شي؟ دا به یادښتونه بدل نه کړي.</string>
     <string name="notifications_reminder_settings">د یادونې تنظیمات</string>
     <string name="notifications_item_removed">خبرتیا لرې شوه</string>
     <string name="notifications_undo">بیرته کول</string>
@@ -468,8 +454,8 @@
     
     <!-- Anti-Uninstall -->
     <string name="anti_uninstall_protection_service">د ضد ړنګولو ساتنې خدمت</string>
-    <string name="anti_uninstall_service_description">Monitors and prevents unauthorized uninstallation attempts when Anti-Uninstall protection is enabled. This service only activates when you have configured password or time-based protection.</string>
-    <string name="device_admin_required">Device Admin permission is required for Anti-Uninstall protection</string>
+    <string name="anti_uninstall_service_description">د غوښتنلیک د غیر مجاز لرې کولو هڅې څاري او مخه یې نیسي.</string>
+    <string name="device_admin_required">د لرې کولو محافظت لپاره د وسیلې اداره اړینه ده</string>
     <string name="please_enter_a_password">مهرباني وکړئ پټنوم ولیکئ</string>
     <string name="password_must_be_at_least_4_characters">پټنوم باید لږ تر لږه ۴ توري وي</string>
     <string name="please_select_a_date">مهرباني وکړئ یوه نېټه وټاکئ</string>
@@ -483,8 +469,8 @@
     <string name="select_theme">قالب وټاکئ</string>
     <string name="search_apps">اپونه ولټوئ</string>
 
-    <string name="anti_uninstall_too_many_attempts">Too many incorrect attempts. Please wait %1$d seconds.</string>
-    <string name="anti_uninstall_attempts_remaining">Incorrect password. %1$d attempts remaining.</string>
+    <string name="anti_uninstall_too_many_attempts">ډیرې ناسمې هڅې. مهرباني وکړئ %1$d ثانیې انتظار وکړئ.</string>
+    <string name="anti_uninstall_attempts_remaining">غلط پاسورډ. %1$d هڅې پاتې دي.</string>
 
     <!-- Error Reporting &amp; Feedback -->
     <string name="error_reporting">د خطا راپور او نظر</string>
@@ -495,17 +481,42 @@
     <string name="view_feedback_submitted">لیږل شوي نظرونه وګورئ</string>
     <string name="export_all_logs">ټول ډاټا صادر کړئ (بریښنالیک/شریکول)</string>
     <string name="clear_all_error_data">د خطا ټول ډاټا پاک کړئ (دایمي)</string>
-    <string name="crash_reporting_description">Save diagnostic information when app crashes</string>
+    <string name="crash_reporting_description">د اپلیکیشن د بندیدو پرمهال معلومات خوندي کړئ</string>
     <string name="feedback_collection_description">د خرابۍ وروسته د نظر اجازه</string>
-    <string name="data_collection_notice">All error data is stored locally on your device. We never collect or send any data without your explicit permission.</string>
+    <string name="data_collection_notice">ټول معلومات ستاسو په وسیله کې خوندي پاتې کیږي.</string>
     <string name="crash_recovery_title">اوه! ستونزه پېښه شوه</string>
-    <string name="crash_recovery_description">AmnShield crashed unexpectedly. We\'ve saved diagnostic information.</string>
+    <string name="crash_recovery_description">AmniShield په ناڅاپي ډول بند شو. معلومات خوندي شول.</string>
     <string name="crash_help_us_improve">په ښه کولو کې مرسته وکړئ</string>
-    <string name="crash_what_were_you_doing">Tell us what you were doing when this happened (optional)</string>
+    <string name="crash_what_were_you_doing">ووایاست چې دا پیښه څنګه وشوه (اختیاري)</string>
     <string name="crash_feedback_category">د بګ راپور</string>
     <string name="crash_user_email_hint">ستاسو بریښنالیک (اختیاري، د تعقیب لپاره)</string>
-    <string name="crash_privacy_notice">Your crash data is stored locally. We never send it without your permission.</string>
+    <string name="crash_privacy_notice">د تیروتنو معلومات په محلي توګه ساتل کیږي.</string>
     <string name="continue_without_sending">د لیږلو پرته دوام</string>
+    <string name="api_permission_title">د AmniShield API اجازه</string>
+    <string name="api_permission_message">اپلیکیشن <b>%s</b> د AmniShield بلاکر API ته د لاسرسي اجازه غواړي. دا به اپلیکیشن ته اجازه ورکړي چې د بلاک لیستونو، فوکس موډ او نورو ډیجیټل هوساینې تنظیماتو لید او تغییر وکړي.</string>
+    <string name="api_permission_allow">اجازه ورکړه</string>
+    <string name="api_permission_deny">رد کړه</string>
+    <string name="blocks">بلاکونه</string>
+    <string name="nav_focus">تمرکز</string>
+    <string name="nav_advanced">پرمختللی</string>
+    <string name="active_blocks">فعال بلاکونه</string>
+    <string name="block_setup">د بلاک تنظیم</string>
+    <string name="manage_all_blocks">ټول بلاکونه اداره کړئ</string>
+    <string name="manage_block_schedules">مهالویش اداره کړئ (آزمایشي)</string>
+    <string name="manage_launch_limits">د خلاصولو حدود اداره کړئ (آزمایشي)</string>
+    <string name="website_blocker">د ویب پاڼې / URL بلاکر</string>
+    <string name="social_media_blocker">د ویب پاڼې / URL بلاکر</string>
+    <string name="enable_website_blocker">د ویب پاڼې / URL بلاکر فعال کړئ</string>
+    <string name="blocked_social_apps">بلاک شوي ټولنیز اپلیکیشنونه</string>
+    <string name="blocked_social_websites">بلاک شوې ویب پاڼې / URLs</string>
+    <string name="manage_apps">اپلیکیشنونه اداره کړئ</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+    <string name="language_pashto">پښتو (Pashto)</string>
+    <string name="language_spanish">Español (Spanish)</string>
+    <string name="language_russian">Русский (Russian)</string>
+    <string name="purple_gradient">بنفشي ګرادینټ</string>
+    <string name="emerald_theme">زمرد</string>
 </resources>
 
 

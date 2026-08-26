@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="AmnShield Pro &amp; Supporter"
+                android:text="AmniShield Pro &amp; Supporter"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -70,7 +70,7 @@
                         style="@style/TextAppearance.Material3.TitleMedium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Included in AmnShield Pro:"
+                        android:text="Included in AmniShield Pro:"
                         android:textColor="?attr/colorPrimary"
                         android:textStyle="bold" />
 

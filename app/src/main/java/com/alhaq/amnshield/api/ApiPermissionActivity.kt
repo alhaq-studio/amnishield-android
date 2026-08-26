@@ -2,6 +2,7 @@ package com.alhaq.amnshield.api
 
 import android.app.Activity
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.alhaq.amnshield.R
@@ -14,6 +15,7 @@ class ApiPermissionActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         val requester = requestingPackage()
         if (requester == null) {

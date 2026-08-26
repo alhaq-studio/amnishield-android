@@ -33,6 +33,33 @@ class AmnShieldViewModel : ViewModel() {
         }
     }
 
+    fun updatePinResetCooldown(minutes: Int) {
+        val safeMinutes = minutes.coerceAtLeast(5)
+        _state.update { it.copy(pinResetCooldownMinutes = safeMinutes) }
+    }
+
+    fun updateEmergencyAccessCooldown(minutes: Int) {
+        val safeMinutes = minutes.coerceAtLeast(5)
+        _state.update { it.copy(emergencyAccessCooldownMinutes = safeMinutes) }
+    }
+
+    fun setPinResetRequested(timestamp: Long) {
+        _state.update { it.copy(pinResetRequestedTimestamp = timestamp) }
+    }
+
+    fun setEmergencyOverrideRequested(timestamp: Long) {
+        _state.update { it.copy(emergencyOverrideRequestedTimestamp = timestamp) }
+    }
+
+    fun setEmergencyOverrideActive(active: Boolean, windowActive: Boolean) {
+        _state.update {
+            it.copy(
+                isEmergencyOverrideActive = active,
+                isEmergencyWindowActive = windowActive
+            )
+        }
+    }
+
     fun toggleAppBlocker() {
         _state.update { it.copy(isAppBlockerEnabled = !it.isAppBlockerEnabled) }
     }

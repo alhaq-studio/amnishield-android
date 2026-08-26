@@ -59,6 +59,13 @@ class TimeTools {
 
 
 
+        fun formatHoursMinutes(millis: Long): String {
+            val totalMinutes = (millis / 60_000L).coerceAtLeast(0L)
+            val hours = totalMinutes / 60
+            val minutes = totalMinutes % 60
+            return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+        }
+
         fun formatTime(timeInMillis: Long, showSeconds: Boolean = true): String {
             val hours = timeInMillis / (1000 * 60 * 60)
             val minutes = (timeInMillis % (1000 * 60 * 60)) / (1000 * 60)

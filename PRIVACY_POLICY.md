@@ -122,7 +122,7 @@ We give you complete control over error reporting and feedback:
 *   You choose which app to use (email, cloud storage, messaging, etc.)
 *   The report includes crash logs, diagnostics, and any feedback you submitted
 *   You can manually add or modify recipient addresses before sending
-*   Our support team emails (support@alhaq-initiative.org and alhaq.dst@gmail.com) are pre-filled as CC recipients for convenience
+*   Our support team emails (support@alhaq.uk and alhaq.dst@gmail.com) are pre-filled as CC recipients for convenience
 
 ## 9. Your Rights and Choices
 
@@ -147,4 +147,4 @@ We may update our Privacy Policy from time to time. We will notify you of any ch
 ## 13. Contact Us
 
 If you have any questions or concerns about this Privacy Policy, please contact us at:
-**contact@alhaq-initiative.org**
+**support@alhaq.uk**

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -59,22 +60,22 @@ fun BlocksScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(
                                 if (state.isMainServiceEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                             ),
@@ -93,13 +94,13 @@ fun BlocksScreen(
                     Column {
                         Text(
                             text = if (state.isMainServiceEnabled) "Protection Active" else "Protection Disabled",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (state.isMainServiceEnabled) "All offline blocking shields are scanning." else "Please enable Accessibility Service.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -117,8 +118,8 @@ fun BlocksScreen(
                         text = "QUICK ACTIONS",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
                     )
 
                     Row(
@@ -136,7 +137,7 @@ fun BlocksScreen(
                             onClick = onNavigateToAppBlocker
                         )
                         QuickActionChip(
-                            icon = Icons.Outlined.Label,
+                            icon = Icons.AutoMirrored.Outlined.Label,
                             label = "Keywords",
                             color = Color(0xFFEF4444),
                             onClick = onNavigateToKeywordBlocker
@@ -168,17 +169,17 @@ fun BlocksScreen(
                     text = "BLOCKERS & SHIELDS",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
                         BlockItemRow(
@@ -191,7 +192,7 @@ fun BlocksScreen(
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                         BlockItemRow(
-                            icon = Icons.Outlined.Label,
+                            icon = Icons.AutoMirrored.Outlined.Label,
                             title = "Keyword Blocker",
                             summary = "Filter web searches & content keywords",
                             statusText = if (state.isKeywordBlockerEnabled) "ON" else "OFF",
@@ -210,8 +211,8 @@ fun BlocksScreen(
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                         BlockItemRow(
                             icon = Icons.Outlined.VideoLibrary,
-                            title = "Reels & Shorts Blocker",
-                            summary = "Stop addictive short video feeds",
+                            title = "Reels Blocker",
+                            summary = "Block short video algorithms",
                             statusText = if (state.isReelsBlockerEnabled) "ON" else "OFF",
                             onChecked = onNavigateToReelsBlocker,
                             iconColor = Color(0xFFF43F5E)
@@ -239,7 +240,28 @@ fun BlocksScreen(
             }
         }
 
-        // Section 2: Schedules & Rules Overview
+        // Section 2: Active Rules Summary
+        if (state.scheduleRules.isNotEmpty()) {
+            item {
+                Text(
+                    text = "ACTIVE RULES & SCHEDULES (${state.scheduleRules.size})",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            itemsIndexed(state.scheduleRules, key = { index, rule -> "${rule.id.ifEmpty { "rule" }}_${index}" }) { _, rule ->
+                BlocksSummaryRuleCard(
+                    rule = rule,
+                    onClick = onNavigateToSchedules
+                )
+            }
+        }
+
+        // Section 3: Schedules & Rules Overview
         item {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -249,17 +271,17 @@ fun BlocksScreen(
                     text = "SCHEDULES & MANAGEMENT",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
                         val rulesCount = state.scheduleRules.size
@@ -282,27 +304,6 @@ fun BlocksScreen(
                         )
                     }
                 }
-            }
-        }
-
-        // Section 3: Summary of Created Rules (if any)
-        if (state.scheduleRules.isNotEmpty()) {
-            item {
-                Text(
-                    text = "ACTIVE SCHEDULE RULES (${state.scheduleRules.size})",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            itemsIndexed(state.scheduleRules, key = { index, rule -> "${(rule?.id ?: "").ifEmpty { "rule" }}_${index}" }) { _, rule ->
-                BlocksSummaryRuleCard(
-                    rule = rule,
-                    onClick = onNavigateToSchedules
-                )
             }
         }
     }
@@ -363,16 +364,16 @@ fun BlockItemRow(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(iconColor.copy(alpha = 0.15f)),
+                    .background(iconColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -381,8 +382,8 @@ fun BlockItemRow(
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -395,14 +396,14 @@ fun BlockItemRow(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(6.dp),
+                shape = RoundedCornerShape(8.dp),
                 color = if (statusText.contains("ON") || statusText.contains("ACTIVE") || (statusText.any { it.isDigit() && it != '0' } && !statusText.contains("0 rules"))) {
                     MaterialTheme.colorScheme.primaryContainer
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+                    MaterialTheme.colorScheme.surfaceContainerHigh
                 }
             ) {
                 Text(
@@ -433,7 +434,7 @@ fun BlocksSummaryRuleCard(
     rule: ScheduleRule,
     onClick: () -> Unit
 ) {
-    val targetType = (rule.targetBlockerType ?: "").ifBlank { "App Blocker" }
+    val targetType = rule.targetBlockerType.ifBlank { "App Blocker" }
     val blockerColor = when (targetType) {
         "Keyword Blocker" -> Color(0xFF10B981)
         "Website Blocker" -> Color(0xFF3B82F6)
@@ -441,8 +442,8 @@ fun BlocksSummaryRuleCard(
         else -> Color(0xFF8B5CF6)
     }
 
-    val ruleName = (rule.name ?: "").ifBlank { "Unnamed Blocker" }
-    val categoryText = (rule.appOrCategory ?: "").ifBlank { "Apps" }
+    val ruleName = rule.name.ifBlank { "Unnamed Blocker" }
+    val categoryText = rule.appOrCategory.ifBlank { "Apps" }
     val blockerType = targetType
 
     Card(
@@ -451,9 +452,9 @@ fun BlocksSummaryRuleCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -468,9 +469,9 @@ fun BlocksSummaryRuleCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(blockerColor.copy(alpha = 0.15f)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                    .background(blockerColor.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -482,7 +483,7 @@ fun BlocksSummaryRuleCard(
                         },
                         contentDescription = null,
                         tint = blockerColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
@@ -504,8 +505,8 @@ fun BlocksSummaryRuleCard(
             }
 
             Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = if (rule.isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                shape = RoundedCornerShape(8.dp),
+                color = if (rule.isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 Text(
                     text = if (rule.isActive) "ACTIVE" else "OFF",

@@ -2,7 +2,7 @@ package com.alhaq.amnshield.trackers
 
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.alhaq.amnshield.blockers.ViewBlocker
+import com.alhaq.amnshield.utils.AccessibilityUtils
 
 /**
  * Lightweight LRU Cache with zero Android framework dependencies.
@@ -367,7 +367,7 @@ class ReelDetectionEngine {
             node?.recycle()
             return found
         }
-        val node = ViewBlocker.findElementById(rootNode, identifier)
+        val node = AccessibilityUtils.findElementById(rootNode, identifier)
         val found = node != null
         @Suppress("DEPRECATION")
         node?.recycle()
@@ -375,7 +375,7 @@ class ReelDetectionEngine {
     }
 
     private fun readNodeSubtreeText(rootNode: AccessibilityNodeInfo, viewId: String): String? {
-        val node = ViewBlocker.findElementById(rootNode, viewId) ?: return null
+        val node = AccessibilityUtils.findElementById(rootNode, viewId) ?: return null
         return try {
             getNodeSubtreeText(node, maxDepth = 4)
         } finally {
@@ -429,7 +429,7 @@ class ReelDetectionEngine {
     ): Pair<String, String>? {
         val urlBarId = BROWSER_URL_BAR_IDS[packageName] ?: return null
         val fullId = "$packageName:id/$urlBarId"
-        val node = ViewBlocker.findElementById(rootNode, fullId) ?: return null
+        val node = AccessibilityUtils.findElementById(rootNode, fullId) ?: return null
         val urlText = try {
             val text = node.text?.toString().orEmpty()
             if (text.isNotBlank()) text else node.contentDescription?.toString().orEmpty()

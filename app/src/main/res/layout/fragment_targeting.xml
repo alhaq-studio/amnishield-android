@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="Select what you want AmnShield to help guard against. You can change these anytime in Settings."
+                android:text="Select what you want AmniShield to help guard against. You can change these anytime in Settings."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- Option 1: Gaze & Eye Guarding (Under Development) -->

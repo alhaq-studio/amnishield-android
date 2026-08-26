@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.alhaq.amnshield.ui.activity.DailyReportReceiver
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 

@@ -61,7 +61,7 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:lineSpacingExtra="2dp"
-                android:text="AmnShield requires essential permissions to operate smoothly and protect your digital wellness."
+                android:text="AmniShield requires essential permissions to operate smoothly and protect your digital wellness."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- 1. Accessibility Service Card -->
@@ -352,7 +352,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:gravity="center"
-                android:text="Have a previously saved AmnShield backup?"
+                android:text="Have a previously saved AmniShield backup?"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <com.google.android.material.card.MaterialCardView

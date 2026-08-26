@@ -1,16 +1,37 @@
+/**
+ * ============================================================================
+ * AmniShield Blocker Pipeline - FocusModeBlocker
+ * ============================================================================
+ * Architecture: Interceptor Pattern (Chain of Responsibility)
+ * Priority: Focus Space & Productivity Lockdown
+ * 
+ * Description:
+ * Evaluates active quick focus sessions and scheduled focus mode rules.
+ * Enforces either Blacklist (Block Distracting Apps) or Strict Whitelist
+ * (Block All Except Selected Apps) while strictly exempting essential system tools
+ * and user-defined Always-Whitelisted Emergency Apps.
+ * 
+ * Execution Context:
+ * Synchronous accessibility node evaluation within AmnShieldAccessibilityService.
+ * ============================================================================
+ */
 package com.alhaq.amnshield.blockers
 
+import android.content.Context
 import com.alhaq.amnshield.Constants
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
 class FocusModeBlocker : BaseBlocker() {
 
     companion object {
+        const val STRICTNESS_MINDFUL_PAUSE = 0
+        const val STRICTNESS_HARD_LOCK = 1
+
         // Essential system apps that should NEVER be blocked to prevent system instability
         val ESSENTIAL_SYSTEM_APPS = setOf(
             "com.android.settings",
             "com.google.android.settings",
-            "com.sec.android.app.sbrowser", // Allow browser so focus mode settings/warning can load helper pages if needed, wait, let's keep it same
+            "com.sec.android.app.sbrowser",
             "com.sec.android.app.launcher",
             "com.samsung.android.settings",
             "com.coloros.settings",
@@ -18,7 +39,6 @@ class FocusModeBlocker : BaseBlocker() {
             "com.google.android.apps.nexuslauncher",
             "com.android.launcher",
             "com.android.launcher3",
-            "com.sec.android.app.launcher",
             "com.huawei.android.launcher",
             "com.miui.mihome2",
             "com.mi.android.globallauncher",
@@ -31,7 +51,7 @@ class FocusModeBlocker : BaseBlocker() {
             "com.google.android.contacts",
             "com.samsung.android.dialer",
             "com.samsung.android.contacts",
-            "com.alhaq.amnshield", // AmnShield itself
+            "com.alhaq.amnshield",
             
             // OEM Security/Phone Managers
             "com.huawei.systemmanager",
@@ -46,7 +66,7 @@ class FocusModeBlocker : BaseBlocker() {
             "com.coloros.safecenter",
             "com.coloros.securityguard",
 
-            // System Keyboards (required to type)
+            // System Keyboards
             "com.google.android.inputmethod.latin",
             "com.samsung.android.honeyboard",
             "com.android.inputmethod.latin",
@@ -98,20 +118,15 @@ class FocusModeBlocker : BaseBlocker() {
     }
 
     /**
-     * Check if app app needs to blocked for reasons related to focus mode
-     *
-     * @param packageName
-     * @param savedPreferencesLoader
-     * @param defaultLauncher
-     * @return
+     * Check if an app needs to be blocked for reasons related to focus mode.
      */
     fun doesAppNeedToBeBlocked(
-        context: android.content.Context,
+        context: Context,
         packageName: String,
         savedPreferencesLoader: SavedPreferencesLoader,
         defaultLauncher: String? = null
     ): FocusModeResult {
-        // NEVER block essential system apps to prevent system instability
+        // 1. NEVER block essential system apps or AmniShield itself
         if (ESSENTIAL_SYSTEM_APPS.contains(packageName) ||
             packageName.equals("com.alhaq.amnshield", ignoreCase = true) ||
             packageName.equals("com.alhaq.deenshield", ignoreCase = true) ||
@@ -121,26 +136,40 @@ class FocusModeBlocker : BaseBlocker() {
             return FocusModeResult(isBlocked = false)
         }
 
-        // 1. Check if manual focus mode is turned on
+        // 2. NEVER block user-configured Always-Whitelisted Emergency Apps
+        val alwaysWhitelisted = savedPreferencesLoader.getAlwaysWhitelistedApps()
+        if (alwaysWhitelisted.contains(packageName)) {
+            return FocusModeResult(isBlocked = false)
+        }
+
+        val isStrict = savedPreferencesLoader.getFocusModeStrictness() == STRICTNESS_HARD_LOCK
+
+        // 3. Check active Quick Focus session
         if (focusModeData.isTurnedOn) {
             if (focusModeData.endTime > 0 && System.currentTimeMillis() >= focusModeData.endTime) {
                 focusModeData.isTurnedOn = false
                 return FocusModeResult(isBlocked = false, isRequestingToUpdateSPData = true)
             }
-            return evaluateBlocking(packageName, focusModeData.modeType, focusModeData.selectedApps, focusModeData.endTime)
+            return evaluateBlocking(packageName, focusModeData.modeType, focusModeData.selectedApps, focusModeData.endTime, isStrict)
         }
 
-        // When Focus Mode is off, apps are not blocked by manual Focus Mode
         return FocusModeResult(isBlocked = false)
     }
 
-    private fun evaluateBlocking(packageName: String, modeType: Int, selectedApps: Set<String>, endTime: Long): FocusModeResult {
+    private fun evaluateBlocking(
+        packageName: String,
+        modeType: Int,
+        selectedApps: Set<String>,
+        endTime: Long,
+        isStrict: Boolean
+    ): FocusModeResult {
         when (modeType) {
             Constants.FOCUS_MODE_BLOCK_SELECTED -> {
                 if (selectedApps.contains(packageName)) {
                     return FocusModeResult(
                         isBlocked = true,
-                        focusModeEndTime = endTime
+                        focusModeEndTime = endTime,
+                        isStrict = isStrict
                     )
                 }
             }
@@ -148,7 +177,8 @@ class FocusModeBlocker : BaseBlocker() {
                 if (!selectedApps.contains(packageName)) {
                     return FocusModeResult(
                         isBlocked = true,
-                        focusModeEndTime = endTime
+                        focusModeEndTime = endTime,
+                        isStrict = isStrict
                     )
                 }
             }
@@ -157,14 +187,8 @@ class FocusModeBlocker : BaseBlocker() {
     }
 
     /**
-     * Stores information related to manual focus mode
-     *
-     * @property isTurnedOn
-     * @property endTime specifies when manual focus hours ends. -1 if not under manual focus hours
-     * @property modeType Can either be of type [Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED] or [Constants.FOCUS_MODE_BLOCK_SELECTED].
-     * @property selectedApps
+     * Stores information related to quick focus mode sessions
      */
-
     data class FocusModeData(
         var isTurnedOn: Boolean = false,
         val endTime: Long = -1,
@@ -174,24 +198,11 @@ class FocusModeBlocker : BaseBlocker() {
 
     /**
      * Focus mode blocker check result
-     *
-     * @property isBlocked
-     * @property focusModeEndTime specifies when focus mode ends. returns -1 if not in focus mode.
-     * @property isRequestingToUpdateSPData returns true if focusModeData in shared preference needs to be updated because focus mode has ended
      */
     data class FocusModeResult(
         val isBlocked: Boolean,
         val focusModeEndTime: Long = -1,
-        val isRequestingToUpdateSPData: Boolean = false
+        val isRequestingToUpdateSPData: Boolean = false,
+        val isStrict: Boolean = false
     )
-    private fun isSystemApp(context: android.content.Context, packageName: String): Boolean {
-        return try {
-            val pm = context.packageManager
-            val appInfo = pm.getApplicationInfo(packageName, 0)
-            (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-        } catch (e: Exception) {
-            false
-        }
-    }
-
 }

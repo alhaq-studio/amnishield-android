@@ -386,9 +386,9 @@
     <string name="compassionate_access_name_required">Please enter your name to continue.</string>
     <string name="compassionate_access_email_invalid">Enter a valid email address or leave it blank.</string>
     <string name="compassionate_access_success_title">Free Access Activated</string>
-    <string name="compassionate_access_success_message">Your 1-year AmniShield free premium access from the Al-Haq Initiative Free Access Program is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amnshield.com/support/ or email support@alhaq-initiative.org with your App ID.</string>
+    <string name="compassionate_access_success_message">Your 1-year AmniShield free premium access from the Al-Haq Initiative Free Access Program is now active.\n\nApp ID: %1$s\nEmail: %2$s\n\nIf you need further help, visit amnishield.com/support/ or email support@alhaq.uk with your App ID.</string>
     <string name="compassionate_access_no_email_value">Not provided</string>
-    <string name="compassionate_access_error">Could not activate free access. Please contact support@alhaq-initiative.org.</string>
+    <string name="compassionate_access_error">Could not activate free access. Please contact support@alhaq.uk.</string>
     <string name="compassionate_access_active">Free Access Active</string>
     <string name="compassionate_access_active_description">You currently have a Free Access Program grant from the Al-Haq Initiative on this device.</string>
     <string name="compassionate_access_active_until">Free Access is active until %1$s.</string>
@@ -401,11 +401,11 @@
     <string name="special_user">Special User</string>
     <string name="special_access_hint">Enter Special Access ID</string>
     <string name="special_access_title">Special Access</string>
-    <string name="special_access_message">If you\'ve contacted contact@alhaq-initiative.org and received a special access ID, enter it below. This grants one year of premium access.</string>
+    <string name="special_access_message">If you\'ve contacted support@alhaq.uk and received a special access ID, enter it below. This grants one year of premium access.</string>
     <string name="special_access_activate">Activate</string>
     <string name="premium_special_access_button">Use Special Access ID</string>
     <string name="special_access_success">Special access activated.</string>
-    <string name="special_access_invalid">Invalid access ID. Please check it and try again, or contact contact@alhaq-initiative.org.</string>
+    <string name="special_access_invalid">Invalid access ID. Please check it and try again, or contact support@alhaq.uk.</string>
     
     <!-- Profile Screen -->
     <string name="account">Account</string>
@@ -428,13 +428,18 @@
     <string name="choose_language">Choose Language</string>
     <string name="language_system">System Default</string>
     <string name="language_english">English</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+    <string name="language_pashto">پښتو (Pashto)</string>
+    <string name="language_persian">فارسی (Persian)</string>
+    <string name="language_spanish">Español (Spanish)</string>
+    <string name="language_french">Français (French)</string>
+    <string name="language_hindi">हिन्दी (Hindi)</string>
+    <string name="language_russian">Русский (Russian)</string>
+    <string name="language_turkish">Türkçe (Turkish)</string>
     <string name="language_german">Deutsch (German)</string>
-    <string name="language_persian">Persian</string>
-    <string name="language_french">French</string>
-    <string name="language_hindi">Hindi</string>
-    <string name="language_portuguese">Portuguese</string>
-    <string name="language_turkish">Turkish</string>
-    <string name="language_chinese">Chinese</string>
+    <string name="language_portuguese">Português (Portuguese)</string>
+    <string name="language_chinese">中文 (Chinese)</string>
     <string name="restart_required">Restart required to apply language changes</string>
     <string name="reports">Reports</string>
     <string name="daily_report_title">Daily Report</string>
@@ -511,8 +516,24 @@
     <string name="crash_what_were_you_doing">Tell us what you were doing when this happened (optional)</string>
     <string name="crash_feedback_category">Bug Report</string>
     <string name="crash_user_email_hint">Your email (optional, for follow-up)</string>
-    <string name="crash_privacy_notice">Your crash data is stored locally. We never send it without your permission.</string>
+    <string name="crash_privacy_notice">Your crash data is stored locally.</string>
     <string name="continue_without_sending">Continue without sending</string>
+    <string name="enable_anti_uninstall_master">Enable Anti-Uninstall</string>
+    <string name="anti_uninstall_active_status">Anti-Uninstall is Active (%1$s)</string>
+    <string name="anti_uninstall_inactive_status">Anti-Uninstall is currently disabled</string>
+    <string name="emergency_access_mode">Emergency Access Mode</string>
+    <string name="emergency_turn_off">Emergency Turn Off</string>
+    <string name="emergency_override_active_countdown">Emergency Override active. Protection will turn OFF in %1$02d:%2$02d.</string>
+    <string name="password_reset_in_progress_countdown">Password Reset in Progress. Anti-Uninstall will unlock in %1$02d:%2$02d.</string>
+    <string name="emergency_window_active_title">Emergency Unlock Active (10 min window)</string>
+    <string name="emergency_window_active_desc">Anti-Uninstall is temporarily unlocked for 10 minutes. You may modify settings or turn OFF protection completely.</string>
+    <string name="pin_verification_required_title">PIN Verification Required</string>
+    <string name="pin_verification_required_desc">Enter your 4-digit PIN to change protection settings</string>
+    <string name="pin_reset_pending_countdown">Security Reset Pending. Protection will unlock in %1$02d:%2$02d.</string>
+    <string name="pin_reset_cooldown_title">PIN Reset Cooldown</string>
+    <string name="emergency_access_cooldown_title">Emergency Access Cooldown</string>
+    <string name="reset_pin_title">Reset PIN</string>
+    <string name="forgot_pin">Forgot PIN?</string>
 </resources>
 
 

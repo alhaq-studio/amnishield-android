@@ -45,7 +45,7 @@ class WarningActivity : AppCompatActivity() {
 
         binding.minsPicker.setValue(3)
         binding.minsPicker.minValue = 2
-        var isDialogCancelable = (!isAppBlockerMode && !isKeywordBlockerMode) || isHomePressRequested
+        var isDialogCancelable = !isAppBlockerMode || isHomePressRequested
 
         if (isSimpleMode) {
             binding.warningTitle.text = "Access Blocked"
@@ -106,7 +106,7 @@ class WarningActivity : AppCompatActivity() {
         } else {
             binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
             binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
-            binding.btnCancel.text = if (isAppBlockerMode || isKeywordBlockerMode || isHomePressRequested) {
+            binding.btnCancel.text = if (isAppBlockerMode || isHomePressRequested) {
                 getString(R.string.warning_cancel_go_home)
             } else {
                 getString(R.string.warning_cancel_stay_safe)
@@ -114,7 +114,7 @@ class WarningActivity : AppCompatActivity() {
         }
 
         binding.btnCancel.setOnClickListener {
-            if (isSimpleMode || isAppBlockerMode || isKeywordBlockerMode || isHomePressRequested) {
+            if (isSimpleMode || isAppBlockerMode || isHomePressRequested) {
                 val intent = Intent(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_HOME)
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

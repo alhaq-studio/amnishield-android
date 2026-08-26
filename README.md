@@ -149,13 +149,12 @@ For Self Build:
 
 | File | Description |
 |---|---|
-| [TESTING_GUIDE.md](TESTING_GUIDE.md) | Full manual test scenarios for all features |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, blocker pipeline & logging invariants |
 | [ROADMAP.md](ROADMAP.md) | Feature roadmap and recent changelog |
+| [TESTING_GUIDE.md](TESTING_GUIDE.md) | Full manual test scenarios for all features |
 | [PRIVACY_POLICY.md](PRIVACY_POLICY.md) | App privacy policy |
 | [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md) | Terms of service |
 | [FDROID_PUBLISHING_GUIDE.md](FDROID_PUBLISHING_GUIDE.md) | Steps to publish on F-Droid |
-| [MONETIZATION_SETUP_GUIDE.md](MONETIZATION_SETUP_GUIDE.md) | Lemon Squeezy + Supabase licensing setup |
-| [ERROR_REPORTING_IMPLEMENTATION_GUIDE.md](ERROR_REPORTING_IMPLEMENTATION_GUIDE.md) | Error reporting architecture |
 
 ---
 

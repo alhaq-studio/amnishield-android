@@ -186,13 +186,13 @@ fun SplashScreenContent() {
                         if (appIconBitmap != null) {
                             Image(
                                 bitmap = appIconBitmap,
-                                contentDescription = "AmnShield Logo",
+                                contentDescription = "AmniShield Logo",
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Image(
                                 painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-                                contentDescription = "AmnShield Logo",
+                                contentDescription = "AmniShield Logo",
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

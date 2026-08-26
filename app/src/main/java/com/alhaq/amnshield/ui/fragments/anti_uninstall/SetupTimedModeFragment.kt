@@ -69,6 +69,9 @@ class SetupTimedModeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
         binding.calendarView.minDate = binding.calendarView.date
         
         binding.calendarView.setOnDateChangeListener { _, year, month, dayOfMonth ->
@@ -160,6 +163,7 @@ class SetupTimedModeFragment : Fragment() {
             activity?.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)?.edit()
         editor?.apply() {
             putBoolean("is_anti_uninstall_on", true)
+            putBoolean("is_configuring_blocked", true)
             putString("date", selectedDate)
             putLong("unlock_at_millis", unlockAtMillis)
             putInt("mode", Constants.ANTI_UNINSTALL_TIMED_MODE)

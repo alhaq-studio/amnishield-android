@@ -9,9 +9,6 @@ import java.util.Calendar
 
 class AppBlocker : BaseBlocker() {
 
-    // package-name -> end-time-in-millis (grace period / temporary bypass)
-    private var cooldownAppsList: MutableMap<String, Long> = mutableMapOf()
-
     companion object {
         val ESSENTIAL_SYSTEM_APPS = setOf(
             "com.android.settings",
@@ -70,7 +67,7 @@ class AppBlocker : BaseBlocker() {
             return AppBlockerResult(isBlocked = false)
         }
 
-        val hasLaunchLimit = savedPrefs?.getAppLaunchLimitRule(packageName) != null
+        val hasLaunchLimit = savedPrefs?.getAppLaunchLimitRule(packageName)?.isEnabled == true
         val hasUsageLimit = packageRules.any { it.type == AppBlockScheduleRule.RuleType.BLOCK && it.durationHours > 0 }
         val isManuallyBlocked = blockedApps.contains(packageName) && packageRules.isNotEmpty()
 
@@ -87,26 +84,19 @@ class AppBlocker : BaseBlocker() {
         }
 
         // 3. Check for Cooldown/Bypass (grace period after warning screen "Proceed")
-        if (cooldownAppsList.containsKey(packageName)) {
-            val now = System.currentTimeMillis()
-            val bypassEnd = cooldownAppsList[packageName]!!
-            if (now < bypassEnd) {
-                return AppBlockerResult(isBlocked = false, cooldownEndTime = bypassEnd)
-            } else {
-                removeCooldownFrom(packageName)
-            }
+        if (isUnderCooldown(packageName)) {
+            val bypassEnd = cooldownMap[packageName] ?: 0L
+            return AppBlockerResult(isBlocked = false, cooldownEndTime = bypassEnd)
         }
 
         // 4. Check if the app should be blocked
-        var shouldBeBlocked = false
-
         // A) Launch Limit check
         if (savedPrefs != null) {
             val launchLimitRule = savedPrefs.getAppLaunchLimitRule(packageName)
-            if (launchLimitRule != null) {
+            if (launchLimitRule != null && launchLimitRule.isEnabled) {
                 val currentCount = savedPrefs.getCurrentLaunchCount(packageName, launchLimitRule)
                 if (currentCount >= launchLimitRule.maxLaunches) {
-                    shouldBeBlocked = true
+                    return AppBlockerResult(isBlocked = true)
                 }
             }
         }
@@ -117,7 +107,7 @@ class AppBlocker : BaseBlocker() {
             val dailyUsageMs = getDailyAppUsageMillis(packageName, savedPrefs.context)
             val maxAllowedMs = usageLimitRules.maxOf { it.durationHours } * 60L * 60L * 1000L
             if (dailyUsageMs >= maxAllowedMs) {
-                shouldBeBlocked = true
+                return AppBlockerResult(isBlocked = true)
             }
         }
 
@@ -126,15 +116,16 @@ class AppBlocker : BaseBlocker() {
         if (blockScheduleRules.isNotEmpty() || isManuallyBlocked) {
             val activeBlockEnd = getActiveRuleEndTime(blockScheduleRules)
             if (activeBlockEnd != null || isManuallyBlocked) {
-                shouldBeBlocked = true
+                return AppBlockerResult(isBlocked = true)
             }
         }
 
-        return AppBlockerResult(isBlocked = shouldBeBlocked)
+        return AppBlockerResult(isBlocked = false)
     }
 
     private fun getDailyAppUsageMillis(packageName: String, context: android.content.Context): Long {
-        val usageStatsManager = context.getSystemService(android.content.Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return 0L
+        val usageStatsManager = context.getSystemService(android.content.Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            ?: return 0L
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -156,21 +147,11 @@ class AppBlocker : BaseBlocker() {
     }
 
     fun putCooldownTo(packageName: String, endTime: Long) {
-        cooldownAppsList[packageName] = endTime
+        applyCooldown(packageName, endTime)
     }
 
     fun removeCooldownFrom(packageName: String) {
-        cooldownAppsList.remove(packageName)
-    }
-
-    fun restoreCooldowns(cooldowns: Map<String, Long>) {
-        cooldownAppsList.clear()
-        val now = System.currentTimeMillis()
-        cooldownAppsList.putAll(cooldowns.filterValues { it > now })
-    }
-
-    fun getCooldownSnapshot(): Map<String, Long> {
-        return HashMap(cooldownAppsList)
+        cooldownMap.remove(packageName)
     }
 
 

@@ -206,7 +206,7 @@ class PermissionGuideHelper(private val activity: Activity) {
                 putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
                 putExtra(
                     DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                    "AmnShield needs device admin permission to prevent accidental uninstallation during focus sessions"
+                    "AmniShield needs device admin permission to prevent accidental uninstallation during focus sessions"
                 )
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

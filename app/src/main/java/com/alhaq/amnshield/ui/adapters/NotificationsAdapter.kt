@@ -58,7 +58,7 @@ class NotificationsAdapter(
             Category.REMINDER -> "Reminder"
             Category.ACHIEVEMENT -> "Achievement"
             Category.BLOCK_ALERT -> "Block alert"
-            Category.SYSTEM -> "AmnShield"
+            Category.SYSTEM -> "AmniShield"
         }
     }
 }

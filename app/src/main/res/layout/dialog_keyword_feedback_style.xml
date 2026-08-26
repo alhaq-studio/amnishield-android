@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="Choose how AmnShield reacts when a restricted keyword is intercepted:"
+        android:text="Choose how AmniShield reacts when a restricted keyword is intercepted:"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
     <RadioGroup

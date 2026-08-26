@@ -40,7 +40,7 @@ class AppBlockerConfigFragment : BaseFeatureFragment() {
                         isServiceEnabled = isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java),
                         onEnableServiceClick = {
                             showAccessibilityInfoDialog(
-                                "AmnShield Accessibility Service",
+                                "AmniShield Accessibility Service",
                                 AmnShieldAccessibilityService::class.java
                             )
                         },
@@ -85,7 +85,7 @@ class ReelBlockerConfigFragment : BaseFeatureFragment() {
                         isServiceEnabled = isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java),
                         onEnableServiceClick = {
                             showAccessibilityInfoDialog(
-                                "AmnShield Accessibility Service",
+                                "AmniShield Accessibility Service",
                                 AmnShieldAccessibilityService::class.java
                             )
                         },
@@ -145,7 +145,7 @@ class UsageTrackerConfigFragment : BaseFeatureFragment() {
                         isServiceEnabled = isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java),
                         onEnableServiceClick = {
                             showAccessibilityInfoDialog(
-                                "AmnShield Accessibility Service",
+                                "AmniShield Accessibility Service",
                                 AmnShieldAccessibilityService::class.java
                             )
                         },
@@ -203,7 +203,7 @@ class KeywordBlockerConfigFragment : BaseFeatureFragment() {
                         isServiceEnabled = isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java),
                         onEnableServiceClick = {
                             showAccessibilityInfoDialog(
-                                "AmnShield Accessibility Service",
+                                "AmniShield Accessibility Service",
                                 AmnShieldAccessibilityService::class.java
                             )
                         },

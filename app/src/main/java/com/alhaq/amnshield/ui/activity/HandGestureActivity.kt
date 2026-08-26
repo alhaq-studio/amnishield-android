@@ -49,7 +49,7 @@ class HandGestureActivity : AppCompatActivity() {
         }
 
         val detectedKeyword = intent.getStringExtra("detected_keyword")
-        val isHomePress = intent.getBooleanExtra("is_home_press", true)
+        val isHomePress = intent.getBooleanExtra("is_home_press", false)
 
         if (!detectedKeyword.isNullOrBlank() && !detectedKeyword.startsWith("/")) {
             binding.gestureSubtitle.text = "Detected restricted keyword"

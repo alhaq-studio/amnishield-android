@@ -1,3 +1,11 @@
+/**
+ * ============================================================================
+ * AmniShield UI - FocusScreen (Material 3)
+ * ============================================================================
+ * Architecture: Focus Space Dashboard, Hero Timer, Mindful Breathing Visualizer,
+ * and Quick Focus Launcher.
+ * ============================================================================
+ */
 package com.alhaq.amnshield.ui.screens
 
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -5,7 +13,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +26,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,18 +36,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.window.DialogProperties
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.alhaq.amnshield.Constants
 import com.alhaq.amnshield.ui.components.bounceClick
+import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
 data class FocusAppItem(
     val packageName: String,
@@ -57,32 +62,36 @@ fun FocusScreen(
     defaultMode: Int,
     onStartFocusSession: (Int, Int, Set<String>) -> Unit,
     onStopFocusSession: () -> Unit = {},
-    onConfigureApps: () -> Unit,
+    onOpenFocusConfig: () -> Unit,
     onConfigureSchedules: () -> Unit,
     onEnableService: () -> Unit
 ) {
+    val context = LocalContext.current
+    val loader = remember { SavedPreferencesLoader(context) }
+    val presets = remember { loader.getQuickFocusDurationPresets() }
+
     var isBreathingActive by remember { mutableStateOf(false) }
     var breathingPhase by remember { mutableStateOf("Inhale") }
     var breathCount by remember { mutableStateOf(0) }
 
-    var showStartFocusDialog by remember { mutableStateOf(false) }
+    var showQuickFocusDialog by remember { mutableStateOf(false) }
 
-    if (showStartFocusDialog) {
-        StartFocusSessionDialog(
-            installedApps = installedApps,
-            preSelectedApps = preSelectedApps,
+    if (showQuickFocusDialog) {
+        StartQuickFocusDialog(
             defaultMode = defaultMode,
-            onDismiss = { showStartFocusDialog = false },
-            onConfigureApps = onConfigureApps,
-            onConfigureSchedules = onConfigureSchedules,
+            preSelectedApps = preSelectedApps,
+            preset1 = presets.first,
+            preset2 = presets.second,
+            preset3 = presets.third,
+            onDismiss = { showQuickFocusDialog = false },
             onStart = { duration, mode, apps ->
-                showStartFocusDialog = false
+                showQuickFocusDialog = false
                 onStartFocusSession(duration, mode, apps)
             }
         )
     }
 
-    // Simulating simple breathing cadence animation
+    // Breathing cadence animation
     LaunchedEffect(isBreathingActive) {
         if (isBreathingActive) {
             while (isBreathingActive) {
@@ -112,27 +121,41 @@ fun FocusScreen(
     ) {
         // Focus Screen Title and Header Description
         item {
-            Column {
-                Text(
-                    text = "FOCUS SPACE",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.08.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Daily Wellbeing & Mindfulness",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Cultivate deep work and block digital interruptions to regain focus.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "FOCUS SPACE",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.08.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Daily Wellbeing & Mindfulness",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenFocusConfig,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Focus Settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -141,29 +164,29 @@ fun FocusScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .clickable { onEnableService() }
-                            .padding(20.dp),
+                            .padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(MaterialTheme.colorScheme.error),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onError,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -192,15 +215,15 @@ fun FocusScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (isFocusModeActive) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                        MaterialTheme.colorScheme.primaryContainer
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        MaterialTheme.colorScheme.surfaceContainer
                     }
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -218,54 +241,57 @@ fun FocusScreen(
                                 if (isFocusModeActive) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                 }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Timer,
+                            imageVector = if (isFocusModeActive) Icons.Outlined.Timer else Icons.Filled.PlayArrow,
                             contentDescription = null,
                             tint = if (isFocusModeActive) Color.White else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(48.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (isFocusModeActive) "Deep Focus Active" else "Ready to Focus?",
-                        style = MaterialTheme.typography.headlineMedium,
+                        text = if (isFocusModeActive) "Focus Active" else "Ready to Focus",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = if (isFocusModeActive) {
-                            val format = SimpleDateFormat("h:mm a", Locale.getDefault())
-                            val endStr = format.format(Date(focusModeEndTime))
-                            "You are locked in zone until $endStr"
+                            val remainingMillis = (focusModeEndTime - System.currentTimeMillis()).coerceAtLeast(0)
+                            val mins = remainingMillis / (60 * 1000)
+                            "Ends in ~ $mins mins"
                         } else {
-                            "Lock out distracting apps, notification alerts, and build pure concentration blocks."
+                            "Start an instant Quick Focus session"
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     if (!isFocusModeActive) {
                         Button(
-                            onClick = { showStartFocusDialog = true },
-                            enabled = isServiceEnabled,
-                            shape = RoundedCornerShape(20.dp),
+                            onClick = {
+                                if (isServiceEnabled) {
+                                    showQuickFocusDialog = true
+                                } else {
+                                    onEnableService()
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(52.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
@@ -273,39 +299,39 @@ fun FocusScreen(
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Start Focus Session",
+                                text = "Start Quick Focus Session",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     } else {
                         Button(
                             onClick = onStopFocusSession,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(52.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = Color.White
+                                contentColor = MaterialTheme.colorScheme.onError
                             )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Block,
                                 contentDescription = null,
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onError
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Stop Focus Session ⏹️",
+                                text = "Stop Focus Session",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onError
                             )
                         }
                     }
@@ -317,39 +343,39 @@ fun FocusScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "FOCUS CONFIGURATIONS",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.08.sp
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
                     )
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column {
                             FocusItemRow(
-                                icon = Icons.Outlined.Apps,
-                                title = "Focus Apps Rules",
-                                summary = "Configure whitelisted allowed apps or blacklisted apps",
-                                statusText = "${preSelectedApps.size} apps",
-                                onChecked = onConfigureApps,
+                                icon = Icons.Outlined.Settings,
+                                title = "Focus Settings & Whitelist",
+                                summary = "Configure global strategy, emergency whitelist & strictness",
+                                statusText = "SETTINGS",
+                                onChecked = onOpenFocusConfig,
                                 iconColor = MaterialTheme.colorScheme.primary
                             )
                             HorizontalDivider(
@@ -359,7 +385,7 @@ fun FocusScreen(
                             FocusItemRow(
                                 icon = Icons.Outlined.CalendarToday,
                                 title = "AutoFocus Schedules",
-                                summary = "Set automated focus mode schedule windows",
+                                summary = "Set automated recurring focus schedule windows",
                                 statusText = "SCHEDULES",
                                 onChecked = onConfigureSchedules,
                                 iconColor = Color(0xFF3B82F6)
@@ -372,7 +398,6 @@ fun FocusScreen(
 
         // Beautiful Mindful Breathing Visualizer Card
         item {
-
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -415,7 +440,6 @@ fun FocusScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Breathing Circle Visual representation
                     val circleSize = when (breathingPhase) {
                         "Inhale" -> 140.dp
                         "Hold" -> 150.dp
@@ -437,14 +461,12 @@ fun FocusScreen(
                             .align(Alignment.CenterHorizontally),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Outer halo
                         Box(
                             modifier = Modifier
                                 .size(animatedSize + 20.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                         )
-                        // Inner pulsing core
                         Box(
                             modifier = Modifier
                                 .size(animatedSize)
@@ -510,7 +532,6 @@ fun FocusScreen(
                 }
             }
         }
-
     }
 }
 
@@ -527,21 +548,21 @@ fun FocusItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .bounceClick { onChecked() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(iconColor.copy(alpha = 0.15f)),
+                .background(iconColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
 
@@ -550,8 +571,8 @@ fun FocusItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
@@ -567,36 +588,45 @@ fun FocusItemRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End
         ) {
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(18.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
             )
         }
     }
 }
 
+/**
+ * Clean, lightweight Quick Focus launcher dialog.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StartFocusSessionDialog(
-    installedApps: List<FocusAppItem>,
-    preSelectedApps: Set<String>,
+fun StartQuickFocusDialog(
     defaultMode: Int,
+    preSelectedApps: Set<String>,
+    preset1: Int,
+    preset2: Int,
+    preset3: Int,
     onDismiss: () -> Unit,
-    onConfigureApps: () -> Unit,
-    onConfigureSchedules: () -> Unit,
     onStart: (Int, Int, Set<String>) -> Unit
 ) {
-    var durationMinutes by remember { mutableStateOf(45) }
-    var selectedMode by remember { mutableStateOf(defaultMode) }
+    var durationMinutes by remember { mutableIntStateOf(preset2) }
+    var selectedMode by remember { mutableIntStateOf(defaultMode) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -619,13 +649,13 @@ fun StartFocusSessionDialog(
                 ) {
                     // Header
                     Text(
-                        text = "Configure Focus Session",
+                        text = "Quick Focus Session",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // 1. Duration Picker
+                    // 1. Duration Selection
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -649,15 +679,15 @@ fun StartFocusSessionDialog(
                             value = durationMinutes.toFloat(),
                             onValueChange = { durationMinutes = it.toInt() },
                             valueRange = 5f..180f,
-                            steps = 34 // 5-minute increments
+                            steps = 34
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Quick choice chips
+                        // Quick choice chips based on configured presets
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            listOf(15, 25, 45, 60, 90).forEach { mins ->
+                            listOf(preset1, preset2, preset3, 25, 45).distinct().forEach { mins ->
                                 val isSelected = durationMinutes == mins
                                 FilterChip(
                                     selected = isSelected,
@@ -668,10 +698,10 @@ fun StartFocusSessionDialog(
                         }
                     }
 
-                    // 2. Focus Mode Option cards
+                    // 2. Mode Strategy Selection
                     Column {
                         Text(
-                            text = "Focus Mode Type",
+                            text = "Protection Strategy",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -680,66 +710,66 @@ fun StartFocusSessionDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Option 1: Whitelist
+                            // Option 1: Blacklist (Block Distractions)
                             Card(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .bounceClick { selectedMode = com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED },
+                                    .bounceClick { selectedMode = Constants.FOCUS_MODE_BLOCK_SELECTED },
                                 border = BorderStroke(
-                                    width = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) 2.dp else 1.dp,
-                                    color = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                    width = if (selectedMode == Constants.FOCUS_MODE_BLOCK_SELECTED) 2.dp else 1.dp,
+                                    color = if (selectedMode == Constants.FOCUS_MODE_BLOCK_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                                 ),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Default.Shield,
-                                        contentDescription = null,
-                                        tint = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Block All Except Allowed",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "Allows only whitelisted apps",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            // Option 2: Blacklist
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .bounceClick { selectedMode = com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_SELECTED },
-                                border = BorderStroke(
-                                    width = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_SELECTED) 2.dp else 1.dp,
-                                    color = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_SELECTED) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                                    containerColor = if (selectedMode == Constants.FOCUS_MODE_BLOCK_SELECTED) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
                                 )
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Icon(
                                         imageVector = Icons.Default.Block,
                                         contentDescription = null,
-                                        tint = if (selectedMode == com.alhaq.amnshield.Constants.FOCUS_MODE_BLOCK_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = if (selectedMode == Constants.FOCUS_MODE_BLOCK_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Block Selected Only",
+                                        text = "Block Distractions",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Blocks specific blacklisted apps",
+                                        text = "Blocks target blacklist",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // Option 2: Whitelist
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .bounceClick { selectedMode = Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED },
+                                border = BorderStroke(
+                                    width = if (selectedMode == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) 2.dp else 1.dp,
+                                    color = if (selectedMode == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selectedMode == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = if (selectedMode == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Strict Whitelist",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Allows allowed apps only",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -748,51 +778,7 @@ fun StartFocusSessionDialog(
                         }
                     }
 
-                    // 3. Focus Settings configuration redirects
-                    Column {
-                        Text(
-                            text = "Focus Settings",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        ) {
-                            Column {
-                                FocusItemRow(
-                                    icon = Icons.Outlined.Apps,
-                                    title = "Configure Focus Apps",
-                                    summary = "${preSelectedApps.size} apps selected",
-                                    statusText = "EDIT",
-                                    onChecked = {
-                                        onDismiss()
-                                        onConfigureApps()
-                                    },
-                                    iconColor = MaterialTheme.colorScheme.primary
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                                FocusItemRow(
-                                    icon = Icons.Outlined.CalendarToday,
-                                    title = "AutoFocus Schedules",
-                                    summary = "Focus block automation rules",
-                                    statusText = "SETUP",
-                                    onChecked = {
-                                        onDismiss()
-                                        onConfigureSchedules()
-                                    },
-                                    iconColor = Color(0xFF3B82F6)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     // Actions Row
                     Row(

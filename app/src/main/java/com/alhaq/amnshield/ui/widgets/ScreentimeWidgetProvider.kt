@@ -10,10 +10,10 @@ import android.widget.RemoteViews
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.ui.activity.FragmentActivity
 import com.alhaq.amnshield.ui.fragments.usage.AllAppsUsageFragment
+import com.alhaq.amnshield.utils.AccessibilityUtils
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 import com.alhaq.amnshield.utils.TimeTools
 import com.alhaq.amnshield.utils.UsageStatsHelper
-import com.alhaq.amnshield.utils.getDefaultLauncherPackageName
 
 class ScreentimeWidgetProvider : AppWidgetProvider() {
 
@@ -71,7 +71,7 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
 
         val usageStatsHelper = UsageStatsHelper(context)
         val ignoredPackages = mutableSetOf<String>()
-        getDefaultLauncherPackageName(context.packageManager)?.let {
+        AccessibilityUtils.getDefaultLauncherPackageName(context.packageManager)?.let {
             ignoredPackages.add(
                 it
             )
@@ -83,7 +83,7 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
             it.totalTime >= 180_000 && it.packageName !in ignoredPackages
         }
 
-        val totalScreentime = list.sumOf { it.totalTime }
+        val totalScreentime = com.alhaq.amnshield.utils.ScreenTimeCalculator.getTodayScreenTime(context)
         try{
             val views = RemoteViews(context.packageName, R.layout.widget_app_stats).apply {
                 setTextViewText(R.id.screentime_widget, if (totalScreentime > 0) formatTime(totalScreentime) else "0m")

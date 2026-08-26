@@ -1,3 +1,22 @@
+/**
+ * ============================================================================
+ * AmniShield Blocker Pipeline - ReelBlocker
+ * ============================================================================
+ * Architecture: Interceptor Pattern (Chain of Responsibility)
+ * Priority: Content Protection & Dopamine Defense
+ * 
+ * Description:
+ * Evaluates shortform video feeds across YouTube Shorts, Instagram Reels,
+ * Facebook Reels, and TikTok. Applies scroll-count limits or total blocking.
+ * 
+ * Execution Context:
+ * Synchronous accessibility node evaluation within AmnShieldAccessibilityService.
+ * 
+ * Invariants & AI/Developer Guidance:
+ * - Do NOT call rootNode.recycle() here (managed by AmnShieldAccessibilityService).
+ * - Keep UI tree traversal lightweight and avoid allocations per frame.
+ * ============================================================================
+ */
 package com.alhaq.amnshield.blockers
 
 import android.view.accessibility.AccessibilityNodeInfo
@@ -84,8 +103,6 @@ class ReelBlocker : BaseBlocker() {
         fun isBrowserPackage(packageName: String): Boolean =
             BROWSER_URL_BAR_IDS.containsKey(packageName)
     }
-
-    private val cooldownViewIdsList = mutableMapOf<String, Long>()
 
     var isEnabled = false
     var isIGInboxReelAllowed = false
@@ -267,27 +284,8 @@ class ReelBlocker : BaseBlocker() {
         }
     }
 
-    fun applyCooldown(viewId: String, endTime: Long) {
-        cooldownViewIdsList[viewId] = endTime
-    }
-
-    fun restoreCooldowns(cooldowns: Map<String, Long>) {
-        cooldownViewIdsList.clear()
-        val now = System.currentTimeMillis()
-        cooldownViewIdsList.putAll(cooldowns.filterValues { it > now })
-    }
-
-    fun getCooldownSnapshot(): Map<String, Long> {
-        return HashMap(cooldownViewIdsList)
-    }
-
     private fun isCooldownActive(viewId: String): Boolean {
-        val cooldownEnd = cooldownViewIdsList[viewId] ?: return false
-        if (System.currentTimeMillis() > cooldownEnd) {
-            cooldownViewIdsList.remove(viewId)
-            return false
-        }
-        return true
+        return isUnderCooldown(viewId)
     }
 
     private fun isViewOpened(rootNode: AccessibilityNodeInfo, viewId: String): Boolean {

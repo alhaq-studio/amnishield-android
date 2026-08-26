@@ -32,25 +32,11 @@ class ViewBlocker : BaseBlocker() {
         }
     }
 
-    private val cooldownViewIdsList = mutableMapOf<String, Long>()
-
     @Suppress("UNUSED_PARAMETER")
     fun doesViewNeedToBeBlocked(
         node: AccessibilityNodeInfo,
         packageName: String
     ): ViewBlockerResult? = null
-
-    fun applyCooldown(viewId: String, endTime: Long) {
-        cooldownViewIdsList[viewId] = endTime
-    }
-
-    fun restoreCooldowns(cooldowns: Map<String, Long>) {
-        cooldownViewIdsList.clear()
-        val now = System.currentTimeMillis()
-        cooldownViewIdsList.putAll(cooldowns.filterValues { it > now })
-    }
-
-    fun getCooldownSnapshot(): Map<String, Long> = HashMap(cooldownViewIdsList)
 
     data class ViewBlockerResult(
         val isBlocked: Boolean = false,

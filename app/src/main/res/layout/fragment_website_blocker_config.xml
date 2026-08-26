@@ -68,7 +68,7 @@
                 style="@style/TextAppearance.Material3.TitleMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Please enable the main AmnShield Accessibility Service"
+                android:text="Please enable the main AmniShield Accessibility Service"
                 android:textColor="?attr/colorOnErrorContainer" />
 
             <com.google.android.material.button.MaterialButton

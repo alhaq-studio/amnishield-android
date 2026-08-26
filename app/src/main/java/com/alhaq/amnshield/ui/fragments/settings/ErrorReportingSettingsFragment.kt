@@ -128,8 +128,8 @@ class ErrorReportingSettingsFragment : Fragment() {
         // Pre-populate primary support email and CC secondary email
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("support@alhaq-initiative.org"))
-            putExtra(Intent.EXTRA_SUBJECT, "AmnShield Error Report")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("support@alhaq.uk"))
+            putExtra(Intent.EXTRA_SUBJECT, "AmniShield Error Report")
             putExtra(Intent.EXTRA_TEXT, report)
             // Pre-fill CC field with support emails (user can modify before sending)
             putExtra(Intent.EXTRA_CC, arrayOf("alhaq.dst@gmail.com"))

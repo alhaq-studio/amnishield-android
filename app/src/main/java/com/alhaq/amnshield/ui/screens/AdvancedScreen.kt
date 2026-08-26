@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.outlined.AppShortcut
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.alhaq.amnshield.ui.state.AmnShieldState
 import com.alhaq.amnshield.ui.components.bounceClick
 
+import com.alhaq.amnshield.ui.components.PinPromptDialog
+
 @Composable
 fun AdvancedScreen(
     state: AmnShieldState,
@@ -37,16 +40,21 @@ fun AdvancedScreen(
     onNavigateToPremium: () -> Unit,
     onTogglePinSecurity: (Boolean, String) -> Unit,
     onToggleAppLock: (Boolean) -> Unit,
-    onToggleBypassPinLock: (Boolean) -> Unit
+    onToggleBypassPinLock: (Boolean) -> Unit,
+    onUpdatePinResetCooldown: (Int) -> Unit = {},
+    onUpdateEmergencyCooldown: (Int) -> Unit = {}
 ) {
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var showPinVerifyDialog by remember { mutableStateOf(false) }
+    var showPinResetDialog by remember { mutableStateOf(false) }
+    var showPinCooldownDialog by remember { mutableStateOf(false) }
+    var showEmergencyCooldownDialog by remember { mutableStateOf(false) }
 
     if (showPinSetupDialog) {
-        PinSetupVerifyDialog(
+        PinPromptDialog(
             isSettingUp = true,
             onDismiss = { showPinSetupDialog = false },
-            onConfirm = { pin ->
+            onPinSuccess = { pin ->
                 showPinSetupDialog = false
                 onTogglePinSecurity(true, pin)
             }
@@ -54,14 +62,63 @@ fun AdvancedScreen(
     }
 
     if (showPinVerifyDialog) {
-        PinSetupVerifyDialog(
-            isSettingUp = false,
+        PinPromptDialog(
+            correctPin = state.profilePin,
+            title = "Verify Existing PIN",
+            subtitle = "Enter current PIN to disable PIN security",
+            allowForgotPin = true,
             onDismiss = { showPinVerifyDialog = false },
-            onConfirm = { pin ->
-                if (pin == state.profilePin) {
-                    showPinVerifyDialog = false
-                    onTogglePinSecurity(false, "")
-                }
+            onPinSuccess = {
+                showPinVerifyDialog = false
+                onTogglePinSecurity(false, "")
+            },
+            onPinResetCompleted = { newPin ->
+                showPinVerifyDialog = false
+                onTogglePinSecurity(true, newPin)
+            }
+        )
+    }
+
+    if (showPinResetDialog) {
+        PinPromptDialog(
+            correctPin = state.profilePin,
+            title = "Reset Security PIN",
+            subtitle = "Initiate delayed PIN reset sequence",
+            allowForgotPin = true,
+            onDismiss = { showPinResetDialog = false },
+            onPinSuccess = { newPin ->
+                showPinResetDialog = false
+                onTogglePinSecurity(true, newPin)
+            },
+            onPinResetCompleted = { newPin ->
+                showPinResetDialog = false
+                onTogglePinSecurity(true, newPin)
+            }
+        )
+    }
+
+    if (showPinCooldownDialog) {
+        CooldownSelectionDialog(
+            title = "PIN Reset Cooldown",
+            subtitle = "Enforce a minimum waiting delay before a forgotten PIN can be reset. Hard floor: 5 minutes.",
+            selectedMinutes = state.pinResetCooldownMinutes,
+            onDismiss = { showPinCooldownDialog = false },
+            onSelectMinutes = { mins ->
+                showPinCooldownDialog = false
+                onUpdatePinResetCooldown(mins)
+            }
+        )
+    }
+
+    if (showEmergencyCooldownDialog) {
+        CooldownSelectionDialog(
+            title = "Emergency Access Cooldown",
+            subtitle = "Enforce a minimum emergency delay before protection can be overridden in Timed Mode. Hard floor: 5 minutes.",
+            selectedMinutes = state.emergencyAccessCooldownMinutes,
+            onDismiss = { showEmergencyCooldownDialog = false },
+            onSelectMinutes = { mins ->
+                showEmergencyCooldownDialog = false
+                onUpdateEmergencyCooldown(mins)
             }
         )
     }
@@ -80,19 +137,19 @@ fun AdvancedScreen(
                     text = "CORE PROTECTION",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
                         AdvancedItemRow(
@@ -106,11 +163,11 @@ fun AdvancedScreen(
 
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         AdvancedItemRow(
-                            icon = Icons.Outlined.Label,
+                            icon = Icons.AutoMirrored.Outlined.Label,
                             title = "Keyword Blocker",
                             summary = "Keywords and adult content packs",
                             statusText = "${state.keywords.size} keywords",
@@ -120,7 +177,7 @@ fun AdvancedScreen(
 
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         AdvancedItemRow(
@@ -134,7 +191,7 @@ fun AdvancedScreen(
 
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         AdvancedItemRow(
@@ -156,19 +213,19 @@ fun AdvancedScreen(
                 text = "SYSTEM SETTINGS",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 0.8.sp
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.sp
             )
         }
 
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column {
                     AdvancedItemRow(
@@ -182,7 +239,7 @@ fun AdvancedScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
 
                     AdvancedItemRow(
@@ -196,7 +253,7 @@ fun AdvancedScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
 
                     AdvancedItemRow(
@@ -218,19 +275,19 @@ fun AdvancedScreen(
                 text = "PIN SECURITY",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 0.8.sp
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.sp
             )
         }
 
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column {
                     // Row 1: Enable PIN Lock
@@ -295,6 +352,51 @@ fun AdvancedScreen(
                             },
                             iconColor = Color(0xFFF59E0B)
                         )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        // Row 4: PIN Reset Cooldown
+                        AdvancedItemRow(
+                            icon = Icons.Outlined.Timer,
+                            title = "PIN Reset Cooldown",
+                            summary = "Minimum delay before forgotten PIN can be reset",
+                            statusText = "${state.pinResetCooldownMinutes} mins",
+                            onChecked = { showPinCooldownDialog = true },
+                            iconColor = Color(0xFF6366F1)
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        // Row 5: Emergency Access Cooldown
+                        AdvancedItemRow(
+                            icon = Icons.Outlined.HourglassTop,
+                            title = "Emergency Access Cooldown",
+                            summary = "Delay before Timed Mode emergency override unlocks",
+                            statusText = "${state.emergencyAccessCooldownMinutes} mins",
+                            onChecked = { showEmergencyCooldownDialog = true },
+                            iconColor = Color(0xFFEF4444)
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        // Row 6: Reset PIN Action
+                        AdvancedItemRow(
+                            icon = Icons.Outlined.LockReset,
+                            title = "Reset PIN",
+                            summary = "Trigger delayed reset sequence if PIN is forgotten",
+                            statusText = "RESET",
+                            onChecked = { showPinResetDialog = true },
+                            iconColor = Color(0xFFEC4899)
+                        )
                     }
                 }
             }
@@ -315,21 +417,21 @@ fun AdvancedItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .bounceClick { onChecked() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(iconColor.copy(alpha = 0.15f)),
+                .background(iconColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
 
@@ -338,8 +440,8 @@ fun AdvancedItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
@@ -355,18 +457,24 @@ fun AdvancedItemRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End
         ) {
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(18.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
             )
         }
     }
@@ -384,21 +492,21 @@ fun AdvancedSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(iconColor.copy(alpha = 0.15f)),
+                .background(iconColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
 
@@ -407,8 +515,8 @@ fun AdvancedSwitchRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
@@ -553,3 +661,74 @@ fun PinSetupVerifyDialog(
     )
 }
 
+@Composable
+fun CooldownSelectionDialog(
+    title: String,
+    subtitle: String,
+    selectedMinutes: Int,
+    onDismiss: () -> Unit,
+    onSelectMinutes: (Int) -> Unit
+) {
+    val options = listOf(5, 10, 15, 30)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                options.forEach { minutes ->
+                    val isSelected = selectedMinutes == minutes
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelectMinutes(minutes) },
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "$minutes minutes" + if (minutes == 5) " (Default)" else "",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { onSelectMinutes(minutes) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    )
+}

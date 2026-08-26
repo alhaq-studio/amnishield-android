@@ -33,7 +33,7 @@ class WebsiteBlockerConfigFragment : BaseFeatureFragment() {
                         isServiceEnabled = isAccessibilityServiceEnabled(AmnShieldAccessibilityService::class.java),
                         onEnableServiceClick = {
                             showAccessibilityInfoDialog(
-                                "AmnShield Accessibility Service",
+                                "AmniShield Accessibility Service",
                                 AmnShieldAccessibilityService::class.java
                             )
                         },

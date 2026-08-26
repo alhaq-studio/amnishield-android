@@ -20,7 +20,8 @@ data class AppLaunchLimitRule(
     val maxLaunches: Int,
     val timePeriod: TimePeriod,
     val dayOfWeek: Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK),
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val isEnabled: Boolean = true
 ) {
     enum class TimePeriod {
         HOURLY,

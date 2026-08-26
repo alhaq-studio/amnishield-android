@@ -1,9 +1,11 @@
 package com.alhaq.amnshield.ui.activity
 
 import android.content.Context
+import android.content.Intent
 import android.os.CountDownTimer
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -11,11 +13,17 @@ import androidx.core.view.WindowInsetsCompat
 import com.alhaq.amnshield.Constants
 import com.alhaq.amnshield.R
 import com.alhaq.amnshield.databinding.ActivityAntiUninstallPasswordBinding
+import com.alhaq.amnshield.services.AmnShieldAccessibilityService
+import com.alhaq.amnshield.utils.PasswordHasher
+import com.alhaq.amnshield.utils.SavedPreferencesLoader
+import com.alhaq.amnshield.utils.ThemeUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import java.util.Calendar
 
 /**
  * Activity shown when user attempts to access protected Settings screens (Device Admin, Accessibility)
- * Requires password verification to proceed or cancels and returns home
+ * or uninstall/deactivate AmnShield.
+ * Requires password verification to proceed, or strictly redirects to the Home screen.
  */
 class AntiUninstallPasswordActivity : AppCompatActivity() {
 
@@ -34,7 +42,7 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        com.alhaq.amnshield.utils.ThemeUtils.applyTheme(this)
+        ThemeUtils.applyTheme(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityAntiUninstallPasswordBinding.inflate(layoutInflater)
@@ -52,10 +60,10 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        // Handle back button to close activity and return to Settings
-        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+        // Handle back button: force exit to Android Home to prevent backstack leaks to Settings
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                finish()
+                forceExitToHome()
             }
         })
 
@@ -76,11 +84,13 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
                 setupTimedMode()
             }
             else -> {
-                // Unknown mode, just close
-                finish()
+                // Unknown mode, force exit
+                forceExitToHome()
             }
         }
     }
+
+    private val loader by lazy { SavedPreferencesLoader(applicationContext) }
 
     private fun setupPasswordMode() {
         binding.txtTitle.text = getString(R.string.anti_uninstall_password_required)
@@ -89,6 +99,7 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
         binding.btnCancel.visibility = android.view.View.VISIBLE
         binding.btnVerify.visibility = android.view.View.VISIBLE
         binding.btnForgotPassword.visibility = android.view.View.VISIBLE
+        binding.btnForgotPassword.text = getString(R.string.forgot_pin)
 
         binding.btnVerify.setOnClickListener {
             val lockoutRemaining = getLockoutRemainingMillis()
@@ -104,11 +115,10 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
 
             val enteredPassword = binding.passwordInput.text.toString()
 
-            if (com.alhaq.amnshield.utils.PasswordHasher.verify(enteredPassword, savedPassword)) {
+            if (PasswordHasher.verify(enteredPassword, savedPassword)) {
                 // If the stored value was the legacy plaintext format, silently upgrade it
-                // to the salted hash now that we know the password matched.
-                if (com.alhaq.amnshield.utils.PasswordHasher.isPlainText(savedPassword)) {
-                    val upgraded = com.alhaq.amnshield.utils.PasswordHasher.hash(enteredPassword)
+                if (PasswordHasher.isPlainText(savedPassword)) {
+                    val upgraded = PasswordHasher.hash(enteredPassword)
                     getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
                         .edit()
                         .putString("password", upgraded)
@@ -116,17 +126,15 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
                     savedPassword = upgraded
                 }
 
-                // Password correct - notify accessibility service to start 5-minute cooldown.
-                // Scope the broadcast to our own package to prevent third-party apps from
-                // sending the same action to bypass anti-uninstall.
+                // Password correct - grant in-memory 5-minute admin grace period
                 clearRecoveryTimerState()
                 clearAttemptState()
                 sendPasswordVerifiedBroadcast()
 
-                // Close activity to allow Settings access - user can continue where they were
+                // Allow user access into Settings
                 finish()
             } else {
-                // Password incorrect - count attempt and apply lockout if threshold reached.
+                // Password incorrect - register attempt and apply lockout if reached
                 val attemptsLeft = registerFailedAttempt()
                 binding.passwordInputLayout.error = if (attemptsLeft > 0) {
                     getString(R.string.anti_uninstall_attempts_remaining, attemptsLeft)
@@ -138,8 +146,7 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
         }
 
         binding.btnCancel.setOnClickListener {
-            // User cancelled - close activity to return to previous Settings screen
-            finish()
+            forceExitToHome()
         }
 
         binding.btnForgotPassword.setOnClickListener {
@@ -154,22 +161,23 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            val cooldownMins = loader.getEmergencyAccessCooldownMinutes()
             MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.start_recovery)
-                .setMessage(R.string.recovery_started)
-                .setPositiveButton(R.string.start_recovery) { _, _ ->
-                    val unlockAt = System.currentTimeMillis() + RECOVERY_WAIT_MILLIS
+                .setTitle("Reset Password")
+                .setMessage("Initiating Password Reset will start a mandatory $cooldownMins-minute cooldown. Protection remains 100% active until the countdown finishes.")
+                .setPositiveButton("Start $cooldownMins-Min Cooldown") { _, _ ->
+                    val unlockAt = System.currentTimeMillis() + (cooldownMins * 60 * 1000L)
                     getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
                         .edit()
                         .putLong(KEY_RECOVERY_UNLOCK_AT, unlockAt)
                         .apply()
-                    beginRecoveryCountdown(unlockAt)
+                    beginRecoveryCountdown(unlockAt, isPasswordReset = true)
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
 
-            updateLockoutUiState()
+        updateLockoutUiState()
         maybeResumeRecoveryCountdown()
     }
 
@@ -178,34 +186,94 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
         
         val antiPrefs = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
         val unlockAtMillis = antiPrefs.getLong("unlock_at_millis", 0L)
+        val dateString = antiPrefs.getString("date", null)
 
-        val message = if (unlockAtMillis > 0L) {
-            val remainingMillis = (unlockAtMillis - System.currentTimeMillis()).coerceAtLeast(0L)
-            val daysDiff = kotlin.math.ceil(
-                remainingMillis / (1000.0 * 60.0 * 60.0 * 24.0)
-            ).toInt().coerceAtLeast(0)
-            getString(R.string.anti_uninstall_timed_mode_days_remaining, daysDiff)
+        val targetUnlockMillis = if (unlockAtMillis > 0L) {
+            unlockAtMillis
+        } else if (dateString != null) {
+            try {
+                val parts = dateString.split("/")
+                val cal = Calendar.getInstance().apply {
+                    set(parts[2].toInt(), parts[0].toInt() - 1, parts[1].toInt(), 23, 59, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
+                cal.timeInMillis
+            } catch (e: Exception) {
+                0L
+            }
         } else {
-            getString(R.string.anti_uninstall_is_active_cannot_remove)
+            0L
+        }
+
+        val remainingMillis = targetUnlockMillis - System.currentTimeMillis()
+        if (targetUnlockMillis > 0L && remainingMillis <= 0L) {
+            // Expired! Turn off anti-uninstall
+            antiPrefs.edit()
+                .putBoolean("is_anti_uninstall_on", false)
+                .remove("unlock_at_millis")
+                .apply()
+
+            val refreshIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+                .setPackage(packageName)
+            sendBroadcast(refreshIntent)
+
+            Toast.makeText(this, getString(R.string.anti_uninstall_timed_mode_expired), Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        val daysDiff = if (remainingMillis > 0L) {
+            kotlin.math.ceil(remainingMillis / (1000.0 * 60.0 * 60.0 * 24.0)).toInt().coerceAtLeast(1)
+        } else {
+            1
         }
         
-        binding.txtMessage.text = message
+        binding.txtMessage.text = getString(R.string.anti_uninstall_timed_mode_days_remaining, daysDiff)
         binding.passwordInputLayout.visibility = android.view.View.GONE
         binding.btnVerify.visibility = android.view.View.GONE
-        binding.btnForgotPassword.visibility = android.view.View.GONE
-        binding.txtRecoveryStatus.visibility = android.view.View.GONE
+        binding.btnForgotPassword.visibility = android.view.View.VISIBLE
+        binding.btnForgotPassword.text = getString(R.string.emergency_turn_off)
         binding.btnCancel.text = getString(R.string.ok)
         binding.btnCancel.visibility = android.view.View.VISIBLE
 
-        binding.btnCancel.setOnClickListener {
-            // Close activity to return to previous Settings screen
-            finish()
+        binding.btnForgotPassword.setOnClickListener {
+            val cooldownMins = loader.getEmergencyAccessCooldownMinutes()
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.emergency_access_mode)
+                .setMessage("Initiating Emergency Access will start a mandatory $cooldownMins-minute cooldown. Protection remains 100% active during the countdown.\n\nOnce the timer finishes, a 10-minute temporary unlock window will be granted.")
+                .setPositiveButton("Start $cooldownMins-Min Cooldown") { _, _ ->
+                    loader.requestEmergencyOverride()
+                    val unlockAt = System.currentTimeMillis() + (cooldownMins * 60 * 1000L)
+                    getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+                        .edit()
+                        .putLong(KEY_RECOVERY_UNLOCK_AT, unlockAt)
+                        .apply()
+                    beginRecoveryCountdown(unlockAt, isPasswordReset = false)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
+
+        binding.btnCancel.setOnClickListener {
+            forceExitToHome()
+        }
+
+        maybeResumeRecoveryCountdown()
+    }
+
+    private fun forceExitToHome() {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                    Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+        }
+        startActivity(homeIntent)
+        finish()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clear password input to prevent memory leaks
         binding.passwordInput.text?.clear()
         recoveryTimer?.cancel()
         recoveryTimer = null
@@ -215,16 +283,17 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
         val unlockAt = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
             .getLong(KEY_RECOVERY_UNLOCK_AT, 0L)
         if (unlockAt > 0L) {
-            beginRecoveryCountdown(unlockAt)
+            val isPasswordMode = antiUninstallMode == Constants.ANTI_UNINSTALL_PASSWORD_MODE
+            beginRecoveryCountdown(unlockAt, isPasswordReset = isPasswordMode)
         }
     }
 
-    private fun beginRecoveryCountdown(unlockAt: Long) {
+    private fun beginRecoveryCountdown(unlockAt: Long, isPasswordReset: Boolean = true) {
         recoveryTimer?.cancel()
 
         val remaining = unlockAt - System.currentTimeMillis()
         if (remaining <= 0L) {
-            onRecoveryReady()
+            onRecoveryReady(isPasswordReset)
             return
         }
 
@@ -236,24 +305,41 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
                 val totalSeconds = millisUntilFinished / 1000L
                 val minutes = (totalSeconds / 60).toInt()
                 val seconds = (totalSeconds % 60).toInt()
-                binding.txtRecoveryStatus.text = getString(
-                    R.string.recovery_countdown_message,
-                    minutes,
-                    seconds
-                )
+                binding.txtRecoveryStatus.text = if (isPasswordReset) {
+                    getString(R.string.password_reset_in_progress_countdown, minutes, seconds)
+                } else {
+                    getString(R.string.emergency_override_active_countdown, minutes, seconds)
+                }
             }
 
             override fun onFinish() {
-                onRecoveryReady()
+                onRecoveryReady(isPasswordReset)
             }
         }.start()
     }
 
-    private fun onRecoveryReady() {
+    private fun onRecoveryReady(isPasswordReset: Boolean) {
         clearRecoveryTimerState()
         clearAttemptState()
-        Toast.makeText(this, getString(R.string.recovery_ready), Toast.LENGTH_LONG).show()
-        sendPasswordVerifiedBroadcast()
+        loader.activateEmergencyWindow()
+        
+        if (!isPasswordReset) {
+            // Timed mode emergency override completed -> disable anti-uninstall
+            getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("is_anti_uninstall_on", false)
+                .remove("unlock_at_millis")
+                .remove("date")
+                .apply()
+            val refreshIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+                .setPackage(packageName)
+            sendBroadcast(refreshIntent)
+            Toast.makeText(this, "Emergency Override complete. Protection disabled.", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "Password Reset Complete. Protection unlocked.", Toast.LENGTH_LONG).show()
+            sendPasswordVerifiedBroadcast()
+        }
+
         finish()
     }
 
@@ -267,8 +353,8 @@ class AntiUninstallPasswordActivity : AppCompatActivity() {
     }
 
     private fun sendPasswordVerifiedBroadcast() {
-        val intent = android.content.Intent(
-            com.alhaq.amnshield.services.AmnShieldAccessibilityService.INTENT_ACTION_PASSWORD_VERIFIED
+        val intent = Intent(
+            AmnShieldAccessibilityService.INTENT_ACTION_PASSWORD_VERIFIED
         ).setPackage(packageName)
         sendBroadcast(intent)
     }

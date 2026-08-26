@@ -1,9 +1,8 @@
-package com.alhaq.amnshield.ui.activity
+package com.alhaq.amnshield.notifications
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.alhaq.amnshield.notifications.SmartNotificationScheduler
 import com.alhaq.amnshield.utils.NotificationHelper
 
 /**

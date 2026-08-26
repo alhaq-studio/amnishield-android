@@ -36,6 +36,24 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
             if (rows.isNotEmpty()) {
                 val latest = rows.maxOf { it.updatedAt }
                 keys.cursor = latest
+                
+                for (row in rows) {
+                    if (row.namespace == "amnshield_config" && row.recordKey == "rules" && !row.deleted) {
+                        try {
+                            val rawJson = if (row.ciphertext.startsWith("plain:")) {
+                                row.ciphertext.removePrefix("plain:")
+                            } else {
+                                row.ciphertext
+                            }
+                            val jsonObj = gson.fromJson(rawJson, JsonObject::class.java)
+                            if (jsonObj != null) {
+                                PolicySyncManager.applyPolicyPayload(context, jsonObj)
+                            }
+                        } catch (e: Exception) {
+                            // ignore malformed record
+                        }
+                    }
+                }
             }
             _status.value = SyncStatus(isSyncing = false, lastSyncTime = System.currentTimeMillis())
         } catch (e: Exception) {
@@ -47,8 +65,21 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
         val session = getOrRefreshSession() ?: return
         _status.value = SyncStatus(isSyncing = true)
         try {
-            // Push active rules configuration to Supabase sync_records
-            val rulesJson = gson.toJson(savedPrefs.loadAppBlockerScheduleRules())
+            // Push active rules, blocklists, and schedules to Supabase sync_records
+            val configObj = JsonObject().apply {
+                val appsArray = com.google.gson.JsonArray()
+                savedPrefs.loadBlockedApps().forEach { appsArray.add(it) }
+                add("blocked_apps", appsArray)
+
+                val kwArray = com.google.gson.JsonArray()
+                savedPrefs.loadBlockedKeywords().forEach { kwArray.add(it) }
+                add("blocked_keywords", kwArray)
+
+                addProperty("adult_pack", savedPrefs.isKeywordBlockerAdultPackEnabled())
+                addProperty("strict_mode", savedPrefs.isFocusModeFeatureEnabled())
+            }
+
+            val rulesJson = configObj.toString()
             val ciphertext = keys.dekB64 ?: "plain:$rulesJson"
             rest.upsertRecord(
                 session = session,

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
@@ -18,8 +19,10 @@ import com.alhaq.amnshield.ui.activity.MainActivity
 import com.alhaq.amnshield.ui.fragments.usage.AllAppsUsageFragment
 import com.alhaq.amnshield.ui.screens.AppUsageItem
 import com.alhaq.amnshield.ui.screens.StatsScreen
+import com.alhaq.amnshield.ui.state.ScreenTimeDay
 import com.alhaq.amnshield.ui.theme.AmnShieldTheme
 import com.alhaq.amnshield.utils.BlockingStatsManager
+import com.alhaq.amnshield.utils.ScreenTimeCalculator
 import com.alhaq.amnshield.utils.UsageStatsHelper
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -42,7 +45,8 @@ class StatsFragment : Fragment() {
 
     // Compose States
     private val isAppUsageTrackingState = mutableStateOf(true)
-    private val totalScreenTimeState = mutableStateOf("0h 0m")
+    private val todayScreenTimeMsState = mutableLongStateOf(0L)
+    private val weeklyStatsState = mutableStateListOf<ScreenTimeDay>()
     private val distractionsBlockedState = mutableStateOf(0)
     private val focusTimeState = mutableStateOf("0m")
     private val totalReelsWatchedState = mutableStateOf(0)
@@ -72,7 +76,8 @@ class StatsFragment : Fragment() {
                 val state by viewModel.state.collectAsState()
                 AmnShieldTheme(appTheme = activeTheme) {
                     StatsScreen(
-                        totalScreenTime = totalScreenTimeState.value,
+                        todayScreenTimeMs = todayScreenTimeMsState.longValue,
+                        weeklyStats = weeklyStatsState,
                         distractionsBlocked = distractionsBlockedState.value,
                         focusTime = focusTimeState.value,
                         totalReelsWatched = totalReelsWatchedState.value,
@@ -175,16 +180,14 @@ class StatsFragment : Fragment() {
                     val usageStatsHelper = UsageStatsHelper(ctx)
 
                     withContext(Dispatchers.IO) {
-                        val calendar = Calendar.getInstance()
-                        calendar.set(Calendar.HOUR_OF_DAY, 0)
-                        calendar.set(Calendar.MINUTE, 0)
-                        calendar.set(Calendar.SECOND, 0)
-                        calendar.set(Calendar.MILLISECOND, 0)
-                        val startTime = calendar.timeInMillis
+                        val startTime = ScreenTimeCalculator.getStartOfDayMillis(0)
                         val endTime = System.currentTimeMillis()
 
+                        // Calculate accurate midnight-aligned device screen time
+                        val todayScreenTime = ScreenTimeCalculator.getTodayScreenTime(ctx)
+                        val weeklyStatsList = ScreenTimeCalculator.getWeeklyScreenTime(ctx)
+
                         val statsList = usageStatsHelper.getForegroundStatsByTimestamps(startTime, endTime)
-                        val deviceTotalTime = statsList.sumOf { it.totalTime }
 
                         // 1. Gather all launcher packages
                         val launcherIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
@@ -230,10 +233,10 @@ class StatsFragment : Fragment() {
                         }
 
                         withContext(Dispatchers.Main) {
-                            // Update screen time
-                            val hours = deviceTotalTime / (1000 * 60 * 60)
-                            val minutes = (deviceTotalTime % (1000 * 60 * 60)) / (1000 * 60)
-                            totalScreenTimeState.value = "${hours}h ${minutes}m"
+                            // Update screen time states
+                            todayScreenTimeMsState.longValue = todayScreenTime
+                            weeklyStatsState.clear()
+                            weeklyStatsState.addAll(weeklyStatsList)
 
                             // Update blocking stats
                             val blockStats = BlockingStatsManager.getInstance(ctx).getTodayStats()
@@ -259,31 +262,36 @@ class StatsFragment : Fragment() {
                             val totalWebHours = totalWebMillis / (1000 * 60 * 60)
                             val totalWebMins = (totalWebMillis % (1000 * 60 * 60)) / (1000 * 60)
                             totalWebBrowsingTimeState.value = if (totalWebHours > 0) "${totalWebHours}h ${totalWebMins}m" else "${totalWebMins}m"
-                            activeWebDomainsCountState.value = domainStats.size
 
-                            val topDomainEntry = domainStats.maxByOrNull { it.value }
-                            if (topDomainEntry != null) {
+                            val topDomainEntry = domainStats.entries.maxByOrNull { it.value }
+                            if (topDomainEntry != null && topDomainEntry.value > 0) {
                                 topWebDomainState.value = topDomainEntry.key
-                                val domMins = topDomainEntry.value / (1000 * 60)
-                                topWebDomainTimeState.value = if (domMins >= 60) "${domMins / 60}h ${domMins % 60}m" else "${domMins}m"
+                                val topMins = topDomainEntry.value / (1000 * 60)
+                                topWebDomainTimeState.value = if (topMins >= 60) "${topMins / 60}h ${topMins % 60}m" else "${topMins}m"
                             } else {
                                 topWebDomainState.value = null
                                 topWebDomainTimeState.value = null
                             }
+                            activeWebDomainsCountState.value = domainStats.size
 
-                            // Update top apps list
                             topAppsState.clear()
                             topAppsState.addAll(resolvedApps)
                         }
                     }
-                } catch (t: Throwable) {
-                    totalScreenTimeState.value = "0h 0m"
-                    distractionsBlockedState.value = 0
-                    focusTimeState.value = "0m"
-                    topAppsState.clear()
-                    android.util.Log.e("StatsFragment", "Failed to load stats", t)
+                } catch (e: Exception) {
+                    android.util.Log.e("StatsFragment", "Error loading stats", e)
                 }
             }
+        }
+    }
+
+    private fun formatMinutes(minutes: Long): String {
+        return if (minutes >= 60) {
+            val hours = minutes / 60
+            val remMins = minutes % 60
+            "${hours}h ${remMins}m"
+        } else {
+            "${minutes}m"
         }
     }
 
@@ -291,7 +299,7 @@ class StatsFragment : Fragment() {
         return try {
             val pm = context.packageManager
             val iconDrawable = pm.getApplicationIcon(packageName)
-            val size = 120
+            val size = 96
             val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(bitmap)
             iconDrawable.setBounds(0, 0, size, size)
@@ -299,16 +307,6 @@ class StatsFragment : Fragment() {
             bitmap
         } catch (e: Exception) {
             null
-        }
-    }
-
-    private fun formatMinutes(totalMinutes: Long): String {
-        val hours = totalMinutes / 60
-        val mins = totalMinutes % 60
-        return when {
-            hours > 0 && mins > 0 -> String.format(Locale.getDefault(), "%dh %dm", hours, mins)
-            hours > 0 -> String.format(Locale.getDefault(), "%dh", hours)
-            else -> String.format(Locale.getDefault(), "%dm", mins)
         }
     }
 }

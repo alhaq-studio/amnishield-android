@@ -30,7 +30,7 @@ object PolicySyncManager {
         val isPaired = prefs.getBoolean("is_paired_with_console", false)
 
         if (!isPaired || deviceId.isNullOrBlank()) {
-            Log.d(TAG, "Device not paired with Web Console. Skipping remote policy pull.")
+            Log.d(TAG, "Device not linked with Cloud Sync Hub. Skipping remote policy pull.")
             return@withContext false
         }
 
@@ -77,10 +77,10 @@ object PolicySyncManager {
     fun applyPolicyPayload(context: Context, payload: JsonObject) {
         val savedPrefs = SavedPreferencesLoader(context)
 
-        // A. Blocked Apps
+        // A. Blocked Apps (Union-Merge: preserves local + remote rules additively)
         if (payload.has("blocked_apps") && payload.get("blocked_apps").isJsonArray) {
             val appsArray = payload.getAsJsonArray("blocked_apps")
-            val appSet = mutableSetOf<String>()
+            val appSet = savedPrefs.loadBlockedApps().toMutableSet()
             for (elem in appsArray) {
                 val pkg = elem.asString.trim()
                 if (pkg.isNotEmpty()) {
@@ -91,23 +91,28 @@ object PolicySyncManager {
             context.sendBroadcast(Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER).setPackage(context.packageName))
         }
 
-        // B. Blocked Domains & Keywords
-        val keywordSet = mutableSetOf<String>()
+        // B. Blocked Domains & Keywords (Union-Merge)
+        val keywordSet = savedPrefs.loadBlockedKeywords().toMutableSet()
+        var hasNewKeywords = false
         if (payload.has("blocked_domains") && payload.get("blocked_domains").isJsonArray) {
             val domArray = payload.getAsJsonArray("blocked_domains")
             for (elem in domArray) {
                 val d = elem.asString.trim().lowercase()
-                if (d.isNotEmpty()) keywordSet.add(d)
+                if (d.isNotEmpty() && keywordSet.add(d)) {
+                    hasNewKeywords = true
+                }
             }
         }
         if (payload.has("blocked_keywords") && payload.get("blocked_keywords").isJsonArray) {
             val kwArray = payload.getAsJsonArray("blocked_keywords")
             for (elem in kwArray) {
                 val k = elem.asString.trim().lowercase()
-                if (k.isNotEmpty()) keywordSet.add(k)
+                if (k.isNotEmpty() && keywordSet.add(k)) {
+                    hasNewKeywords = true
+                }
             }
         }
-        if (keywordSet.isNotEmpty()) {
+        if (hasNewKeywords) {
             savedPrefs.saveBlockedKeywords(keywordSet)
             context.sendBroadcast(Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST).setPackage(context.packageName))
         }
@@ -128,7 +133,7 @@ object PolicySyncManager {
             context.sendBroadcast(Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).setPackage(context.packageName))
         }
 
-        // E. Schedules
+        // E. Schedules (LWW with remote update)
         if (payload.has("schedules") && payload.get("schedules").isJsonObject) {
             val sch = payload.getAsJsonObject("schedules")
             val enabled = sch.get("enabled")?.asBoolean ?: false
@@ -144,7 +149,7 @@ object PolicySyncManager {
 
                 val rule = AppBlockScheduleRule(
                     id = "cloud_sync_schedule",
-                    title = "Web Console Schedule",
+                    title = "Cloud Sync Schedule",
                     packageName = "all",
                     type = AppBlockScheduleRule.RuleType.BLOCK,
                     recurrence = AppBlockScheduleRule.Recurrence.WEEKLY,

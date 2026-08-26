@@ -34,7 +34,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AmnShield"
-        tools:targetApi="34">
+        android:resizeableActivity="true"
+        android:localeConfig="@xml/locales_config"
+        tools:targetApi="36">
         <activity
             android:name=".ui.activity.ShortcutActivity"
             android:excludeFromRecents="true"
@@ -116,10 +118,10 @@
                 <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/app/activate" />
                 <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/pair" />
                 <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/pair" />
-                <data android:scheme="https" android:host="app.amnshield.com" android:pathPrefix="/activate" />
-                <data android:scheme="https" android:host="amnshield.com" android:pathPrefix="/activate" />
-                <data android:scheme="https" android:host="app.amnshield.com" android:pathPrefix="/pair" />
-                <data android:scheme="https" android:host="amnshield.com" android:pathPrefix="/pair" />
+                <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/activate" />
+                <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/activate" />
+                <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/pair" />
+                <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/pair" />
                 <data android:scheme="http" android:host="app.amnishield.com" android:pathPrefix="/activate" />
                 <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/activate" />
                 <data android:scheme="http" android:host="app.amnishield.com" android:pathPrefix="/pair" />
@@ -152,6 +154,8 @@
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
             </intent-filter>
 
             <meta-data
@@ -187,7 +191,7 @@
 
         <!-- BroadcastReceiver for daily report notifications -->
         <receiver
-            android:name=".ui.activity.DailyReportReceiver"
+            android:name=".notifications.DailyReportReceiver"
             android:exported="false"
             android:enabled="true" />
 

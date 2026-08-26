@@ -21,9 +21,9 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "QuickFocusWidget"
-        private val ACTION_START_FOCUS_15 = "${BuildConfig.APPLICATION_ID}.focus.START_15"
-        private val ACTION_START_FOCUS_30 = "${BuildConfig.APPLICATION_ID}.focus.START_30"
-        private val ACTION_START_FOCUS_60 = "${BuildConfig.APPLICATION_ID}.focus.START_60"
+        private val ACTION_START_FOCUS_P1 = "${BuildConfig.APPLICATION_ID}.focus.START_P1"
+        private val ACTION_START_FOCUS_P2 = "${BuildConfig.APPLICATION_ID}.focus.START_P2"
+        private val ACTION_START_FOCUS_P3 = "${BuildConfig.APPLICATION_ID}.focus.START_P3"
         private val ACTION_STOP_FOCUS = "${BuildConfig.APPLICATION_ID}.focus.STOP_FOCUS"
         private val ACTION_WIDGET_REFRESH = "${BuildConfig.APPLICATION_ID}.focus.WIDGET_REFRESH"
 
@@ -58,12 +58,15 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
 
         val action = intent.action ?: return
+        val loader = SavedPreferencesLoader(context)
+        val (p1, p2, p3) = loader.getQuickFocusDurationPresets()
+
         if (action.startsWith("${BuildConfig.APPLICATION_ID}.focus.START_")) {
             val minutes = when (action) {
-                ACTION_START_FOCUS_15 -> 15
-                ACTION_START_FOCUS_30 -> 30
-                ACTION_START_FOCUS_60 -> 60
-                else -> 30
+                ACTION_START_FOCUS_P1 -> p1
+                ACTION_START_FOCUS_P2 -> p2
+                ACTION_START_FOCUS_P3 -> p3
+                else -> p2
             }
             startFocusSessionFromWidget(context, minutes)
         } else if (action == ACTION_STOP_FOCUS) {
@@ -100,26 +103,21 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
         }
         context.sendBroadcast(refreshIntent)
 
-        val timer = NotificationTimerManager(context)
-        timer.startTimer(
-            totalMillis = durationMillis,
-            onFinishCallback = {
-                stopFocusSessionFromWidget(context)
-            }
-        )
+        NotificationTimerManager(context).startTimer(durationMillis)
+        updateAllWidgets(context)
     }
 
     private fun stopFocusSessionFromWidget(context: Context) {
         val loader = SavedPreferencesLoader(context)
         loader.stopFocusSession()
 
-        val timer = NotificationTimerManager(context)
-        timer.stopTimer()
-
         val refreshIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
             setPackage(context.packageName)
         }
         context.sendBroadcast(refreshIntent)
+
+        NotificationTimerManager(context).stopTimer()
+        updateAllWidgets(context)
     }
 
     private fun updateWidget(
@@ -130,50 +128,58 @@ class QuickFocusWidgetProvider : AppWidgetProvider() {
         try {
             val loader = SavedPreferencesLoader(context)
             val focusData = loader.getFocusModeData()
+            val (p1, p2, p3) = loader.getQuickFocusDurationPresets()
+            val views = RemoteViews(context.packageName, R.layout.widget_quick_focus)
+
             val isFocusActive = focusData.isTurnedOn && focusData.endTime > System.currentTimeMillis()
-            val remainingMins = if (isFocusActive) ((focusData.endTime - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1) else 0
 
-            val views = RemoteViews(context.packageName, R.layout.widget_quick_focus).apply {
-                if (isFocusActive) {
-                    setTextViewText(R.id.txt_focus_status_badge, "ACTIVE")
-                    setTextViewText(R.id.txt_focus_timer_display, "${remainingMins}m Remaining")
-                    setTextViewText(R.id.txt_focus_subtitle, "Focus session active")
+            if (isFocusActive) {
+                val remainingMillis = focusData.endTime - System.currentTimeMillis()
+                val minutesLeft = (remainingMillis / 60_000L).coerceAtLeast(1)
 
-                    setViewVisibility(R.id.layout_active_focus_controls, View.VISIBLE)
-                    setViewVisibility(R.id.layout_quick_start_buttons, View.GONE)
+                views.setTextViewText(R.id.txt_focus_status_badge, "ACTIVE")
+                views.setTextViewText(R.id.txt_focus_timer_display, "${minutesLeft}m Left")
+                views.setTextViewText(R.id.txt_focus_subtitle, "Focus session active")
 
-                    setOnClickPendingIntent(
-                        R.id.btn_stop_focus,
-                        createActionIntent(context, widgetId, ACTION_STOP_FOCUS)
-                    )
-                } else {
-                    setTextViewText(R.id.txt_focus_status_badge, "READY")
-                    setTextViewText(R.id.txt_focus_timer_display, "Ready to Focus")
-                    setTextViewText(R.id.txt_focus_subtitle, "Tap a preset to start instant session")
+                views.setViewVisibility(R.id.layout_active_focus_controls, View.VISIBLE)
+                views.setViewVisibility(R.id.layout_quick_start_buttons, View.GONE)
 
-                    setViewVisibility(R.id.layout_active_focus_controls, View.GONE)
-                    setViewVisibility(R.id.layout_quick_start_buttons, View.VISIBLE)
-                }
-
-                // Preset button pending intents
-                setOnClickPendingIntent(R.id.btn_quick_focus_15, createActionIntent(context, widgetId, ACTION_START_FOCUS_15))
-                setOnClickPendingIntent(R.id.btn_quick_focus_30, createActionIntent(context, widgetId, ACTION_START_FOCUS_30))
-                setOnClickPendingIntent(R.id.btn_quick_focus_60, createActionIntent(context, widgetId, ACTION_START_FOCUS_60))
-
-                // Tap title/timer display to open Focus Space screen
-                val openIntent = Intent(context, FragmentActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("feature_type", "focus_mode")
-                }
-                val pendingOpen = PendingIntent.getActivity(
-                    context,
-                    0,
-                    openIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                views.setOnClickPendingIntent(
+                    R.id.btn_stop_focus,
+                    createActionIntent(context, widgetId, ACTION_STOP_FOCUS)
                 )
-                setOnClickPendingIntent(R.id.txt_focus_timer_display, pendingOpen)
-                setOnClickPendingIntent(R.id.txt_focus_status_badge, pendingOpen)
+            } else {
+                views.setTextViewText(R.id.txt_focus_status_badge, "READY")
+                views.setTextViewText(R.id.txt_focus_timer_display, "Ready to Focus")
+                views.setTextViewText(R.id.txt_focus_subtitle, "Tap a preset to start instant session")
+
+                views.setViewVisibility(R.id.layout_active_focus_controls, View.GONE)
+                views.setViewVisibility(R.id.layout_quick_start_buttons, View.VISIBLE)
+
+                // Update preset button labels with user-configured minutes
+                views.setTextViewText(R.id.btn_quick_focus_15, "${p1}m")
+                views.setTextViewText(R.id.btn_quick_focus_30, "${p2}m")
+                views.setTextViewText(R.id.btn_quick_focus_60, "${p3}m")
             }
+
+            // Preset button pending intents
+            views.setOnClickPendingIntent(R.id.btn_quick_focus_15, createActionIntent(context, widgetId, ACTION_START_FOCUS_P1))
+            views.setOnClickPendingIntent(R.id.btn_quick_focus_30, createActionIntent(context, widgetId, ACTION_START_FOCUS_P2))
+            views.setOnClickPendingIntent(R.id.btn_quick_focus_60, createActionIntent(context, widgetId, ACTION_START_FOCUS_P3))
+
+            // Tap title/timer display to open Focus Space screen
+            val openIntent = Intent(context, FragmentActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("feature_type", "focus_mode")
+            }
+            val pendingOpen = PendingIntent.getActivity(
+                context,
+                0,
+                openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.txt_focus_timer_display, pendingOpen)
+            views.setOnClickPendingIntent(R.id.txt_focus_status_badge, pendingOpen)
 
             appWidgetManager.updateAppWidget(widgetId, views)
         } catch (e: Exception) {

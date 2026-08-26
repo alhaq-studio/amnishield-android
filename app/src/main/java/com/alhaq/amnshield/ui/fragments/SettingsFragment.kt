@@ -109,15 +109,15 @@ class SettingsFragment : Fragment() {
                         state = state,
                         viewModel = viewModel,
                         onNavigateToProfile = {
-                            val containerId = if (requireActivity().findViewById<View>(R.id.nav_host_fragment) != null) {
-                                R.id.nav_host_fragment
-                            } else {
-                                R.id.fragment_holder
+                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                                putExtra("fragment", "profile")
                             }
-                            val transaction = parentFragmentManager.beginTransaction()
-                            transaction.replace(containerId, ProfileFragment())
-                            transaction.addToBackStack(null)
-                            transaction.commit()
+                            val options = ActivityOptionsCompat.makeCustomAnimation(
+                                requireContext(),
+                                R.anim.fade_in,
+                                R.anim.fade_out
+                            )
+                            startActivity(intent, options.toBundle())
                         },
                         onBackupRestore = { showBackupRestoreDialog() },
                         onReminders = {
@@ -130,6 +130,17 @@ class SettingsFragment : Fragment() {
                             startActivity(intent, options.toBundle())
                         },
                         onShareCrashLogs = { shareCrashLogs() },
+                        onDiagnostics = {
+                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                                putExtra("feature_type", "diagnostics")
+                            }
+                            val options = ActivityOptionsCompat.makeCustomAnimation(
+                                requireContext(),
+                                R.anim.fade_in,
+                                R.anim.fade_out
+                            )
+                            startActivity(intent, options.toBundle())
+                        },
                         onHelpFAQ = { showFAQDialog() },
                         onAbout = { showAboutDialog() },
                         onLanguage = { showLanguageDialog() },
@@ -163,9 +174,19 @@ class SettingsFragment : Fragment() {
                             savedPreferencesLoader.setReelsTrackingEnabled(enabled)
                             viewModel.loadState(viewModel.state.value.copy(isReelsTrackingEnabled = enabled))
                         },
+                        onUpdatePinResetCooldown = { mins ->
+                            savedPreferencesLoader.setPinResetCooldownMinutes(mins)
+                            viewModel.updatePinResetCooldown(mins)
+                        },
+                        onUpdateEmergencyCooldown = { mins ->
+                            savedPreferencesLoader.setEmergencyAccessCooldownMinutes(mins)
+                            viewModel.updateEmergencyAccessCooldown(mins)
+                        },
                         onBack = {
                             if (!parentFragmentManager.popBackStackImmediate()) {
-                                requireActivity().finish()
+                                (activity as? MainActivity)?.let { main ->
+                                    main.selectTab(main.getSelectedTabId())
+                                } ?: requireActivity().finish()
                             }
                         }
                     )
@@ -180,6 +201,11 @@ class SettingsFragment : Fragment() {
         loadSettingsState()
     }
 
+    override fun onResume() {
+        super.onResume()
+        loadSettingsState()
+    }
+
     private fun loadSettingsState() {
         val webFilterEnabled = savedPreferencesLoader.isWebsiteBlockerEnabled()
         val usageTrackerEnabled = savedPreferencesLoader.isUsageTrackerFeatureEnabled()
@@ -189,6 +215,8 @@ class SettingsFragment : Fragment() {
         val account = googleSignInHelper.getLastSignedInAccount()
         val name = account?.displayName ?: "Alhaq DST"
         val email = account?.email ?: "alhaq.dst@gmail.com"
+        val pinResetCooldown = savedPreferencesLoader.getPinResetCooldownMinutes()
+        val emergencyCooldown = savedPreferencesLoader.getEmergencyAccessCooldownMinutes()
         
         val isAdvanced = true
         
@@ -199,6 +227,8 @@ class SettingsFragment : Fragment() {
                 isAppUsageTrackingEnabled = appUsageTrackingEnabled,
                 isWebsiteUsageTrackingEnabled = websiteUsageTrackingEnabled,
                 isReelsTrackingEnabled = reelsTrackingEnabled,
+                pinResetCooldownMinutes = pinResetCooldown,
+                emergencyAccessCooldownMinutes = emergencyCooldown,
                 userName = name,
                 userEmail = email,
                 isAdvancedMode = isAdvanced
@@ -232,38 +262,25 @@ class SettingsFragment : Fragment() {
 
     private fun shareCrashLogs() {
         val ctx = requireContext()
-        val errorManager = com.alhaq.amnshield.utils.ErrorReportManager.getInstance(ctx)
-        val report = errorManager.exportReportsAsText()
-        if (report.contains("No crash logs found.") && report.contains("No feedback submitted.")) {
-            Toast.makeText(ctx, "No crash logs found", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val attachmentFile = errorManager.createBundledReportFile()
-        if (attachmentFile == null) {
-            Toast.makeText(ctx, "Failed to prepare bundled report", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val attachmentUri = androidx.core.content.FileProvider.getUriForFile(
-            ctx,
-            "${ctx.packageName}.provider",
-            attachmentFile
-        )
-
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "AmnShield Crash Log")
-            putExtra(Intent.EXTRA_TEXT, "Bundled crash report attached.")
-            putExtra(Intent.EXTRA_CC, arrayOf("support@alhaq-initiative.org", "alhaq.dst@gmail.com"))
-            putExtra(Intent.EXTRA_STREAM, attachmentUri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-        }
-
         try {
-            startActivity(Intent.createChooser(intent, "Share Crash Log"))
+            val crashLogger = com.alhaq.amnshield.CrashLogger.getInstance(ctx)
+            val exportFile = crashLogger.getExportLogFile()
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                ctx,
+                "${ctx.packageName}.provider",
+                exportFile
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "AmniShield Diagnostic Logs")
+                putExtra(Intent.EXTRA_TEXT, "Attached are the AmniShield diagnostic system & crash logs.")
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                clipData = android.content.ClipData.newRawUri("Diagnostic Logs", uri)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share Diagnostic Logs"))
         } catch (e: Exception) {
-            Toast.makeText(ctx, "No email client found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, "Failed to share logs: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -375,7 +392,7 @@ class SettingsFragment : Fragment() {
                 ═══════════════════════════
                 
                 Q: How do I report bugs or request features?
-                A: Use the in-app feedback option, email support@alhaq-initiative.org, or contact us through the AmnShield support hub.
+                A: Use the in-app feedback option, email support@alhaq.uk, or contact us through the AmnShield support hub.
                 
                 Q: Is there a user guide?
                 A: Yes. Check the official AmnShield docs for documentation, policies, and updates.
@@ -387,7 +404,7 @@ class SettingsFragment : Fragment() {
                 .setTitle("Help & FAQ")
                 .setMessage(faqs)
                 .setPositiveButton("Email Support") { _, _ ->
-                    openUrl("mailto:support@alhaq-initiative.org")
+                    openUrl("mailto:support@alhaq.uk")
                 }
                 .setNeutralButton("Docs") { _, _ ->
                     openUrl(Constants.AMNSHIELD_DOCS_URL)
@@ -408,7 +425,7 @@ class SettingsFragment : Fragment() {
             val message = """
                 Version: $versionName
                 
-                AmnShield is a privacy-first digital wellbeing app that helps users maintain a healthy, balanced digital lifestyle through practical protection, smart blocking, and focus habits.
+                AmniShield is a privacy-first digital wellbeing app that helps users maintain a healthy, balanced digital lifestyle through practical protection, smart blocking, and focus habits.
                 
                 Free Features (100% Free for Everyone):
                 • App Blocker with schedules & category rules
@@ -430,18 +447,18 @@ class SettingsFragment : Fragment() {
                 
                 Developer: Al-Haq Studio (Al-Haq Digital Services & Solutions)
                 Free Access Program: Provided by Al-Haq Initiative
-                Contact: support@alhaq-initiative.org
-                Website: amnshield.com
+                Contact: support@alhaq.uk
+                Website: alhaq.uk / amnishield.com
             """.trimIndent()
 
             MaterialAlertDialogBuilder(ctx)
                 .setTitle(getString(R.string.about_amnshield))
                 .setMessage(message)
                 .setPositiveButton("Website") { _, _ ->
-                    openUrl(Constants.AMNSHIELD_WEBSITE_URL)
+                    openUrl(Constants.ALHAQ_STUDIO_URL)
                 }
                 .setNeutralButton("Email") { _, _ ->
-                    openUrl("mailto:support@alhaq-initiative.org")
+                    openUrl("mailto:support@alhaq.uk")
                 }
                 .setNegativeButton("Close", null)
                 .show()
@@ -498,13 +515,15 @@ class SettingsFragment : Fragment() {
         val languages = arrayOf(
             getString(R.string.language_system) to "",
             getString(R.string.language_english) to "en",
-            getString(R.string.language_german) to "de",
+            getString(R.string.language_arabic) to "ar",
+            getString(R.string.language_urdu) to "ur",
+            getString(R.string.language_pashto) to "ps",
             getString(R.string.language_persian) to "fa",
+            getString(R.string.language_spanish) to "es",
             getString(R.string.language_french) to "fr",
             getString(R.string.language_hindi) to "hi",
-            getString(R.string.language_portuguese) to "pt",
-            getString(R.string.language_turkish) to "tr",
-            getString(R.string.language_chinese) to "zh"
+            getString(R.string.language_russian) to "ru",
+            getString(R.string.language_turkish) to "tr"
         )
 
         val languageNames = languages.map { it.first }.toTypedArray()
@@ -533,10 +552,5 @@ class SettingsFragment : Fragment() {
         loadSettingsState()
         
         Toast.makeText(requireContext(), R.string.restart_required, Toast.LENGTH_LONG).show()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        loadSettingsState()
     }
 }

@@ -62,7 +62,7 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:lineSpacingExtra="2dp"
-                android:text="AmnShield needs Accessibility permissions to manage your screen time and block distracting content."
+                android:text="AmniShield needs Accessibility permissions to manage your screen time and block distracting content."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- Step 1 Card -->
@@ -114,7 +114,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:lineSpacingExtra="4dp"
-                        android:text="1. Open Accessibility Settings\n2. Select 'AmnShield' under Installed Apps\n3. Toggle switch to ON and confirm 'Allow'\n\nThis allows AmnShield to detect app usage and block distracting content."
+                        android:text="1. Open Accessibility Settings\n2. Select 'AmniShield' under Installed Apps\n3. Toggle switch to ON and confirm 'Allow'\n\nThis allows AmniShield to detect app usage and block distracting content."
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <com.google.android.material.button.MaterialButton
@@ -177,7 +177,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:lineSpacingExtra="3dp"
-                        android:text="If Android blocks Accessibility as a 'Restricted Setting':\n\n1️⃣ Open Settings → Apps → AmnShield\n2️⃣ Tap the 3 dots (top right) → Allow Restricted Settings\n3️⃣ Return to Accessibility Settings &amp; enable AmnShield."
+                        android:text="If Android blocks Accessibility as a 'Restricted Setting':\n\n1️⃣ Open Settings → Apps → AmniShield\n2️⃣ Tap the 3 dots (top right) → Allow Restricted Settings\n3️⃣ Return to Accessibility Settings &amp; enable AmniShield."
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>

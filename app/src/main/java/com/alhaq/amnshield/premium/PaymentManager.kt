@@ -18,7 +18,7 @@ import java.util.concurrent.Executors
 object PaymentManager {
 
     private const val SUPABASE_CHECKOUT_URL = "https://jrgpmcomvibgklmvnxud.supabase.co/functions/v1/stripe-checkout"
-    private const val FALLBACK_PRICING_URL = "https://amnshield.com/#pricing"
+    private const val FALLBACK_PRICING_URL = "https://amnishield.com/#pricing"
 
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -41,7 +41,7 @@ object PaymentManager {
             mainHandler.post {
                 Toast.makeText(
                     context,
-                    "Google Play distribution mode active. Please visit alhaq-initiative.org on the web to manage subscription.",
+                    "Google Play distribution mode active. Please visit alhaq.uk on the web to manage subscription.",
                     Toast.LENGTH_LONG
                 ).show()
                 callback?.onError("Play Store build restriction")
@@ -68,8 +68,8 @@ object PaymentManager {
                 val payload = JSONObject().apply {
                     put("plan", plan)
                     put("customerEmail", customerEmail.ifEmpty { null })
-                    put("successUrl", "https://app.amnshield.com/?checkout=success")
-                    put("cancelUrl", "https://amnshield.com/#pricing")
+                    put("successUrl", "https://app.amnishield.com/?checkout=success")
+                    put("cancelUrl", "https://amnishield.com/#pricing")
                 }
 
                 OutputStreamWriter(conn.outputStream).use { writer ->

@@ -24,11 +24,11 @@
     <dimen name="padding_xxlarge">32dp</dimen>
 
     <!-- Card -->
-    <dimen name="card_corner_radius">12dp</dimen>
-    <dimen name="card_corner_radius_normal">12dp</dimen>
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="card_corner_radius_normal">16dp</dimen>
     <dimen name="card_corner_radius_large">16dp</dimen>
-    <dimen name="card_elevation">2dp</dimen>
-    <dimen name="card_elevation_high">4dp</dimen>
+    <dimen name="card_elevation">0dp</dimen>
+    <dimen name="card_elevation_high">2dp</dimen>
 
     <!-- Icon sizes -->
     <dimen name="icon_size_small">20dp</dimen>

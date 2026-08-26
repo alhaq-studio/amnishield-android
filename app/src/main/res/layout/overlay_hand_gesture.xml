@@ -54,7 +54,7 @@
             android:background="@drawable/widget_chip_background"
             android:paddingHorizontal="12dp"
             android:paddingVertical="4dp"
-            android:text="AmnShield SafeGuard"
+            android:text="AmniShield SafeGuard"
             android:textColor="#F59E0B"
             android:textSize="11sp"
             android:textStyle="bold" />

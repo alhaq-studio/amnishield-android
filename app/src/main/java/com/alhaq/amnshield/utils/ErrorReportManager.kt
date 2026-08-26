@@ -1,8 +1,21 @@
+/**
+ * ============================================================================
+ * AmniShield Diagnostic & Error Report Manager
+ * ============================================================================
+ * Responsibility:
+ * Manages local error and crash diagnostics and user-initiated feedback reports.
+ * 
+ * Invariants & AI/Developer Guidance:
+ * - ZERO External Telemetry: Stored locally by default; users can export via Android Sharesheet.
+ * - PII Sanitization: Strips passwords, tokens, auth keys, and emails before output.
+ * ============================================================================
+ */
 package com.alhaq.amnshield.utils
 
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.alhaq.amnshield.CrashLogger
 import com.google.gson.Gson
 import java.io.File
 import java.text.SimpleDateFormat
@@ -11,14 +24,13 @@ import java.util.Locale
 
 /**
  * Centralized manager for error/crash logs and user feedback collection.
- * Stores locally by default; users can opt-in to share via email.
+ * Stores locally by default; users can opt-in to share via standard Android Sharesheet.
  */
 class ErrorReportManager(private val context: Context) {
 
     private val errorDir = File(context.filesDir, "error_reports")
     private val crashLogFile = File(errorDir, "crash_log.txt")
     private val feedbackDir = File(errorDir, "feedback")
-    private val diagnosticsFile = File(errorDir, "diagnostics.json")
     private val prefs = context.getSharedPreferences("error_reporting", Context.MODE_PRIVATE)
     private val gson = Gson()
 
@@ -27,9 +39,6 @@ class ErrorReportManager(private val context: Context) {
         feedbackDir.mkdirs()
     }
 
-    /**
-     * User preferences for error reporting
-     */
     fun setErrorReportingEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("crash_reporting_enabled", enabled).apply()
     }
@@ -47,21 +56,19 @@ class ErrorReportManager(private val context: Context) {
     }
 
     /**
-     * Log a fatal crash with full diagnostic information
+     * Log a fatal crash with diagnostic information
      */
     fun logCrash(thread: Thread, throwable: Throwable) {
         try {
-            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
+            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
             val crashEntry = StringBuilder()
             
-            // Header
             crashEntry.append("\n\n")
             crashEntry.append("═".repeat(80)).append("\n")
             crashEntry.append("CRASH REPORT\n")
             crashEntry.append("═".repeat(80)).append("\n")
             crashEntry.append("Timestamp: $timestamp\n")
             
-            // Device info
             crashEntry.append("\n--- DEVICE INFORMATION ---\n")
             crashEntry.append("Manufacturer: ${Build.MANUFACTURER}\n")
             crashEntry.append("Model: ${Build.MODEL}\n")
@@ -69,14 +76,11 @@ class ErrorReportManager(private val context: Context) {
             crashEntry.append("Device Brand: ${Build.BRAND}\n")
             crashEntry.append("Hardware: ${Build.HARDWARE}\n")
             
-            // App info
             crashEntry.append("\n--- APP INFORMATION ---\n")
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             crashEntry.append("App Version: ${packageInfo.versionName} (${packageInfo.longVersionCode})\n")
             crashEntry.append("Package: ${context.packageName}\n")
             
-            // Memory info
-            crashEntry.append("\n--- MEMORY INFORMATION ---\n")
             val runtime = Runtime.getRuntime()
             val totalMemory = runtime.totalMemory() / 1024 / 1024
             val freeMemory = runtime.freeMemory() / 1024 / 1024
@@ -86,28 +90,22 @@ class ErrorReportManager(private val context: Context) {
             crashEntry.append("Max Memory: ${maxMemory}MB\n")
             crashEntry.append("Used Memory: ${totalMemory - freeMemory}MB\n")
             
-            // Thread info
             crashEntry.append("\n--- CRASH DETAILS ---\n")
             crashEntry.append("Thread: ${thread.name} (ID: ${thread.id})\n")
             crashEntry.append("Exception: ${throwable.javaClass.simpleName}\n")
-            crashEntry.append("Message: ${throwable.message ?: "No message"}\n")
+            crashEntry.append("Message: ${CrashLogger.getInstance(context).sanitize(throwable.message ?: "No message")}\n")
             
-            // Stack trace
             crashEntry.append("\n--- STACK TRACE ---\n")
-            crashEntry.append(throwable.stackTraceToString()).append("\n")
+            crashEntry.append(CrashLogger.getInstance(context).sanitize(throwable.stackTraceToString())).append("\n")
             
-            // Cause chain
             if (throwable.cause != null) {
                 crashEntry.append("\n--- CAUSED BY ---\n")
-                crashEntry.append(throwable.cause!!.stackTraceToString()).append("\n")
+                crashEntry.append(CrashLogger.getInstance(context).sanitize(throwable.cause!!.stackTraceToString())).append("\n")
             }
             
-            // Footer
             crashEntry.append("═".repeat(80)).append("\n")
             
-            // Write to file
             crashLogFile.appendText(crashEntry.toString())
-            
             Log.e("ErrorReportManager", "Crash logged to ${crashLogFile.absolutePath}")
         } catch (e: Exception) {
             Log.e("ErrorReportManager", "Failed to log crash", e)
@@ -119,16 +117,16 @@ class ErrorReportManager(private val context: Context) {
      */
     fun logNonFatalError(tag: String, message: String, exception: Exception? = null) {
         try {
-            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
+            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
             val errorEntry = StringBuilder()
             
             errorEntry.append("\n--- NON-FATAL ERROR at $timestamp ---\n")
-            errorEntry.append("Tag: $tag\n")
-            errorEntry.append("Message: $message\n")
+            errorEntry.append("Tag: ${CrashLogger.getInstance(context).sanitize(tag)}\n")
+            errorEntry.append("Message: ${CrashLogger.getInstance(context).sanitize(message)}\n")
             
             if (exception != null) {
                 errorEntry.append("Exception: ${exception.javaClass.simpleName}\n")
-                errorEntry.append(exception.stackTraceToString()).append("\n")
+                errorEntry.append(CrashLogger.getInstance(context).sanitize(exception.stackTraceToString())).append("\n")
             }
             
             crashLogFile.appendText(errorEntry.toString())
@@ -138,9 +136,6 @@ class ErrorReportManager(private val context: Context) {
         }
     }
 
-    /**
-     * Save user feedback with optional email for response
-     */
     fun saveFeedback(feedback: UserFeedback): Boolean {
         return try {
             val filename = "feedback_${System.currentTimeMillis()}.json"
@@ -155,13 +150,10 @@ class ErrorReportManager(private val context: Context) {
         }
     }
 
-    /**
-     * Collect all diagnostic data for reports
-     */
     fun collectDiagnostics(): String {
         return try {
             val diagnostics = mapOf(
-                "timestamp" to SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
+                "timestamp" to SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()),
                 "device" to "${Build.MANUFACTURER} ${Build.MODEL}",
                 "android_version" to Build.VERSION.RELEASE,
                 "api_level" to Build.VERSION.SDK_INT,
@@ -176,20 +168,18 @@ class ErrorReportManager(private val context: Context) {
         }
     }
 
-    /**
-     * Get all crash logs as a single string (for sharing)
-     */
     fun getCrashLogContent(): String {
         return try {
-            if (crashLogFile.exists()) crashLogFile.readText() else "No crash logs found."
+            if (crashLogFile.exists()) {
+                CrashLogger.getInstance(context).sanitize(crashLogFile.readText())
+            } else {
+                "No crash logs found."
+            }
         } catch (e: Exception) {
             "Error reading crash logs: ${e.message}"
         }
     }
 
-    /**
-     * Get all feedback as formatted text (for review)
-     */
     fun getAllFeedbackAsText(): String {
         return try {
             val feedbacks = feedbackDir.listFiles()?.mapNotNull { file ->
@@ -201,72 +191,70 @@ class ErrorReportManager(private val context: Context) {
                 }
             } ?: emptyList()
 
-            if (feedbacks.isEmpty()) return "No feedback submitted."
-
-            feedbacks.joinToString("\n${"─".repeat(60)}\n") { feedback ->
-                buildString {
-                    append("Date: ${feedback.timestamp}\n")
-                    append("Category: ${feedback.category}\n")
-                    append("Rating: ${feedback.rating}/5\n")
-                    append("Message:\n${feedback.message}\n")
-                    if (!feedback.email.isNullOrEmpty()) {
-                        append("User Email: ${feedback.email}\n")
-                    }
-                    if (!feedback.stackTrace.isNullOrEmpty()) {
-                        append("Stack Trace:\n${feedback.stackTrace}\n")
-                    }
-                }
+            if (feedbacks.isEmpty()) {
+                return "No feedback submitted."
             }
+
+            val sb = StringBuilder()
+            feedbacks.forEachIndexed { index, feedback ->
+                sb.append("FEEDBACK #${index + 1}\n")
+                sb.append("Timestamp: ${feedback.timestamp}\n")
+                sb.append("Category: ${feedback.category}\n")
+                sb.append("Rating: ${feedback.rating}/5\n")
+                sb.append("Message: ${CrashLogger.getInstance(context).sanitize(feedback.message)}\n")
+                if (!feedback.email.isNullOrBlank()) {
+                    sb.append("Email: [REDACTED_EMAIL]\n")
+                }
+                sb.append("─".repeat(50)).append("\n")
+            }
+            sb.toString()
         } catch (e: Exception) {
             "Error reading feedback: ${e.message}"
         }
     }
 
-    /**
-     * Clear all logs and feedback (privacy cleanup)
-     */
+    fun exportReportsAsText(): String {
+        val appLogs = CrashLogger.getInstance(context).getRawLogContent()
+        val crashLogs = getCrashLogContent()
+        val feedback = getAllFeedbackAsText()
+        val diagnostics = collectDiagnostics()
+
+        return buildString {
+            append("════════════════════════════════════════════════════════════════════════════════\n")
+            append("AMNISHIELD DIAGNOSTIC LOG EXPORT (100% On-Device, Sanitized)\n")
+            append("════════════════════════════════════════════════════════════════════════════════\n")
+            append("Diagnostics:\n$diagnostics\n\n")
+            append("════════════════════════════════════════════════════════════════════════════════\n")
+            append("APPLICATION DIAGNOSTIC LOGS\n")
+            append("════════════════════════════════════════════════════════════════════════════════\n")
+            append(if (appLogs.isNotBlank()) appLogs else "No application log entries recorded.\n")
+            append("\n\n════════════════════════════════════════════════════════════════════════════════\n")
+            append("CRASH LOGS\n")
+            append("════════════════════════════════════════════════════════════════════════════════\n")
+            append(crashLogs)
+            append("\n\n════════════════════════════════════════════════════════════════════════════════\n")
+            append("FEEDBACK SUBMISSIONS\n")
+            append("════════════════════════════════════════════════════════════════════════════════\n")
+            append(feedback)
+            append("\n")
+        }
+    }
+
     fun clearAllReports() {
         try {
-            errorDir.deleteRecursively()
-            errorDir.mkdirs()
-            feedbackDir.mkdirs()
-            Log.d("ErrorReportManager", "All error reports cleared")
+            if (crashLogFile.exists()) crashLogFile.delete()
+            feedbackDir.listFiles()?.forEach { it.delete() }
+            CrashLogger.getInstance(context).clearLogs()
+            Log.d("ErrorReportManager", "All reports and logs cleared")
         } catch (e: Exception) {
             Log.e("ErrorReportManager", "Failed to clear reports", e)
         }
     }
 
-    /**
-     * Export logs for email sharing
-     */
-    fun exportReportsAsText(): String {
-        return buildString {
-            append("AmnShield Error Report Export\n")
-            append("Generated: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}\n")
-            append("\n${"═".repeat(60)}\n\n")
-            
-            append("DIAGNOSTICS\n")
-            append("─".repeat(60)).append("\n")
-            append(collectDiagnostics()).append("\n\n")
-            
-            append("CRASH LOGS\n")
-            append("─".repeat(60)).append("\n")
-            append(getCrashLogContent()).append("\n\n")
-            
-            append("USER FEEDBACK\n")
-            append("─".repeat(60)).append("\n")
-            append(getAllFeedbackAsText()).append("\n")
-        }
-    }
-
-    /**
-     * Create a single shareable report file that can be attached to an email.
-     */
     fun createBundledReportFile(prefixText: String? = null): File? {
         return try {
-            val shareDir = File(context.cacheDir, "shared_reports").apply { mkdirs() }
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val reportFile = File(shareDir, "amnshield_error_report_$timestamp.txt")
+            val reportDir = File(context.cacheDir, "reports").apply { mkdirs() }
+            val reportFile = File(reportDir, "amni_shield_diagnostics_${System.currentTimeMillis()}.txt")
 
             val content = buildString {
                 if (!prefixText.isNullOrBlank()) {
@@ -290,7 +278,7 @@ class ErrorReportManager(private val context: Context) {
 
         fun getInstance(context: Context): ErrorReportManager {
             return instance ?: synchronized(this) {
-                instance ?: ErrorReportManager(context).also { instance = it }
+                instance ?: ErrorReportManager(context.applicationContext).also { instance = it }
             }
         }
     }
@@ -300,11 +288,11 @@ class ErrorReportManager(private val context: Context) {
  * Data class for user feedback
  */
 data class UserFeedback(
-    val timestamp: String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()),
-    val category: String = "General", // "Bug", "Crash", "Feature", "Performance", "General"
+    val timestamp: String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()),
+    val category: String = "General",
     val message: String,
-    val rating: Int = 3, // 1-5 stars
-    val email: String? = null, // Optional: user contact for follow-up
-    val stackTrace: String? = null, // Optional: auto-attached stack trace
-    val deviceInfo: String? = null // Optional: device/app version info
+    val rating: Int = 3,
+    val email: String? = null,
+    val stackTrace: String? = null,
+    val deviceInfo: String? = null
 )

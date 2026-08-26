@@ -63,6 +63,9 @@ class SetupPasswordModeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.btnBack.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
 
         binding.btnNextPass.setOnClickListener {
             // Validate password first
@@ -150,6 +153,7 @@ class SetupPasswordModeFragment : Fragment() {
             activity?.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)?.edit()
         editor?.apply() {
             putBoolean("is_anti_uninstall_on", true)
+            putBoolean("is_configuring_blocked", true)
             putString("password", hashed)
             putInt("mode", Constants.ANTI_UNINSTALL_PASSWORD_MODE)
             commit()

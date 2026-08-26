@@ -77,16 +77,13 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
 
     private val recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
 
-    private val keywordCooldowns = mutableMapOf<String, Long>()
-
-    fun applyCooldown(keyword: String, untilTimeMillis: Long) {
-        keywordCooldowns[keyword.trim().lowercase(Locale.ROOT)] = untilTimeMillis
+    override fun applyCooldown(key: String, expireTimestampMs: Long) {
+        super.applyCooldown(key.trim().lowercase(Locale.ROOT), expireTimestampMs)
         resetDetectionCache()
     }
 
-    fun isUnderCooldown(keyword: String): Boolean {
-        val until = keywordCooldowns[keyword.trim().lowercase(Locale.ROOT)] ?: return false
-        return System.currentTimeMillis() < until
+    override fun isUnderCooldown(key: String): Boolean {
+        return super.isUnderCooldown(key.trim().lowercase(Locale.ROOT))
     }
 
     private fun containsBlockedKeyword(text: CharSequence?): String? {
@@ -252,7 +249,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
         val urlBarInfo = packageName?.let { URL_BAR_ID_LIST[it] }
         if (urlBarInfo == null) {
             return if (detectedAdultKeyword != null) {
-                KeywordBlockerResult(isHomePressRequested = true, resultDetectWord = detectedAdultKeyword)
+                KeywordBlockerResult(isHomePressRequested = false, resultDetectWord = detectedAdultKeyword)
             } else {
                 KeywordBlockerResult()
             }
@@ -455,9 +452,149 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
 
             override fun onCancelled(gestureDescription: GestureDescription?) {
                 super.onCancelled(gestureDescription)
-                service.performGlobalAction(GLOBAL_ACTION_HOME)
             }
         }, null)
+    }
+
+    fun clearOffendingText(rootNode: AccessibilityNodeInfo?, event: AccessibilityEvent?): Boolean {
+        var cleared = false
+
+        // 1. Try event.source if it is editable or an input field
+        val sourceNode = try { event?.source } catch (_: Exception) { null }
+        if (sourceNode != null) {
+            try {
+                if (isEditableOrInputField(sourceNode)) {
+                    cleared = sourceNode.performAction(
+                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+                        Bundle().apply {
+                            putCharSequence(
+                                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                                ""
+                            )
+                        }
+                    )
+                }
+            } catch (_: Exception) {
+            } finally {
+                try { sourceNode.recycle() } catch (_: Exception) {}
+            }
+        }
+
+        if (cleared) return true
+
+        // 2. Try currently focused input node
+        rootNode ?: return false
+        val focusedNode = try { rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) } catch (_: Exception) { null }
+        if (focusedNode != null) {
+            try {
+                if (isEditableOrInputField(focusedNode)) {
+                    cleared = focusedNode.performAction(
+                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+                        Bundle().apply {
+                            putCharSequence(
+                                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                                ""
+                            )
+                        }
+                    )
+                }
+            } catch (_: Exception) {
+            } finally {
+                try { focusedNode.recycle() } catch (_: Exception) {}
+            }
+        }
+
+        if (cleared) return true
+
+        // 3. Search editable nodes in the tree containing the blocked keyword or search fields
+        val packageName = event?.packageName?.toString() ?: rootNode.packageName?.toString()
+        val editableNodes = findEditableNodes(rootNode, packageName)
+        try {
+            for (node in editableNodes) {
+                val text = node.text?.toString()
+                if (!text.isNullOrBlank() && containsBlockedKeyword(text) != null) {
+                    val didClear = node.performAction(
+                        AccessibilityNodeInfo.ACTION_SET_TEXT,
+                        Bundle().apply {
+                            putCharSequence(
+                                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                                ""
+                            )
+                        }
+                    )
+                    if (didClear) {
+                        cleared = true
+                        break
+                    }
+                }
+            }
+            // Fallback: if not cleared yet and an editable field is present with non-empty text
+            if (!cleared && editableNodes.isNotEmpty()) {
+                for (node in editableNodes) {
+                    val text = node.text?.toString()
+                    if (!text.isNullOrBlank()) {
+                        val didClear = node.performAction(
+                            AccessibilityNodeInfo.ACTION_SET_TEXT,
+                            Bundle().apply {
+                                putCharSequence(
+                                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                                    ""
+                                )
+                            }
+                        )
+                        if (didClear) {
+                            cleared = true
+                            break
+                        }
+                    }
+                }
+            }
+        } finally {
+            for (node in editableNodes) {
+                try { node.recycle() } catch (_: Exception) {}
+            }
+        }
+
+        return cleared
+    }
+
+    private fun isEditableOrInputField(node: AccessibilityNodeInfo): Boolean {
+        val className = node.className?.toString() ?: ""
+        return node.isEditable ||
+                className == "android.widget.EditText" ||
+                className == "android.widget.AutoCompleteTextView" ||
+                className == "android.widget.SearchView" ||
+                className.contains("EditText", ignoreCase = true)
+    }
+
+    private fun findEditableNodes(
+        rootNode: AccessibilityNodeInfo,
+        packageName: String?
+    ): List<AccessibilityNodeInfo> {
+        val results = mutableListOf<AccessibilityNodeInfo>()
+        val nodesToVisit = ArrayDeque<AccessibilityNodeInfo>()
+        try {
+            nodesToVisit.add(AccessibilityNodeInfo.obtain(rootNode))
+            while (nodesToVisit.isNotEmpty() && results.size < 10) {
+                val current = nodesToVisit.removeFirst()
+                if (isEditableOrInputField(current)) {
+                    results.add(AccessibilityNodeInfo.obtain(current))
+                }
+                for (i in 0 until current.childCount) {
+                    val child = current.getChild(i)
+                    if (child != null) {
+                        nodesToVisit.addLast(child)
+                    }
+                }
+                current.recycle()
+            }
+        } catch (_: Exception) {
+        } finally {
+            while (nodesToVisit.isNotEmpty()) {
+                try { nodesToVisit.removeFirst().recycle() } catch (_: Exception) {}
+            }
+        }
+        return results
     }
 
     data class BrowserUrlBarInfo(

@@ -474,6 +474,74 @@ class SavedPreferencesLoader(val context: Context) {
         return gson.fromJson(json, type)
     }
 
+    /**
+     * Emergency / Always Whitelisted apps that are NEVER blocked under any focus session.
+     */
+    fun getAlwaysWhitelistedApps(): List<String> {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        val json = sharedPreferences.getString("always_whitelisted_apps", null)
+        if (json.isNullOrEmpty()) return emptyList()
+        return try {
+            val type = object : TypeToken<List<String>>() {}.type
+            Gson().fromJson(json, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun saveAlwaysWhitelistedApps(apps: List<String>) {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        sharedPreferences.edit()
+            .putString("always_whitelisted_apps", Gson().toJson(apps))
+            .apply()
+    }
+
+    /**
+     * Focus Mode Strictness:
+     * 0 = Standard (Mindful Pause, allows early stop / warning countdown)
+     * 1 = Deep Focus (Strict Lock, cannot stop early / zero bypass)
+     */
+    fun getFocusModeStrictness(): Int {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        return sharedPreferences.getInt("focus_strictness", 0)
+    }
+
+    fun setFocusModeStrictness(strictness: Int) {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putInt("focus_strictness", strictness).apply()
+    }
+
+    /**
+     * Configured duration presets for Home Screen Widget and Quick Focus sheet (in minutes).
+     * Defaults to (15, 30, 60).
+     */
+    fun getQuickFocusDurationPresets(): Triple<Int, Int, Int> {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        val p1 = sharedPreferences.getInt("quick_focus_preset_1", 15)
+        val p2 = sharedPreferences.getInt("quick_focus_preset_2", 30)
+        val p3 = sharedPreferences.getInt("quick_focus_preset_3", 60)
+        return Triple(p1, p2, p3)
+    }
+
+    fun saveQuickFocusDurationPresets(p1: Int, p2: Int, p3: Int) {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        sharedPreferences.edit()
+            .putInt("quick_focus_preset_1", p1)
+            .putInt("quick_focus_preset_2", p2)
+            .putInt("quick_focus_preset_3", p3)
+            .apply()
+    }
+
+    fun isFocusModeEarlyStopAllowed(): Boolean {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        return sharedPreferences.getBoolean("allow_early_stop", true)
+    }
+
+    fun setFocusModeEarlyStopAllowed(allowed: Boolean) {
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putBoolean("allow_early_stop", allowed).apply()
+    }
+
     fun saveKeywordBlockerIgnoredApps(appList: List<String>) {
         val sharedPreferences =
             context.getSharedPreferences("Keyword_blocker_ignored_apps", Context.MODE_PRIVATE)
@@ -701,7 +769,7 @@ class SavedPreferencesLoader(val context: Context) {
     fun getDisplayName(): String {
         return getPremiumPrefs().getString("display_name", null)
             ?: getUserEmail()?.substringBefore("@")
-            ?: "AmnShield User"
+            ?: "AmniShield User"
     }
 
     fun getLastPremiumReminder(): Long {
@@ -809,6 +877,17 @@ class SavedPreferencesLoader(val context: Context) {
             "com.twitter.android",
             "com.snapchat.android"
         )
+
+        // PIN Security, Cooldown & Reset Engine
+        const val MIN_COOLDOWN_MINUTES = 5
+        const val DEFAULT_COOLDOWN_MINUTES = 5
+        const val PREF_PIN_RESET_COOLDOWN_MINS = "pin_reset_cooldown_mins"
+        const val PREF_EMERGENCY_ACCESS_COOLDOWN_MINS = "emergency_access_cooldown_mins"
+        const val PREF_PIN_RESET_REQUESTED_TIMESTAMP = "pin_reset_requested_timestamp"
+        const val PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP = "emergency_override_requested_timestamp"
+        const val PREF_EMERGENCY_OVERRIDE_ACTIVE = "is_emergency_override_active"
+        const val PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP = "emergency_window_expiry_timestamp"
+        const val EMERGENCY_WINDOW_DURATION_MS = 10 * 60 * 1000L // 10-minute temporary unlock window
     }
 
     fun isUsageTrackerFeatureEnabled(default: Boolean = true): Boolean {
@@ -1210,7 +1289,8 @@ class SavedPreferencesLoader(val context: Context) {
         ReelsStatsManager.getInstance(context).recordReelWatchTime(packageName, seconds)
     }
 
-    // ==================== PIN Security & App Lock ====================
+    // ==================== PIN Security, Cooldown & Reset Engine ====================
+
     fun isPinSecurityEnabled(): Boolean {
         return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .getBoolean("pin_protection_enabled", false)
@@ -1252,6 +1332,175 @@ class SavedPreferencesLoader(val context: Context) {
 
         context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .edit().putBoolean("pin_bypass_lock", enabled).apply()
+
+        val intent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+            .setPackage(context.packageName)
+        context.sendBroadcast(intent)
+    }
+
+    // --- PIN Reset Cooldown Settings & State (Hard minimum 5 minutes) ---
+
+    fun getPinResetCooldownMinutes(): Int {
+        val mins = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getInt(PREF_PIN_RESET_COOLDOWN_MINS, DEFAULT_COOLDOWN_MINUTES)
+        return mins.coerceAtLeast(MIN_COOLDOWN_MINUTES)
+    }
+
+    fun setPinResetCooldownMinutes(minutes: Int) {
+        val safeMinutes = minutes.coerceAtLeast(MIN_COOLDOWN_MINUTES)
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().putInt(PREF_PIN_RESET_COOLDOWN_MINS, safeMinutes).apply()
+    }
+
+    fun getPinResetRequestedTimestamp(): Long {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getLong(PREF_PIN_RESET_REQUESTED_TIMESTAMP, 0L)
+    }
+
+    fun setPinResetRequestedTimestamp(timestamp: Long) {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().putLong(PREF_PIN_RESET_REQUESTED_TIMESTAMP, timestamp).apply()
+    }
+
+    fun requestPinReset() {
+        setPinResetRequestedTimestamp(System.currentTimeMillis())
+    }
+
+    fun clearPinResetRequest() {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().remove(PREF_PIN_RESET_REQUESTED_TIMESTAMP).apply()
+    }
+
+    fun isPinResetCooldownActive(): Boolean {
+        val requestedAt = getPinResetRequestedTimestamp()
+        if (requestedAt <= 0L) return false
+        val cooldownMs = getPinResetCooldownMinutes() * 60 * 1000L
+        return System.currentTimeMillis() < (requestedAt + cooldownMs)
+    }
+
+    fun getPinResetRemainingMillis(): Long {
+        val requestedAt = getPinResetRequestedTimestamp()
+        if (requestedAt <= 0L) return 0L
+        val cooldownMs = getPinResetCooldownMinutes() * 60 * 1000L
+        val remaining = (requestedAt + cooldownMs) - System.currentTimeMillis()
+        return remaining.coerceAtLeast(0L)
+    }
+
+    fun isPinResetReady(): Boolean {
+        val requestedAt = getPinResetRequestedTimestamp()
+        return requestedAt > 0L && getPinResetRemainingMillis() <= 0L
+    }
+
+    // --- Emergency Access Cooldown Settings & State (Hard minimum 5 minutes) ---
+
+    fun getEmergencyAccessCooldownMinutes(): Int {
+        val mins = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getInt(PREF_EMERGENCY_ACCESS_COOLDOWN_MINS, DEFAULT_COOLDOWN_MINUTES)
+        return mins.coerceAtLeast(MIN_COOLDOWN_MINUTES)
+    }
+
+    fun setEmergencyAccessCooldownMinutes(minutes: Int) {
+        val safeMinutes = minutes.coerceAtLeast(MIN_COOLDOWN_MINUTES)
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().putInt(PREF_EMERGENCY_ACCESS_COOLDOWN_MINS, safeMinutes).apply()
+    }
+
+    fun getEmergencyOverrideRequestedTimestamp(): Long {
+        return context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .getLong(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP, 0L)
+    }
+
+    fun setEmergencyOverrideRequestedTimestamp(timestamp: Long) {
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit().putLong(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP, timestamp).apply()
+    }
+
+    fun requestEmergencyOverride() {
+        setEmergencyOverrideRequestedTimestamp(System.currentTimeMillis())
+    }
+
+    fun clearEmergencyOverrideRequest() {
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit().remove(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP).apply()
+    }
+
+    fun isEmergencyOverrideCooldownActive(): Boolean {
+        val requestedAt = getEmergencyOverrideRequestedTimestamp()
+        if (requestedAt <= 0L) return false
+        val cooldownMs = getEmergencyAccessCooldownMinutes() * 60 * 1000L
+        return System.currentTimeMillis() < (requestedAt + cooldownMs)
+    }
+
+    fun getEmergencyOverrideRemainingMillis(): Long {
+        val requestedAt = getEmergencyOverrideRequestedTimestamp()
+        if (requestedAt <= 0L) return 0L
+        val cooldownMs = getEmergencyAccessCooldownMinutes() * 60 * 1000L
+        val remaining = (requestedAt + cooldownMs) - System.currentTimeMillis()
+        return remaining.coerceAtLeast(0L)
+    }
+
+    fun isEmergencyOverrideReady(): Boolean {
+        val requestedAt = getEmergencyOverrideRequestedTimestamp()
+        return requestedAt > 0L && getEmergencyOverrideRemainingMillis() <= 0L
+    }
+
+    fun isEmergencyOverrideActive(): Boolean {
+        return context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .getBoolean(PREF_EMERGENCY_OVERRIDE_ACTIVE, false)
+    }
+
+    fun setEmergencyOverrideActive(active: Boolean) {
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit().putBoolean(PREF_EMERGENCY_OVERRIDE_ACTIVE, active).apply()
+    }
+
+    fun getEmergencyWindowExpiryTimestamp(): Long {
+        return context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .getLong(PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP, 0L)
+    }
+
+    fun setEmergencyWindowExpiryTimestamp(timestamp: Long) {
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit().putLong(PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP, timestamp).apply()
+    }
+
+    /**
+     * Called when the emergency countdown finishes.
+     * Grants a 10-minute temporary unlock window and records PREF_EMERGENCY_OVERRIDE_ACTIVE.
+     */
+    fun activateEmergencyWindow() {
+        val expiry = System.currentTimeMillis() + EMERGENCY_WINDOW_DURATION_MS
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_EMERGENCY_OVERRIDE_ACTIVE, true)
+            .putLong(PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP, expiry)
+            .remove(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP)
+            .apply()
+
+        val intent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+            .setPackage(context.packageName)
+        context.sendBroadcast(intent)
+    }
+
+    fun isEmergencyWindowActive(): Boolean {
+        if (!isEmergencyOverrideActive()) return false
+        val expiry = getEmergencyWindowExpiryTimestamp()
+        if (expiry <= 0L) return false
+        if (System.currentTimeMillis() >= expiry) {
+            // Expired, auto-clear
+            clearEmergencyOverride()
+            return false
+        }
+        return true
+    }
+
+    fun clearEmergencyOverride() {
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREF_EMERGENCY_OVERRIDE_ACTIVE)
+            .remove(PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP)
+            .remove(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP)
+            .apply()
 
         val intent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
             .setPackage(context.packageName)
