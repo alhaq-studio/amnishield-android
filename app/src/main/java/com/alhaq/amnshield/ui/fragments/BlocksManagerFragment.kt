@@ -56,6 +56,9 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.alhaq.amnshield.ui.theme.AmnShieldTheme
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
@@ -111,6 +114,18 @@ class BlocksManagerFragment : Fragment() {
                 var initialType by remember { mutableStateOf(prefillType ?: "Block Schedule") }
                 var editingRule by remember { mutableStateOf<com.alhaq.amnshield.ui.state.ScheduleRule?>(null) }
                 var showSelectBlockerDialog by remember { mutableStateOf(false) }
+                var pendingPinProtectedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+                val checkPinAndProceed: (() -> Unit) -> Unit = { action ->
+                    val pinEnabled = savedPreferencesLoader.isPinSecurityEnabled()
+                    val pinCode = savedPreferencesLoader.getPinCode()
+                    val needsPin = pinEnabled && pinCode.isNotEmpty() && !com.alhaq.amnshield.AmnShield.isBypassSessionActive()
+                    if (needsPin) {
+                        pendingPinProtectedAction = action
+                    } else {
+                        action()
+                    }
+                }
 
                 LaunchedEffect(currentScreen) {
                     val isManage = currentScreen == "manage"
@@ -137,30 +152,65 @@ class BlocksManagerFragment : Fragment() {
                 }
 
                 AmnShieldTheme(appTheme = activeTheme) {
+                    if (pendingPinProtectedAction != null) {
+                        val pinCode = remember { savedPreferencesLoader.getPinCode() }
+                        com.alhaq.amnshield.ui.components.PinPromptDialog(
+                            correctPin = pinCode,
+                            title = getString(R.string.pin_verification_required_title),
+                            subtitle = getString(R.string.pin_verification_required_desc),
+                            allowForgotPin = true,
+                            onDismiss = { pendingPinProtectedAction = null },
+                            onPinSuccess = {
+                                com.alhaq.amnshield.AmnShield.unlockBypassSession()
+                                val actionToRun = pendingPinProtectedAction
+                                pendingPinProtectedAction = null
+                                actionToRun?.invoke()
+                            },
+                            onPinResetCompleted = {
+                                com.alhaq.amnshield.AmnShield.unlockBypassSession()
+                                val actionToRun = pendingPinProtectedAction
+                                pendingPinProtectedAction = null
+                                actionToRun?.invoke()
+                            }
+                        )
+                    }
+
                     when (currentScreen) {
                         "manage" -> {
                             BlocksManagerScreen(
                                 state = state,
                                 viewModel = viewModel,
                                 onNavigateToCreateRule = { type ->
-                                    editingRule = null
-                                    initialType = type
-                                    showSelectBlockerDialog = true
-                                },
-                                onEditRule = { rule ->
-                                    editingRule = rule
-                                    initialType = rule.restrictionType
-                                    val firstBlocker = rule.selectedBlockers.firstOrNull() ?: rule.targetBlockerType
-                                    currentScreen = when (firstBlocker) {
-                                        "Keyword Blocker" -> "create_keyword"
-                                        "Website Blocker" -> "create_website"
-                                        "Reels Blocker" -> "create_reels"
-                                        "Focus Mode" -> "create_focus"
-                                        else -> "create_app"
+                                    checkPinAndProceed {
+                                        editingRule = null
+                                        initialType = type
+                                        showSelectBlockerDialog = true
                                     }
                                 },
-                                onToggleRule = { id -> toggleScheduleRuleActive(id) },
-                                onDeleteRule = { id -> deleteScheduleRule(id) }
+                                onEditRule = { rule ->
+                                    checkPinAndProceed {
+                                        editingRule = rule
+                                        initialType = rule.restrictionType
+                                        val firstBlocker = rule.selectedBlockers.firstOrNull() ?: rule.targetBlockerType
+                                        currentScreen = when (firstBlocker) {
+                                            "Keyword Blocker" -> "create_keyword"
+                                            "Website Blocker" -> "create_website"
+                                            "Reels Blocker" -> "create_reels"
+                                            "Focus Mode" -> "create_focus"
+                                            else -> "create_app"
+                                        }
+                                    }
+                                },
+                                onToggleRule = { id ->
+                                    checkPinAndProceed {
+                                        toggleScheduleRuleActive(id)
+                                    }
+                                },
+                                onDeleteRule = { id ->
+                                    checkPinAndProceed {
+                                        deleteScheduleRule(id)
+                                    }
+                                }
                             )
 
                             if (showSelectBlockerDialog) {
@@ -821,7 +871,7 @@ class BlocksManagerFragment : Fragment() {
                         endTime = "23:59",
                         days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
                         limitValue = limit.maxLaunches,
-                        isActive = true,
+                        isActive = limit.isEnabled,
                         targetBlockerType = "App Blocker",
                         selectedApps = listOf(limit.packageName),
                         selectedBlockers = listOf("App Blocker"),
@@ -1041,7 +1091,29 @@ class BlocksManagerFragment : Fragment() {
         viewModel.toggleScheduleRuleActive(id)
         
         if (id.startsWith("limit::")) {
-            // Launch Limits don't have built-in switch toggles in legacy backend, they are deleted
+            val pkg = id.removePrefix("limit::")
+            val limitRule = savedPreferencesLoader.getAppLaunchLimitRule(pkg)
+            if (limitRule != null) {
+                val newEnabled = !limitRule.isEnabled
+                savedPreferencesLoader.addAppLaunchLimitRule(limitRule.copy(isEnabled = newEnabled))
+            }
+        } else if (id == "app_blocker_direct_default") {
+            val currentRule = viewModel.state.value.scheduleRules.firstOrNull { it.id == id }
+            val isAppBlockerOn = savedPreferencesLoader.isAppBlockerFeatureEnabled()
+            val targetState = !(currentRule?.isActive ?: isAppBlockerOn)
+            savedPreferencesLoader.setAppBlockerFeatureEnabled(targetState, updateManual = true)
+
+            val appRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+            var modified = false
+            appRules.forEachIndexed { idx, item ->
+                if (item.groupId == id || item.id == id) {
+                    appRules[idx] = item.copy(isEnabled = targetState)
+                    modified = true
+                }
+            }
+            if (modified) {
+                savedPreferencesLoader.saveAppBlockerScheduleRules(appRules)
+            }
         } else {
             val appRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
             var appModified = false
@@ -1121,9 +1193,25 @@ class BlocksManagerFragment : Fragment() {
                 currentBlocked.remove(pkg)
                 savedPreferencesLoader.saveBlockedApps(currentBlocked)
             }
+        } else if (id == "app_blocker_direct_default") {
+            val currentRule = viewModel.state.value.scheduleRules.firstOrNull { it.id == id }
+            val appsToRemove = currentRule?.selectedApps ?: savedPreferencesLoader.loadBlockedApps()
+            val currentBlocked = savedPreferencesLoader.loadBlockedApps().toMutableSet()
+            currentBlocked.removeAll(appsToRemove.toSet())
+            savedPreferencesLoader.saveBlockedApps(currentBlocked)
+            savedPreferencesLoader.removeAppBlockerScheduleGroup(id)
+            savedPreferencesLoader.removeAppBlockerScheduleRule(id)
+
+            appsToRemove.forEach { pkg ->
+                savedPreferencesLoader.removeAppLaunchLimitRule(pkg)
+            }
         } else {
+            val currentRule = viewModel.state.value.scheduleRules.firstOrNull { it.id == id }
+            val ruleApps = currentRule?.selectedApps ?: emptyList()
             val appSchedules = savedPreferencesLoader.loadAppBlockerScheduleRules()
-            val associatedApps = appSchedules.filter { (it.groupId ?: it.id) == id }.map { it.packageName }
+            val matchingRules = appSchedules.filter { (it.groupId ?: it.id) == id }
+            val associatedApps = (matchingRules.map { it.packageName } + ruleApps).toSet()
+
             associatedApps.forEach { pkg ->
                 savedPreferencesLoader.removeAppLaunchLimitRule(pkg)
             }
@@ -1145,8 +1233,15 @@ class BlocksManagerFragment : Fragment() {
                 savedPreferencesLoader.setReelBlockerDailyLimit(0)
             }
             if (id == "focus_mode_default" || associatedApps.contains("FOCUS_MODE") || associatedApps.contains("focus_mode")) {
-                val currentData = savedPreferencesLoader.getFocusModeData()
-                savedPreferencesLoader.saveFocusModeData(currentData.copy(isTurnedOn = false))
+                savedPreferencesLoader.saveFocusModeData(
+                    com.alhaq.amnshield.blockers.FocusModeBlocker.FocusModeData(
+                        isTurnedOn = false,
+                        endTime = 0,
+                        modeType = 0,
+                        selectedApps = hashSetOf()
+                    )
+                )
+                savedPreferencesLoader.saveFocusModeSelectedApps(emptyList())
                 savedPreferencesLoader.setFocusModeFeatureEnabled(false, updateManual = true)
             }
 

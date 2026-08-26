@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="AmnShield Pro &amp; Supporter"
+                android:text="AmniShield Pro &amp; Supporter"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -107,7 +107,7 @@
                             style="@style/TextAppearance.Material3.TitleMedium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Included in AmnShield Pro:"
+                            android:text="Included in AmniShield Pro:"
                             android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
 
@@ -402,6 +402,17 @@
                     android:gravity="center"
                     android:text="@string/premium_disclaimer"
                     android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <!-- Finish Onboarding Action Button (Visible during onboarding) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFinishOnboarding"
+                    style="@style/Widget.Material3.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Continue to AmniShield"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
         </LinearLayout>

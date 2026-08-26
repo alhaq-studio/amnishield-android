@@ -63,10 +63,19 @@ class SupabaseRest(
             .build()
         client.newCall(req).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
-            val obj = if (text.isBlank()) JsonObject() else gson.fromJson(text, JsonObject::class.java)
+            val obj = if (text.isBlank()) JsonObject() else {
+                try {
+                    gson.fromJson(text, JsonObject::class.java)
+                } catch (_: Exception) {
+                    JsonObject()
+                }
+            }
             if (!resp.isSuccessful) {
-                val msg = obj.get("error_description")?.asString ?: obj.get("msg")?.asString
-                ?: obj.get("error")?.asString ?: "request failed (${resp.code})"
+                val msg = obj.get("error_description")?.takeIf { !it.isJsonNull }?.asString
+                    ?: obj.get("msg")?.takeIf { !it.isJsonNull }?.asString
+                    ?: obj.get("message")?.takeIf { !it.isJsonNull }?.asString
+                    ?: obj.get("error")?.takeIf { !it.isJsonNull }?.asString
+                    ?: "Request failed (${resp.code})"
                 throw AuthHttpException(resp.code, msg)
             }
             return obj
@@ -92,6 +101,14 @@ class SupabaseRest(
             ?: throw IOException("sign in did not return a session")
     }
 
+    fun signInWithGoogleIdToken(idToken: String): Session? {
+        val body = JsonObject().apply {
+            addProperty("provider", "google")
+            addProperty("id_token", idToken.trim())
+        }
+        return parseSession(postAuth("token?grant_type=id_token", body))
+    }
+
     fun refresh(refreshToken: String): Session {
         val body = JsonObject().apply { addProperty("refresh_token", refreshToken) }
         return parseSession(postAuth("token?grant_type=refresh_token", body))
@@ -99,8 +116,9 @@ class SupabaseRest(
     }
 
     fun sendEmailOtp(email: String, emailRedirectTo: String = "https://app.amnishield.com/activate") {
+        val trimmedEmail = email.trim().lowercase()
         val body = JsonObject().apply {
-            addProperty("email", email.trim().lowercase())
+            addProperty("email", trimmedEmail)
             addProperty("create_user", true)
             val options = JsonObject().apply {
                 addProperty("email_redirect_to", emailRedirectTo)
@@ -112,26 +130,39 @@ class SupabaseRest(
     }
 
     fun verifyOtp(email: String, token: String, type: String = "email"): Session {
-        val trimmedToken = token.trim()
-        val trimmedEmail = email.trim().lowercase()
+        val cleanToken = token.replace("\\s+".toRegex(), "").trim()
+        val cleanEmail = email.trim().lowercase()
 
-        val typesToTry = if (type == "email") listOf("email", "signup", "magiclink", "recovery") else listOf(type, "email", "signup")
-        var lastError: Exception? = null
-
-        for (tryType in typesToTry) {
-            try {
-                val body = JsonObject().apply {
-                    addProperty("email", trimmedEmail)
-                    addProperty("token", trimmedToken)
-                    addProperty("type", tryType)
-                }
-                val session = parseSession(postAuth("verify", body))
-                if (session != null) return session
-            } catch (e: Exception) {
-                lastError = e
+        // 1. Primary verification attempt with requested type (standard Supabase GoTrue OTP)
+        try {
+            val body = JsonObject().apply {
+                addProperty("email", cleanEmail)
+                addProperty("token", cleanToken)
+                addProperty("type", type)
             }
+            val session = parseSession(postAuth("verify", body))
+            if (session != null) return session
+        } catch (e: Exception) {
+            // If primary type failed and was "email", try fallback to "signup" or "magiclink"
+            if (type == "email") {
+                val fallbacks = listOf("signup", "magiclink", "recovery")
+                for (fb in fallbacks) {
+                    try {
+                        val body = JsonObject().apply {
+                            addProperty("email", cleanEmail)
+                            addProperty("token", cleanToken)
+                            addProperty("type", fb)
+                        }
+                        val session = parseSession(postAuth("verify", body))
+                        if (session != null) return session
+                    } catch (_: Exception) {
+                        // ignore and try next fallback
+                    }
+                }
+            }
+            throw e
         }
-        throw lastError ?: IOException("Invalid or expired verification code.")
+        throw IOException("Invalid or expired verification code.")
     }
 
     fun fetchProfile(session: Session): UserProfile? {
@@ -146,6 +177,32 @@ class SupabaseRest(
             role = o.get("role")?.takeIf { !it.isJsonNull }?.asString ?: "user",
             licenseKey = o.get("license_key")?.takeIf { !it.isJsonNull }?.asString,
         )
+    }
+
+    fun fetchProfileByEmail(email: String, accessToken: String? = null): UserProfile? {
+        val cleanEmail = email.trim().lowercase()
+        val reqBuilder = Request.Builder()
+            .url("$baseUrl/rest/v1/profiles?email=eq.$cleanEmail&select=id,email,is_premium,role,license_key")
+            .header("apikey", anonKey)
+            .header("Accept", "application/json")
+        if (accessToken != null) {
+            reqBuilder.header("Authorization", "Bearer $accessToken")
+        }
+        val req = reqBuilder.build()
+        client.newCall(req).execute().use { resp ->
+            val text = resp.body?.string().orEmpty()
+            if (!resp.isSuccessful || text.isBlank()) return null
+            val arr = gson.fromJson(text, com.google.gson.JsonArray::class.java)
+            if (arr == null || arr.size() == 0) return null
+            val o = arr[0].asJsonObject
+            return UserProfile(
+                id = o.get("id")?.takeIf { !it.isJsonNull }?.asString.orEmpty(),
+                email = o.get("email")?.takeIf { !it.isJsonNull }?.asString ?: cleanEmail,
+                isPremium = o.get("is_premium")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
+                role = o.get("role")?.takeIf { !it.isJsonNull }?.asString ?: "user",
+                licenseKey = o.get("license_key")?.takeIf { !it.isJsonNull }?.asString,
+            )
+        }
     }
 
     fun resend(email: String, type: String) {

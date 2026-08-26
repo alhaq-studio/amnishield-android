@@ -20,6 +20,8 @@
 # -----------------------------------------------------------------------------
 -keep class com.alhaq.amnshield.data.** { *; }
 -keepclassmembers class com.alhaq.amnshield.data.** { *; }
+-keep class com.alhaq.amnshield.data.sync.** { *; }
+-keepclassmembers class com.alhaq.amnshield.data.sync.** { *; }
 
 -keep class com.alhaq.amnshield.ui.state.** { *; }
 -keepclassmembers class com.alhaq.amnshield.ui.state.** { *; }

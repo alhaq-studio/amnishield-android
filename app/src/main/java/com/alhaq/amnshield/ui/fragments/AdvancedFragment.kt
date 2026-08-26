@@ -59,7 +59,15 @@ class AdvancedFragment : BaseFeatureFragment() {
                         onNavigateToPremium = { openFeatureConfig("premium_features", requiresPremium = false) },
                         onTogglePinSecurity = { enabled, pin -> togglePinSecurity(enabled, pin) },
                         onToggleAppLock = { enabled -> toggleAppLock(enabled) },
-                        onToggleBypassPinLock = { enabled -> toggleBypassPinLock(enabled) }
+                        onToggleBypassPinLock = { enabled -> toggleBypassPinLock(enabled) },
+                        onUpdatePinResetCooldown = { mins ->
+                            loader.setPinResetCooldownMinutes(mins)
+                            viewModel.updatePinResetCooldown(mins)
+                        },
+                        onUpdateEmergencyCooldown = { mins ->
+                            loader.setEmergencyAccessCooldownMinutes(mins)
+                            viewModel.updateEmergencyAccessCooldown(mins)
+                        }
                     )
                 }
             }
@@ -106,6 +114,12 @@ class AdvancedFragment : BaseFeatureFragment() {
         val pinCode = loader.getPinCode()
         val appLockActive = loader.isAppLockEnabled()
         val bypassPinLockActive = loader.isBypassPinLockEnabled()
+        val pinResetCooldown = loader.getPinResetCooldownMinutes()
+        val emergencyCooldown = loader.getEmergencyAccessCooldownMinutes()
+        val pinResetTimestamp = loader.getPinResetRequestedTimestamp()
+        val emergencyOverrideTimestamp = loader.getEmergencyOverrideRequestedTimestamp()
+        val emergencyOverrideActive = loader.isEmergencyOverrideActive()
+        val emergencyWindowActive = loader.isEmergencyWindowActive()
 
         viewModel.loadState(
             AmnShieldState(
@@ -125,6 +139,12 @@ class AdvancedFragment : BaseFeatureFragment() {
                 profilePin = pinCode,
                 isAppLockEnabled = appLockActive,
                 isBypassPinLockEnabled = bypassPinLockActive,
+                pinResetCooldownMinutes = pinResetCooldown,
+                emergencyAccessCooldownMinutes = emergencyCooldown,
+                pinResetRequestedTimestamp = pinResetTimestamp,
+                emergencyOverrideRequestedTimestamp = emergencyOverrideTimestamp,
+                isEmergencyOverrideActive = emergencyOverrideActive,
+                isEmergencyWindowActive = emergencyWindowActive,
                 isAdvancedMode = loader.getEnforcementMode() == "ADVANCED"
             )
         )
@@ -170,6 +190,9 @@ class AdvancedFragment : BaseFeatureFragment() {
         if (!enabled) {
             loader.setAppLockEnabled(false)
             loader.setBypassPinLockEnabled(false)
+            com.alhaq.amnshield.AmnShield.lockSession()
+        } else {
+            com.alhaq.amnshield.AmnShield.unlockBypassSession()
         }
         viewModel.updateProfile(
             name = viewModel.state.value.userName,

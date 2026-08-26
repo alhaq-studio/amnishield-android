@@ -67,6 +67,7 @@ class FragmentActivity : AppCompatActivity() {
         if (featureType != null) {
             fragment = when (featureType) {
                 "focus_mode" -> com.alhaq.amnshield.ui.fragments.FocusFragment()
+                "focus_mode_config" -> com.alhaq.amnshield.ui.fragments.features.FocusModeConfigFragment()
                 "app_blocker" -> com.alhaq.amnshield.ui.fragments.features.AppBlockerConfigFragment()
                 "app_blocker_schedules" -> com.alhaq.amnshield.ui.fragments.BlocksManagerFragment().apply {
                     arguments = Bundle().apply {
@@ -85,6 +86,7 @@ class FragmentActivity : AppCompatActivity() {
                 "setup_timed_mode" -> com.alhaq.amnshield.ui.fragments.anti_uninstall.SetupTimedModeFragment()
                 "additional_features" -> PremiumFeaturesFragment()
                 "premium_features" -> PremiumFeaturesFragment()
+                "diagnostics", "system_logs", "crash_logs" -> com.alhaq.amnshield.ui.fragments.DiagnosticsFragment()
                 else -> null
             }
         }
@@ -92,6 +94,9 @@ class FragmentActivity : AppCompatActivity() {
         // Fallback to old fragment navigation
         if (fragment == null && intent.getStringExtra("fragment") != null) {
             when (intent.getStringExtra("fragment")) {
+                com.alhaq.amnshield.ui.fragments.features.FocusModeConfigFragment.FRAGMENT_ID -> {
+                    fragment = com.alhaq.amnshield.ui.fragments.features.FocusModeConfigFragment()
+                }
                 ChooseModeFragment.FRAGMENT_ID -> {
                     fragment = ChooseModeFragment()
                 }
@@ -141,12 +146,9 @@ class FragmentActivity : AppCompatActivity() {
 
             val loader = SavedPreferencesLoader(this)
             val pinEnabled = loader.isPinSecurityEnabled()
-            val bypassEnabled = loader.isBypassPinLockEnabled()
-            val antiUninstallPrefs = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
-            val isAntiUninstallOn = antiUninstallPrefs.getBoolean("is_anti_uninstall_on", false)
             val pinCode = loader.getPinCode()
 
-            val needsPin = isBlockerConfig && pinEnabled && bypassEnabled && isAntiUninstallOn && pinCode.isNotEmpty() && !AmnShield.isBypassUnlocked
+            val needsPin = isBlockerConfig && pinEnabled && pinCode.isNotEmpty() && !AmnShield.isBypassSessionActive()
 
             if (needsPin) {
                 showBypassPinDialog(pinCode) {
@@ -173,155 +175,34 @@ class FragmentActivity : AppCompatActivity() {
 
         val composeView = androidx.compose.ui.platform.ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        
-        composeView.setContent {
-            var pinText by remember { mutableStateOf("") }
-            var errorText by remember { mutableStateOf("") }
-            
-            AmnShieldTheme(appTheme = com.alhaq.amnshield.utils.ThemeUtils.resolveAppTheme(this@FragmentActivity)) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(
-                            text = "Settings Locked",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Enter your 4-digit PIN to modify blocker settings",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            repeat(4) { index ->
-                                val hasChar = index < pinText.length
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (hasChar) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                )
-                            }
+            setContent {
+                AmnShieldTheme(appTheme = com.alhaq.amnshield.utils.ThemeUtils.resolveAppTheme(this@FragmentActivity)) {
+                    com.alhaq.amnshield.ui.components.PinPromptContent(
+                        correctPin = correctPinCode,
+                        title = "Settings Locked",
+                        subtitle = "Enter your 4-digit PIN to modify blocker settings",
+                        allowForgotPin = true,
+                        onDismiss = {
+                            dialog.dismiss()
+                            finish()
+                        },
+                        onPinSuccess = {
+                            AmnShield.unlockBypassSession()
+                            dialog.dismiss()
+                            onSuccess()
+                        },
+                        onPinResetCompleted = {
+                            AmnShield.unlockBypassSession()
+                            dialog.dismiss()
+                            onSuccess()
                         }
-                        
-                        if (errorText.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = errorText,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(48.dp))
-                        
-                        val buttons = listOf(
-                            listOf("1", "2", "3"),
-                            listOf("4", "5", "6"),
-                            listOf("7", "8", "9"),
-                            listOf("Cancel", "0", "Delete")
-                        )
-                        
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            buttons.forEach { row ->
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                                ) {
-                                    row.forEach { char ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(72.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (char == "Cancel" || char == "Delete") Color.Transparent
-                                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                )
-                                                .clickable {
-                                                    when (char) {
-                                                        "Cancel" -> {
-                                                            dialog.dismiss()
-                                                            finish()
-                                                        }
-                                                        "Delete" -> {
-                                                            if (pinText.isNotEmpty()) {
-                                                                pinText = pinText.substring(0, pinText.length - 1)
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            if (pinText.length < 4) {
-                                                                pinText += char
-                                                                errorText = ""
-                                                                if (pinText.length == 4) {
-                                                                    if (pinText == correctPinCode) {
-                                                                        AmnShield.isBypassUnlocked = true
-                                                                        dialog.dismiss()
-                                                                        onSuccess()
-                                                                    } else {
-                                                                        pinText = ""
-                                                                        errorText = "Incorrect PIN code"
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = char,
-                                                style = if (char == "Cancel" || char == "Delete") MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (char == "Cancel") MaterialTheme.colorScheme.error else if (char == "Delete") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    )
                 }
             }
         }
         
         dialog.setContentView(composeView)
         dialog.setCancelable(false)
-        dialog.setOnKeyListener { _, keyCode, _ ->
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
-                dialog.dismiss()
-                finish()
-                true
-            } else {
-                false
-            }
-        }
         dialog.show()
     }
 }

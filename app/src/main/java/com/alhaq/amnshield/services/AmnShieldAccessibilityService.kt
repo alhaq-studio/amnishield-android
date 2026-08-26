@@ -1,3 +1,23 @@
+/**
+ * ============================================================================
+ * AmniShield Core Accessibility Engine - AmnShieldAccessibilityService
+ * ============================================================================
+ * Architecture: Central Accessibility Stream Orchestrator & Blocker Pipeline Host
+ * 
+ * Description:
+ * Receives Android accessibility events, inspects active window trees, and orchestrates
+ * the Chain of Responsibility interceptor pipeline (AntiUninstall, AppBlocker, FocusMode,
+ * WebsiteBlocker, KeywordBlocker, ReelsBlocker).
+ * 
+ * Invariants & AI/Developer Guidance:
+ * - NODE LIFECYCLE INVARIANT: AmnShieldAccessibilityService exclusively owns the lifecycle
+ *   of rootNode (recycled once in the finally block of onAccessibilityEvent).
+ * - Interceptors and detectors must NEVER call rootNode.recycle().
+ * - Interceptors must only recycle child nodes they generate during internal stack traversals.
+ * - STRICT SHORT-CIRCUITING: When a higher-priority interceptor blocks an action, the event
+ *   stream must return early to avoid redundant processing.
+ * ============================================================================
+ */
 package com.alhaq.amnshield.services
 
 import android.annotation.SuppressLint
@@ -61,7 +81,6 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private lateinit var focusModeBlocker: FocusModeBlocker
     private lateinit var keywordBlocker: KeywordBlocker
     private lateinit var reelBlocker: ReelBlocker
-    private lateinit var viewBlocker: ViewBlocker
     private lateinit var blockingStatsManager: BlockingStatsManager
     private lateinit var premiumManager: PremiumManager
     private lateinit var crashLogger: CrashLogger
@@ -69,127 +88,48 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
     private val homeFeedNavigator = HomeFeedNavigator()
 
     private var appBlockerWarningConfig = MainActivity.WarningData()
-    private var viewBlockerWarningConfig = MainActivity.WarningData()
     private var keywordBlockerWarningConfig = MainActivity.WarningData()
 
-    // Anti-uninstall protection state
-    private var isAntiUninstallOn = false
-    private var antiUninstallMode = -1
-    private var savedPassword: String? = null
-    private var savedDate: String? = null
-    private var savedUnlockAtMillis: Long = 0L
-    private var isConfiguringBlocked = false
-    private var lastBlockTime = 0L
-    private val blockCooldown = 2000L
-    private var protectedApps: Set<String> = emptySet()
+    private lateinit var antiUninstallDetector: com.alhaq.amnshield.security.AntiUninstallDetector
+    private lateinit var reelsSessionTracker: com.alhaq.amnshield.trackers.ReelsSessionTracker
+    private lateinit var serviceBroadcastManager: ServiceBroadcastManager
+    private lateinit var keywordActionHandler: com.alhaq.amnshield.blockers.KeywordActionHandler
+    private lateinit var reelActionHandler: com.alhaq.amnshield.blockers.ReelActionHandler
+    private lateinit var websiteBlockerDetector: com.alhaq.amnshield.blockers.WebsiteBlockerDetector
 
-    // Password verification session management
-    private var lastPasswordVerificationTime = 0L
-    private val PASSWORD_VERIFICATION_COOLDOWN = 5 * 60 * 1000L
-    private var isPasswordVerified = false
     private var cachedDefaultLauncher: String? = null
     private var lastTrackedLaunchPackage: String? = null
-
-    private var lastReelScrollTime = 0L
-    private var sessionReelsScrolled = 0
-    private var sessionReelsWatchSeconds = 0L
-    private var currentReelsPackage: String? = null
-    private val reelDetectionEngine = ReelDetectionEngine()
-    private var usageStatOverlayManager: com.alhaq.amnshield.ui.overlay.UsageStatOverlayManager? = null
-
-    private val reelsTrackingHandler = Handler(Looper.getMainLooper())
-    private val reelsTrackingRunnable = object : Runnable {
-        override fun run() {
-            try {
-                val isReelsTrackingEnabled = savedPreferencesLoader.isReelsTrackingEnabled(true)
-                val isReelsBlockerEnabled = reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)
-
-                if (isReelsTrackingEnabled || isReelsBlockerEnabled) {
-                    val root = rootInActiveWindow
-                    if (root != null) {
-                        val pkg = root.packageName?.toString().orEmpty()
-                        if (ReelDetectionEngine.isReelCandidatePackage(pkg)) {
-                            val detection = reelDetectionEngine.detectReelSurface(root, pkg)
-                            if (detection != null && detection.isReelSurface) {
-                                if (currentReelsPackage != pkg) {
-                                    currentReelsPackage = pkg
-                                    sessionReelsWatchSeconds = 0L
-                                    sessionReelsScrolled = 0
-                                    reelDetectionEngine.resetSession(pkg)
-                                }
-                                sessionReelsWatchSeconds++
-                                savedPreferencesLoader.addReelsWatchTime(1L, pkg)
-                                reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
-
-                                val comparator = reelDetectionEngine.extractReelComparator(root, pkg, null)
-                                val isProgression = reelDetectionEngine.checkReelProgression(pkg, comparator)
-                                if (isProgression) {
-                                    sessionReelsScrolled++
-                                    savedPreferencesLoader.incrementReelsScrolled(pkg)
-                                    reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
-                                }
-
-                                val isOverlayEnabled = savedPreferencesLoader.isReelsOverlayCounterEnabled(true)
-                                val overlayApps = savedPreferencesLoader.getReelsOverlayApps()
-                                if (isOverlayEnabled && (overlayApps.contains(pkg) || overlayApps.isEmpty())) {
-                                    val overlayMgr = usageStatOverlayManager ?: com.alhaq.amnshield.ui.overlay.UsageStatOverlayManager(this@AmnShieldAccessibilityService).also {
-                                        usageStatOverlayManager = it
-                                    }
-                                    if (!overlayMgr.isOverlayVisible) {
-                                        overlayMgr.startDisplaying()
-                                    }
-                                    val mode = savedPreferencesLoader.getOverlayCounterDisplayMode()
-                                    overlayMgr.updateCounter(sessionReelsScrolled, sessionReelsWatchSeconds, mode)
-                                }
-                            } else {
-                                if (currentReelsPackage != null) {
-                                    reelDetectionEngine.resetSession(currentReelsPackage)
-                                    currentReelsPackage = null
-                                }
-                                if (usageStatOverlayManager?.isOverlayVisible == true) {
-                                    usageStatOverlayManager?.removeOverlay()
-                                }
-                            }
-                        } else {
-                            if (currentReelsPackage != null) {
-                                reelDetectionEngine.resetSession(currentReelsPackage)
-                                currentReelsPackage = null
-                            }
-                            if (usageStatOverlayManager?.isOverlayVisible == true) {
-                                usageStatOverlayManager?.removeOverlay()
-                            }
-                        }
-                        @Suppress("DEPRECATION")
-                        root.recycle()
-                    }
-                }
-            } catch (e: Exception) {
-                crashLogger.logNonFatalError("AccessibilityService", "Error during reels tracking execution", e)
-            }
-            reelsTrackingHandler.postDelayed(this, 1000L)
-        }
-    }
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
         droppedEvent.recycle()
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
         super.onServiceConnected()
         try {
-            reelsTrackingHandler.post(reelsTrackingRunnable)
-
             appBlocker = AppBlocker()
             focusModeBlocker = FocusModeBlocker()
             keywordBlocker = KeywordBlocker(this)
             reelBlocker = ReelBlocker()
-            viewBlocker = ViewBlocker()
             blockingStatsManager = BlockingStatsManager.getInstance(this)
             premiumManager = PremiumManager.getInstance(this)
             crashLogger = CrashLogger(this)
             handGestureOverlayManager = com.alhaq.amnshield.ui.overlay.HandGestureOverlayManager(this)
+
+            antiUninstallDetector = com.alhaq.amnshield.security.AntiUninstallDetector(this)
+            keywordActionHandler = com.alhaq.amnshield.blockers.KeywordActionHandler(
+                context = this,
+                savedPreferencesLoader = savedPreferencesLoader,
+                keywordBlocker = keywordBlocker,
+                handGestureOverlayManager = handGestureOverlayManager
+            )
+            reelActionHandler = com.alhaq.amnshield.blockers.ReelActionHandler(
+                context = this,
+                savedPreferencesLoader = savedPreferencesLoader,
+                homeFeedNavigator = homeFeedNavigator
+            )
+            websiteBlockerDetector = com.alhaq.amnshield.blockers.WebsiteBlockerDetector(savedPreferencesLoader)
 
             runCatching { savedPreferencesLoader.migrateLegacySchedulesIfNeeded() }
                 .onFailure { Log.e("AmnShieldService", "Failed schedule migration", it) }
@@ -201,54 +141,65 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 .onFailure { Log.e("AmnShieldService", "Failed setupKeywordBlocker", it) }
             runCatching { setupReelBlocker() }
                 .onFailure { Log.e("AmnShieldService", "Failed setupReelBlocker", it) }
-            runCatching { setupViewBlocker() }
-                .onFailure { Log.e("AmnShieldService", "Failed setupViewBlocker", it) }
-            runCatching { setupAntiUninstall() }
-                .onFailure { Log.e("AmnShieldService", "Failed setupAntiUninstall", it) }
             cachedDefaultLauncher = getDefaultLauncherPackage()
 
-            val filter = IntentFilter().apply {
-                addAction(INTENT_ACTION_REFRESH_APP_BLOCKER)
-                addAction(INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
-                addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER)
-                addAction(INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN)
-                addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER)
-                addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN)
-                addAction(INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
-                addAction(INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
-                addAction(INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN)
-                addAction(INTENT_ACTION_REFRESH_FOCUS_MODE)
-                addAction(INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
-                addAction(INTENT_ACTION_PASSWORD_VERIFIED)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(refreshReceiver, filter, RECEIVER_NOT_EXPORTED)
-            } else {
-                registerReceiver(refreshReceiver, filter)
-            }
+            reelsSessionTracker = com.alhaq.amnshield.trackers.ReelsSessionTracker(
+                service = this,
+                savedPreferencesLoader = savedPreferencesLoader,
+                reelBlocker = reelBlocker,
+                crashLogger = crashLogger,
+                isFeatureActive = { isFeatureCurrentlyActive(it) }
+            )
+            reelsSessionTracker.start()
+
+            serviceBroadcastManager = ServiceBroadcastManager(
+                context = this,
+                callbacks = object : ServiceBroadcastManager.Callbacks {
+                    override fun onRefreshAppBlocker() = setupAppBlocker()
+                    override fun onRefreshBlockedKeywordList() = setupKeywordBlocker()
+                    override fun onRefreshViewBlocker() = setupReelBlocker()
+                    override fun onRefreshViewBlockerCooldown(resultId: String?, interval: Int) {
+                        val warningConfig = savedPreferencesLoader.loadViewBlockerWarningInfo()
+                        val duration = if (interval > 0) interval else warningConfig.timeInterval
+                        val endTime = System.currentTimeMillis() + duration
+                        reelBlocker.applyCooldown(resultId ?: "xxxxxxxxxxxxxx", endTime)
+                        savedPreferencesLoader.saveReelBlockerCooldownData(reelBlocker.getCooldownSnapshot())
+                    }
+                    override fun onRefreshReelBlocker() = setupReelBlocker()
+                    override fun onRefreshReelBlockerCooldown(resultId: String?, interval: Int) {
+                        val warningConfig = savedPreferencesLoader.loadViewBlockerWarningInfo()
+                        val duration = if (interval > 0) interval else warningConfig.timeInterval
+                        val endTime = System.currentTimeMillis() + duration
+                        reelBlocker.applyCooldown(resultId ?: "xxxxxxxxxxxxxx", endTime)
+                        savedPreferencesLoader.saveReelBlockerCooldownData(reelBlocker.getCooldownSnapshot())
+                    }
+                    override fun onRefreshKeywordBlockerCooldown(resultId: String?, interval: Int) {
+                        val duration = if (interval > 0) interval else keywordBlockerWarningConfig.timeInterval
+                        val endTime = System.currentTimeMillis() + duration
+                        resultId?.let { keywordBlocker.applyCooldown(it, endTime) }
+                    }
+                    override fun onRefreshUnifiedFeatureSchedules() {
+                        setupAppBlocker()
+                        setupReelBlocker()
+                        setupKeywordBlocker()
+                    }
+                    override fun onRefreshAppBlockerCooldown(resultId: String?, interval: Int) {
+                        val duration = if (interval > 0) interval else appBlockerWarningConfig.timeInterval
+                        val endTime = System.currentTimeMillis() + duration
+                        appBlocker.putCooldownTo(resultId ?: "xxxxxxxxxxxxxx", endTime)
+                        savedPreferencesLoader.saveAppBlockerCooldownData(appBlocker.getCooldownSnapshot())
+                    }
+                    override fun onRefreshFocusMode() = setupFocusMode()
+                    override fun onRefreshAntiUninstall() = antiUninstallDetector.reloadConfig()
+                    override fun onPasswordVerified() = antiUninstallDetector.onPasswordVerified()
+                }
+            )
+            serviceBroadcastManager.register()
 
             startBackgroundWorker()
         } catch (e: Throwable) {
             android.util.Log.e("AmnShieldService", "Critical failure during onServiceConnected initialization", e)
         }
-    }
-
-    private fun isSettingsApp(packageName: String?): Boolean {
-        packageName ?: return false
-        return packageName == "com.android.settings" ||
-                packageName == "com.google.android.settings" ||
-                packageName == "com.samsung.android.settings" ||
-                packageName.endsWith(".settings") ||
-                packageName.contains("securitycenter") ||
-                packageName.contains("safecenter") ||
-                packageName.contains("systemmanager") ||
-                packageName.contains("permissionmanager") ||
-                packageName == "com.samsung.android.lool" ||
-                packageName == "com.samsung.android.sm" ||
-                packageName == "com.samsung.android.sm_cn" ||
-                packageName == "com.oppo.safe" ||
-                packageName == "com.iqoo.secure" ||
-                packageName == "com.oneplus.security"
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -288,47 +239,12 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 cachedDefaultLauncher = getDefaultLauncherPackage()
             }
 
-            if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
-                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                val activePackage = event.packageName?.toString().orEmpty()
-                val isReelsTracking = savedPreferencesLoader.isReelsTrackingEnabled(true)
-                val isReelsBlocker = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
-                if ((isReelsTracking || isReelsBlocker) && ReelDetectionEngine.isReelCandidatePackage(activePackage)) {
-                    val root = rootInActiveWindow
-                    if (root != null) {
-                        val detection = reelDetectionEngine.detectReelSurface(root, activePackage)
-                        if (detection != null && detection.isReelSurface) {
-                            val comparator = reelDetectionEngine.extractReelComparator(root, activePackage, event)
-                            val isProgression = reelDetectionEngine.checkReelProgression(activePackage, comparator)
-
-                            if (isProgression) {
-                                val now = System.currentTimeMillis()
-                                lastReelScrollTime = now
-                                sessionReelsScrolled++
-                                savedPreferencesLoader.incrementReelsScrolled(activePackage)
-                                reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
-                            }
-
-                            val isOverlayEnabled = savedPreferencesLoader.isReelsOverlayCounterEnabled(true)
-                            val overlayApps = savedPreferencesLoader.getReelsOverlayApps()
-                            if (isOverlayEnabled && (overlayApps.contains(activePackage) || overlayApps.isEmpty())) {
-                                val overlayMgr = usageStatOverlayManager ?: com.alhaq.amnshield.ui.overlay.UsageStatOverlayManager(this@AmnShieldAccessibilityService).also {
-                                    usageStatOverlayManager = it
-                                }
-                                if (!overlayMgr.isOverlayVisible) {
-                                    overlayMgr.startDisplaying()
-                                }
-                                val mode = savedPreferencesLoader.getOverlayCounterDisplayMode()
-                                overlayMgr.updateCounter(sessionReelsScrolled, sessionReelsWatchSeconds, mode)
-                            }
-                        }
-                        @Suppress("DEPRECATION")
-                        root.recycle()
-                    }
-                }
+            rootNode = rootInActiveWindow
+            if (rootNode != null && (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
+                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) {
+                reelsSessionTracker.onAccessibilityEvent(event, rootNode)
             }
 
-            rootNode = rootInActiveWindow
             val rootPackage = rootNode?.packageName?.toString() ?: packageName
 
             if (rootPackage.equals(myPackageName, ignoreCase = true) ||
@@ -338,12 +254,8 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                 return
             }
 
-            if (isAntiUninstallOn && isSettingsApp(packageName) && rootNode != null) {
-                checkAndBlockDangerousSettingsScreens(rootNode)
-            }
-
-            if (isAntiUninstallOn && rootNode != null) {
-                checkAndBlockLauncherUninstall(rootNode)
+            if (antiUninstallDetector.inspect(event, rootNode)) {
+                return
             }
 
             val isPremiumUser = premiumManager.isPremium()
@@ -469,7 +381,13 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                         val keywordResult = keywordBlocker.checkIfUserGettingFreaky(rootNode, event)
                         if (keywordResult.resultDetectWord != null) {
                             blockingStatsManager.recordKeywordBlock(keywordResult.resultDetectWord, packageName)
-                            handleKeywordBlockerResult(keywordResult, packageName)
+                            keywordActionHandler.handleKeywordBlock(
+                                result = keywordResult,
+                                packageName = packageName,
+                                rootNode = rootNode,
+                                event = event,
+                                onPressHome = { pressHome() }
+                            )
                             return
                         }
                     } catch (e: Exception) {
@@ -480,7 +398,7 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
 
             if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
                 try {
-                    if (checkBlockedWebsites(rootNode, packageName)) {
+                    if (websiteBlockerDetector.checkBlockedWebsites(rootNode, packageName)) {
                         blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $packageName")
                         pressHome()
                         return
@@ -504,12 +422,15 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
                     val rawResult = reelBlocker.doesReelNeedToBeBlocked(rootNode, packageName)
                     if (rawResult != null && rawResult.isBlocked) {
                         blockingStatsManager.recordViewBlock(packageName, rawResult.viewId)
-                        // Attach the user's chosen block response mode (loaded here rather than
-                        // inside ReelBlocker to keep the blocker class UI-agnostic).
                         val reelBlockerResult = rawResult.copy(
                             blockResponseMode = savedPreferencesLoader.getReelBlockerBlockResponseMode()
                         )
-                        handleReelBlockerResult(reelBlockerResult)
+                        reelActionHandler.handleReelBlock(
+                            result = reelBlockerResult,
+                            onPressHome = { pressHome() },
+                            onPressBack = { pressBack() },
+                            getRootInActiveWindow = { rootInActiveWindow }
+                        )
                         return
                     }
                 } catch (e: Exception) {
@@ -518,144 +439,6 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
             }
         } finally {
             rootNode.recycle()
-        }
-    }
-
-    private fun handleReelBlockerResult(result: ReelBlocker.ReelBlockerResult?) {
-        if (result == null || !result.isBlocked) return
-
-        when (result.blockResponseMode) {
-            ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT -> {
-                // Try to navigate to the platform home feed; fall back to GLOBAL_ACTION_BACK
-                val root = rootInActiveWindow
-                val navigated = if (root != null) {
-                    val pkg = root.packageName?.toString().orEmpty()
-                    @Suppress("DEPRECATION")
-                    val success = homeFeedNavigator.navigateToHomeFeed(root, pkg)
-                    root.recycle()
-                    success
-                } else false
-                if (!navigated) pressBack()
-                // Home Feed Redirect mode is silent — no warning overlay
-                return
-            }
-            ReelBlocker.BlockResponseMode.ANDROID_HOME -> {
-                pressHome()
-                // Silent — no warning overlay for Android Home mode
-                return
-            }
-            ReelBlocker.BlockResponseMode.HARD_BLOCK -> {
-                pressBack()
-            }
-        }
-
-        if (viewBlockerWarningConfig.isWarningDialogHidden) return
-        val dialogIntent = Intent(this, WarningActivity::class.java)
-        dialogIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        dialogIntent.putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
-        dialogIntent.putExtra("result_id", result.viewId)
-        dialogIntent.putExtra("is_press_home", result.requestHomePressInstead)
-        dialogIntent.putExtra("is_reel_blocker", true)
-        dialogIntent.putExtra("blocked_by_feature", "Reels Blocker")
-        startActivity(dialogIntent)
-    }
-
-    private val refreshReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent == null) return
-            when (intent.action) {
-                INTENT_ACTION_REFRESH_APP_BLOCKER -> setupAppBlocker()
-                INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST -> setupKeywordBlocker()
-                INTENT_ACTION_REFRESH_VIEW_BLOCKER -> setupViewBlocker()
-                INTENT_ACTION_REFRESH_REEL_BLOCKER -> setupReelBlocker()
-                INTENT_ACTION_REFRESH_FOCUS_MODE -> setupFocusMode()
-                INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES -> {
-                    setupAppBlocker()
-                    setupReelBlocker()
-                    setupKeywordBlocker()
-                    setupViewBlocker()
-                }
-                INTENT_ACTION_REFRESH_ANTI_UNINSTALL -> setupAntiUninstall()
-                INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN -> {
-                    val interval = intent.getIntExtra("selected_time", viewBlockerWarningConfig.timeInterval)
-                    val endTime = System.currentTimeMillis() + interval
-                    viewBlocker.applyCooldown(
-                        intent.getStringExtra("result_id") ?: "xxxxxxxxxxxxxx",
-                        endTime
-                    )
-                    savedPreferencesLoader.saveViewBlockerCooldownData(viewBlocker.getCooldownSnapshot())
-                }
-                INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN -> {
-                    val interval = intent.getIntExtra("selected_time", viewBlockerWarningConfig.timeInterval)
-                    val endTime = System.currentTimeMillis() + interval
-                    reelBlocker.applyCooldown(
-                        intent.getStringExtra("result_id") ?: "xxxxxxxxxxxxxx",
-                        endTime
-                    )
-                    savedPreferencesLoader.saveReelBlockerCooldownData(reelBlocker.getCooldownSnapshot())
-                }
-
-                INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN -> {
-                    val interval = intent.getIntExtra("selected_time", appBlockerWarningConfig.timeInterval)
-                    val endTime = System.currentTimeMillis() + interval
-                    appBlocker.putCooldownTo(
-                        intent.getStringExtra("result_id") ?: "xxxxxxxxxxxxxx",
-                        endTime
-                    )
-                    savedPreferencesLoader.saveAppBlockerCooldownData(appBlocker.getCooldownSnapshot())
-                }
-
-                INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN -> {
-                    val interval = intent.getIntExtra("selected_time", keywordBlockerWarningConfig.timeInterval)
-                    val endTime = System.currentTimeMillis() + interval
-                    intent.getStringExtra("result_id")?.let { keyword ->
-                        keywordBlocker.applyCooldown(keyword, endTime)
-                    }
-                }
-
-                INTENT_ACTION_PASSWORD_VERIFIED -> {
-                    isPasswordVerified = true
-                    lastPasswordVerificationTime = System.currentTimeMillis()
-                }
-            }
-        }
-    }
-
-    private fun handleKeywordBlockerResult(
-        result: KeywordBlocker.KeywordBlockerResult,
-        packageName: String
-    ) {
-        val feedbackMode = savedPreferencesLoader.getKeywordBlockerFeedbackMode()
-        val isHomePress = result.isHomePressRequested
-
-        when (feedbackMode) {
-            Constants.KEYWORD_FEEDBACK_HAND_GESTURE -> {
-                if (::handGestureOverlayManager.isInitialized) {
-                    handGestureOverlayManager.showGestureOverlay(result.resultDetectWord, isHomePress) {
-                        if (isHomePress) pressHome() else pressBack()
-                    }
-                } else {
-                    if (isHomePress) pressHome() else pressBack()
-                }
-            }
-            Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> {
-                val warningInfo = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
-                if (warningInfo.isWarningDialogHidden) {
-                    if (isHomePress) pressHome() else pressBack()
-                } else {
-                    val intent = Intent(this, com.alhaq.amnshield.ui.activity.WarningActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        putExtra("result_id", result.resultDetectWord)
-                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                        putExtra("is_press_home", isHomePress)
-                        putExtra("blocked_by_feature", "Keyword Blocker")
-                    }
-                    startActivity(intent)
-                }
-            }
-            else -> {
-                if (isHomePress) pressHome() else pressBack()
-            }
         }
     }
 
@@ -717,12 +500,6 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
         keywordBlocker.ignoredPackages = userIgnoredPackages
     }
 
-    private fun setupViewBlocker() {
-        viewBlockerWarningConfig = savedPreferencesLoader.loadViewBlockerWarningInfo()
-        viewBlocker.restoreCooldowns(savedPreferencesLoader.loadViewBlockerCooldownData())
-        savedPreferencesLoader.saveViewBlockerCooldownData(viewBlocker.getCooldownSnapshot())
-    }
-
     private fun setupReelBlocker() {
         val viewBlockerPrefs = getSharedPreferences("view_blocker", Context.MODE_PRIVATE)
         val reelBlockerPrefs = getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
@@ -777,517 +554,6 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
 
 
 
-
-    private fun setupAntiUninstall() {
-        val info = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
-        isAntiUninstallOn = info.getBoolean("is_anti_uninstall_on", false)
-        antiUninstallMode = info.getInt("mode", -1)
-        savedPassword = info.getString("password", null)
-        savedDate = info.getString("date", null)
-        savedUnlockAtMillis = info.getLong("unlock_at_millis", 0L)
-        isConfiguringBlocked = info.getBoolean("is_configuring_blocked", false)
-
-        protectedApps = if (isAntiUninstallOn) setOf(this.packageName, "com.alhaq.amnshield") else emptySet()
-    }
-
-    private fun checkAndBlockDangerousSettingsScreens(node: AccessibilityNodeInfo?) {
-        if (node == null) return
-
-        var isDangerousScreen = false
-        traverseAndDetectScreen(node, node) { detectedType, appPackage ->
-            when (detectedType) {
-                "device_admin" -> if (isAntiUninstallOn && isConfiguringBlocked) isDangerousScreen = true
-                "accessibility_amnshield" -> if (isAntiUninstallOn && isConfiguringBlocked) isDangerousScreen = true
-                "app_uninstall" -> if (appPackage != null && protectedApps.contains(appPackage)) isDangerousScreen = true
-            }
-        }
-
-        if (isDangerousScreen) {
-            val shouldBlock = shouldBlockRemoval()
-            if (shouldBlock) {
-                val currentTime = System.currentTimeMillis()
-                if (isPasswordVerified && (currentTime - lastPasswordVerificationTime) < PASSWORD_VERIFICATION_COOLDOWN) {
-                    return
-                }
-
-                if (currentTime - lastBlockTime > blockCooldown) {
-                    lastBlockTime = currentTime
-                    handleAntiUninstallAttempt()
-                }
-            }
-        }
-    }
-
-    private fun checkAndBlockLauncherUninstall(node: AccessibilityNodeInfo?) {
-        if (node == null) return
-
-        val rootPackage = node.packageName?.toString() ?: return
-        if (!rootPackage.contains("packageinstaller") &&
-            !rootPackage.contains("permissioncontroller") &&
-            rootPackage != "android"
-        ) {
-            return
-        }
-
-        var isUninstallDialog = false
-        var detectedAppPackage: String? = null
-
-        scanNodeForUninstallDialog(node) { appPackage ->
-            if (appPackage != null && protectedApps.contains(appPackage)) {
-                isUninstallDialog = true
-                detectedAppPackage = appPackage
-            }
-        }
-
-        if (isUninstallDialog && detectedAppPackage != null) {
-            val shouldBlock = shouldBlockRemoval()
-            if (shouldBlock) {
-                val currentTime = System.currentTimeMillis()
-                if (isPasswordVerified && (currentTime - lastPasswordVerificationTime) < PASSWORD_VERIFICATION_COOLDOWN) {
-                    return
-                }
-
-                if (currentTime - lastBlockTime > blockCooldown) {
-                    lastBlockTime = currentTime
-                    handleAntiUninstallAttempt()
-                }
-            }
-        }
-    }
-
-    private fun scanNodeForUninstallDialog(root: AccessibilityNodeInfo?, onAppDetected: (String?) -> Unit) {
-        root ?: return
-        val stack = java.util.ArrayDeque<AccessibilityNodeInfo>()
-        stack.push(root)
-        
-        var found = false
-        while (!stack.isEmpty() && !found) {
-            val current = stack.pop()
-            
-            val nodeText = current.text?.toString()?.lowercase(Locale.ROOT) ?: ""
-            val nodeContentDesc = current.contentDescription?.toString()?.lowercase(Locale.ROOT) ?: ""
-            
-            val hasUninstallKeyword = nodeText.contains("uninstall") ||
-                nodeText.contains("remove") ||
-                nodeText.contains("delete") ||
-                nodeContentDesc.contains("uninstall")
-            
-            if (hasUninstallKeyword) {
-                for (packageName in protectedApps) {
-                    val appName = getAppName(packageName)
-                    if (nodeText.contains(appName.lowercase(Locale.ROOT)) ||
-                        nodeText.contains(packageName) ||
-                        nodeContentDesc.contains(appName.lowercase(Locale.ROOT))
-                    ) {
-                        onAppDetected(packageName)
-                        found = true
-                        break
-                    }
-                }
-            }
-            
-            if (!found) {
-                for (i in 0 until current.childCount) {
-                    val child = current.getChild(i)
-                    if (child != null) {
-                        stack.push(child)
-                    }
-                }
-            }
-            
-            if (current != root) {
-                current.recycle()
-            }
-        }
-        
-        while (!stack.isEmpty()) {
-            val item = stack.pop()
-            if (item != root) {
-                item.recycle()
-            }
-        }
-    }
-
-    private fun getAppName(packageName: String): String {
-        return try {
-            val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(appInfo).toString()
-        } catch (e: Exception) {
-            packageName.substringAfterLast(".")
-        }
-    }
-
-    private fun traverseAndDetectScreen(
-        root: AccessibilityNodeInfo?, 
-        windowRoot: AccessibilityNodeInfo?, 
-        onScreenDetected: (String, String?) -> Unit
-    ) {
-        if (root == null || windowRoot == null) return
-        val stack = java.util.ArrayDeque<AccessibilityNodeInfo>()
-        stack.push(root)
-        
-        while (!stack.isEmpty()) {
-            val current = stack.pop()
-            
-            if (current.className != null && current.className == "android.widget.TextView") {
-                val nodeText = current.text?.toString()?.lowercase(Locale.ROOT) ?: ""
-                
-                if ((nodeText.contains("device admin") || nodeText.contains("device administrators")) &&
-                    checkForAmnShieldMention(windowRoot)
-                ) {
-                    if (checkForActionButton(windowRoot)) {
-                        onScreenDetected("device_admin", null)
-                        if (current != root) current.recycle()
-                        while (!stack.isEmpty()) {
-                            val item = stack.pop()
-                            if (item != root) item.recycle()
-                        }
-                        return
-                    }
-                }
-                
-                val appLabel = getAppLabelLowercase()
-                if ((nodeText.contains(appLabel) || nodeText.contains("amnshield") || nodeText.contains("deenshield")) && nodeText.contains("accessibility")) {
-                    if (checkForToggleContext(windowRoot)) {
-                        onScreenDetected("accessibility_amnshield", null)
-                        if (current != root) current.recycle()
-                        while (!stack.isEmpty()) {
-                            val item = stack.pop()
-                            if (item != root) item.recycle()
-                        }
-                        return
-                    }
-                }
-                
-                if (nodeText.contains("uninstall") || nodeText.contains("remove")) {
-                    for (packageName in protectedApps) {
-                        val appName = packageName.substringAfterLast(".").lowercase(Locale.ROOT)
-                        if (checkForAppMention(windowRoot, appName, packageName)) {
-                            onScreenDetected("app_uninstall", packageName)
-                            if (current != root) current.recycle()
-                            while (!stack.isEmpty()) {
-                                val item = stack.pop()
-                                if (item != root) item.recycle()
-                            }
-                            return
-                        }
-                    }
-                }
-            }
-            
-            for (i in 0 until current.childCount) {
-                val child = current.getChild(i)
-                if (child != null) {
-                    stack.push(child)
-                }
-            }
-            
-            if (current != root) {
-                current.recycle()
-            }
-        }
-    }
-
-    private fun checkForActionButton(root: AccessibilityNodeInfo?): Boolean {
-        root ?: return false
-        val stack = java.util.ArrayDeque<AccessibilityNodeInfo>()
-        stack.push(root)
-        
-        var found = false
-        while (!stack.isEmpty() && !found) {
-            val current = stack.pop()
-            
-            if (current.className != null &&
-                (current.className.toString().contains("Button") || current.isClickable)
-            ) {
-                val nodeText = current.text?.toString()?.lowercase(Locale.ROOT) ?: ""
-                if (nodeText.contains("deactivate") ||
-                    nodeText.contains("activate") ||
-                    nodeText.contains("remove") ||
-                    nodeText.contains("turn off")
-                ) {
-                    found = true
-                }
-            }
-            
-            if (!found) {
-                for (i in 0 until current.childCount) {
-                    val child = current.getChild(i)
-                    if (child != null) {
-                        stack.push(child)
-                    }
-                }
-            }
-            
-            if (current != root) {
-                current.recycle()
-            }
-        }
-        
-        while (!stack.isEmpty()) {
-            val item = stack.pop()
-            if (item != root) {
-                item.recycle()
-            }
-        }
-        
-        return found
-    }
-
-    private fun checkForToggleContext(root: AccessibilityNodeInfo?): Boolean {
-        root ?: return false
-        val stack = java.util.ArrayDeque<AccessibilityNodeInfo>()
-        stack.push(root)
-        
-        var found = false
-        while (!stack.isEmpty() && !found) {
-            val current = stack.pop()
-            
-            if (current.className != null && current.className.toString().contains("Switch")) {
-                found = true
-            } else {
-                val nodeText = current.text?.toString()?.lowercase(Locale.ROOT) ?: ""
-                if (nodeText.contains("use service") ||
-                    nodeText.contains("turn off") ||
-                    nodeText.contains("turn on")
-                ) {
-                    found = true
-                }
-            }
-            
-            if (!found) {
-                for (i in 0 until current.childCount) {
-                    val child = current.getChild(i)
-                    if (child != null) {
-                        stack.push(child)
-                    }
-                }
-            }
-            
-            if (current != root) {
-                current.recycle()
-            }
-        }
-        
-        while (!stack.isEmpty()) {
-            val item = stack.pop()
-            if (item != root) {
-                item.recycle()
-            }
-        }
-        
-        return found
-    }
-
-    private fun checkForAppMention(root: AccessibilityNodeInfo?, appName: String, packageName: String): Boolean {
-        root ?: return false
-        val stack = java.util.ArrayDeque<AccessibilityNodeInfo>()
-        stack.push(root)
-        
-        var found = false
-        while (!stack.isEmpty() && !found) {
-            val current = stack.pop()
-            
-            val nodeText = current.text?.toString()?.lowercase(Locale.ROOT) ?: ""
-            val nodeContentDescription = current.contentDescription?.toString()?.lowercase(Locale.ROOT) ?: ""
-            
-            if (nodeText.contains(appName) ||
-                nodeText.contains(packageName) ||
-                nodeContentDescription.contains(appName) ||
-                nodeContentDescription.contains(packageName)
-            ) {
-                found = true
-            }
-            
-            if (!found) {
-                for (i in 0 until current.childCount) {
-                    val child = current.getChild(i)
-                    if (child != null) {
-                        stack.push(child)
-                    }
-                }
-            }
-            
-            if (current != root) {
-                current.recycle()
-            }
-        }
-        
-        while (!stack.isEmpty()) {
-            val item = stack.pop()
-            if (item != root) {
-                item.recycle()
-            }
-        }
-        
-        return found
-    }
-
-    private fun getAppLabelLowercase(): String {
-        return try {
-            packageManager.getApplicationLabel(applicationInfo).toString().lowercase(Locale.ROOT)
-        } catch (e: Exception) {
-            "amnshield"
-        }
-    }
-
-    private fun checkForAmnShieldMention(root: AccessibilityNodeInfo?): Boolean {
-        root ?: return false
-        val appLabel = getAppLabelLowercase()
-        val stack = java.util.ArrayDeque<AccessibilityNodeInfo>()
-        stack.push(root)
-        
-        var found = false
-        while (!stack.isEmpty() && !found) {
-            val current = stack.pop()
-            
-            if (current.className != null && current.className == "android.widget.TextView") {
-                val nodeText = current.text?.toString()?.lowercase(Locale.ROOT) ?: ""
-                if (nodeText.contains(appLabel) || nodeText.contains("amnshield") || nodeText.contains("deenshield")) {
-                    found = true
-                }
-            }
-            
-            if (!found) {
-                for (i in 0 until current.childCount) {
-                    val child = current.getChild(i)
-                    if (child != null) {
-                        stack.push(child)
-                    }
-                }
-            }
-            
-            if (current != root) {
-                current.recycle()
-            }
-        }
-        
-        while (!stack.isEmpty()) {
-            val item = stack.pop()
-            if (item != root) {
-                item.recycle()
-            }
-        }
-        
-        return found
-    }
-
-    private fun shouldBlockRemoval(): Boolean {
-        if (!isAntiUninstallOn) {
-            return false
-        }
-
-        return when (antiUninstallMode) {
-            Constants.ANTI_UNINSTALL_PASSWORD_MODE -> true
-            Constants.ANTI_UNINSTALL_TIMED_MODE -> checkIfDateNotReached()
-            else -> false
-        }
-    }
-
-    private fun checkIfDateNotReached(): Boolean {
-        if (savedUnlockAtMillis > 0L) {
-            val now = System.currentTimeMillis()
-            if (now > savedUnlockAtMillis) {
-                val info = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
-                info.edit {
-                    putBoolean("is_anti_uninstall_on", false)
-                    remove("unlock_at_millis")
-                }
-                isAntiUninstallOn = false
-
-                Handler(Looper.getMainLooper()).post {
-                    android.widget.Toast.makeText(
-                        this,
-                        getString(R.string.anti_uninstall_timed_mode_expired),
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                }
-                return false
-            }
-            return true
-        }
-
-        if (savedDate == null) return false
-
-        return try {
-            val parts = savedDate!!.split("/")
-            if (parts.size != 3) return false
-
-            val selectedDate = java.util.Calendar.getInstance()
-            selectedDate.set(parts[2].toInt(), parts[0].toInt() - 1, parts[1].toInt(), 0, 0, 0)
-            selectedDate.set(java.util.Calendar.MILLISECOND, 0)
-
-            val today = java.util.Calendar.getInstance()
-            today.set(java.util.Calendar.HOUR_OF_DAY, 0)
-            today.set(java.util.Calendar.MINUTE, 0)
-            today.set(java.util.Calendar.SECOND, 0)
-            today.set(java.util.Calendar.MILLISECOND, 0)
-
-            if (selectedDate.before(today) || selectedDate.equals(today)) {
-                val info = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
-                info.edit { putBoolean("is_anti_uninstall_on", false) }
-                isAntiUninstallOn = false
-
-                Handler(Looper.getMainLooper()).post {
-                    android.widget.Toast.makeText(
-                        this,
-                        getString(R.string.anti_uninstall_timed_mode_expired),
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                }
-                false
-            } else {
-                selectedDate.after(today)
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun handleAntiUninstallAttempt() {
-        val intent = Intent(this, com.alhaq.amnshield.ui.activity.AntiUninstallPasswordActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        startActivity(intent)
-    }
-
-    private val BROWSER_URL_BAR_IDS = mapOf(
-        "com.android.chrome" to "url_bar",
-        "com.chrome.beta" to "url_bar",
-        "com.chrome.dev" to "url_bar",
-        "com.chrome.canary" to "url_bar",
-        "com.brave.browser" to "url_bar",
-        "com.microsoft.emmx" to "url_bar",
-        "com.sec.android.app.sbrowser" to "location_bar_edit_text",
-        "org.mozilla.firefox" to "mozac_browser_toolbar_url_view",
-        "org.mozilla.focus" to "mozac_browser_toolbar_url_view",
-        "com.opera.browser" to "url_field",
-        "com.opera.mini.native" to "url_field",
-        "com.duckduckgo.mobile.android" to "omnibarTextInput",
-        "com.vivaldi.browser" to "url_bar",
-        "com.kiwibrowser.browser" to "url_bar"
-    )
-
-    private fun checkBlockedWebsites(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
-        val urlBarId = BROWSER_URL_BAR_IDS[packageName] ?: return false
-        val fullId = "$packageName:id/$urlBarId"
-        val urlNode = ViewBlocker.findElementById(rootNode, fullId) ?: return false
-        return try {
-            val urlText = urlNode.text?.toString()?.lowercase(java.util.Locale.ROOT).orEmpty()
-            if (urlText.isNotBlank()) {
-                val manualWebsites = savedPreferencesLoader.loadBlockedWebsites()
-                for (site in manualWebsites) {
-                    val siteLower = site.trim().lowercase(Locale.ROOT)
-                    if (siteLower.isNotEmpty() && urlText.contains(siteLower)) {
-                        return true
-                    }
-                }
-            }
-            false
-        } finally {
-            urlNode.recycle()
-        }
-    }
 
     override fun onInterrupt() {
     }
@@ -1387,17 +653,16 @@ class AmnShieldAccessibilityService : BaseBlockingService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        reelsTrackingHandler.removeCallbacks(reelsTrackingRunnable)
-        try {
-            unregisterReceiver(refreshReceiver)
-        } catch (_: Exception) {
+        if (::reelsSessionTracker.isInitialized) {
+            reelsSessionTracker.stop()
+        }
+        if (::serviceBroadcastManager.isInitialized) {
+            serviceBroadcastManager.unregister()
         }
         try {
             if (::handGestureOverlayManager.isInitialized) {
                 handGestureOverlayManager.dismissOverlay()
             }
-            usageStatOverlayManager?.removeOverlay()
-            usageStatOverlayManager = null
         } catch (_: Exception) {
         }
         eventChannel.close()

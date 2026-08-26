@@ -27,10 +27,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class PremiumFeaturesFragment : Fragment() {
+import android.content.Context
+import android.content.Intent
+
+open class PremiumFeaturesFragment : Fragment() {
+
+    companion object {
+        const val FRAGMENT_ID = "premium_features_fragment"
+        const val ARG_IS_ONBOARDING = "is_onboarding"
+
+        fun newInstance(isOnboarding: Boolean = false): PremiumFeaturesFragment {
+            return PremiumFeaturesFragment().apply {
+                arguments = Bundle().apply {
+                    putBoolean(ARG_IS_ONBOARDING, isOnboarding)
+                }
+            }
+        }
+    }
 
     private var _binding: FragmentPremiumFeaturesBinding? = null
-    private val binding get() = _binding!!
+    protected val binding get() = _binding!!
     private val premiumManager by lazy { PremiumManager.getInstance(requireContext().applicationContext) }
     private val preferencesLoader by lazy { SavedPreferencesLoader(requireContext().applicationContext) }
     private var billingClientWrapper: BillingClientWrapper? = null
@@ -50,6 +66,16 @@ class PremiumFeaturesFragment : Fragment() {
         setupClickListeners()
         updatePremiumState()
 
+        val isOnboarding = arguments?.getBoolean(ARG_IS_ONBOARDING, false) ?: false
+        if (isOnboarding) {
+            binding.btnFinishOnboarding.visibility = View.VISIBLE
+            binding.btnFinishOnboarding.setOnClickListener {
+                finishOnboarding()
+            }
+        } else {
+            binding.btnFinishOnboarding.visibility = View.GONE
+        }
+
         if (BuildConfig.IS_PLAYSTORE) {
             billingClientWrapper = BillingClientWrapper(requireContext()).apply {
                 startConnection {
@@ -60,6 +86,17 @@ class PremiumFeaturesFragment : Fragment() {
                 }
             }
         }
+    }
+
+    fun finishOnboarding() {
+        val sharedPreferences = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putBoolean("isFirstLaunchComplete", true).apply()
+
+        val intent = Intent(requireActivity(), com.alhaq.amnshield.ui.activity.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        requireActivity().finish()
     }
 
     override fun onDestroyView() {
@@ -394,7 +431,7 @@ class PremiumFeaturesFragment : Fragment() {
                 withContext(Dispatchers.Main) {
                     if (profile != null && !profile.licenseKey.isNullOrBlank()) {
                         if (premiumManager.redeemLicenseKey(profile.licenseKey)) {
-                            Toast.makeText(requireContext(), "AmnShield Pro Activated for $email!", Toast.LENGTH_LONG).show()
+                            Toast.makeText(requireContext(), "AmniShield Pro Activated for $email!", Toast.LENGTH_LONG).show()
                             updatePremiumState()
                         } else {
                             Toast.makeText(requireContext(), "License key found in profile was invalid or expired.", Toast.LENGTH_LONG).show()
@@ -402,7 +439,7 @@ class PremiumFeaturesFragment : Fragment() {
                     } else if (profile?.isPremium == true) {
                         premiumManager.updatePremiumStatus(true)
                         updatePremiumState()
-                        Toast.makeText(requireContext(), "AmnShield Pro Status Restored!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(requireContext(), "AmniShield Pro Status Restored!", Toast.LENGTH_LONG).show()
                     } else {
                         Toast.makeText(requireContext(), "No active Pro license found for $email. Please check your purchase email.", Toast.LENGTH_LONG).show()
                     }

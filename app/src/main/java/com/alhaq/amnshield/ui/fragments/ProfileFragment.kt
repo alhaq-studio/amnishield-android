@@ -21,6 +21,13 @@ import com.alhaq.amnshield.ui.theme.AmnShieldTheme
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
 import com.alhaq.amnshield.utils.GoogleSignInHelper
 
+import androidx.lifecycle.lifecycleScope
+import com.alhaq.amnshield.data.AmnShieldAccount
+import com.alhaq.amnshield.data.sync.SupabaseRest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 class ProfileFragment : Fragment() {
 
     private lateinit var googleSignInHelper: GoogleSignInHelper
@@ -43,8 +50,61 @@ class ProfileFragment : Fragment() {
                 // Refresh ViewModel state
                 loadProfileData()
                 Toast.makeText(requireContext(), getString(R.string.signed_in_as, account.email), Toast.LENGTH_SHORT).show()
+                
+                // Automatically connect and verify with Supabase backend
+                syncAccountWithBackend(account)
             } else {
                 Toast.makeText(requireContext(), "Sign in failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun syncAccountWithBackend(account: AmnShieldAccount) {
+        val appContext = requireContext().applicationContext
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val rest = SupabaseRest()
+                var profile: SupabaseRest.UserProfile? = null
+
+                if (!account.idToken.isNullOrBlank()) {
+                    try {
+                        val session = rest.signInWithGoogleIdToken(account.idToken)
+                        if (session != null) {
+                            profile = rest.fetchProfile(session)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("ProfileFragment", "Supabase id_token exchange failed, falling back to email profile fetch", e)
+                    }
+                }
+
+                if (profile == null && !account.email.isNullOrBlank()) {
+                    try {
+                        profile = rest.fetchProfileByEmail(account.email)
+                    } catch (e: Exception) {
+                        android.util.Log.w("ProfileFragment", "Fetch profile by email failed", e)
+                    }
+                }
+
+                if (profile != null) {
+                    val key = profile.licenseKey
+                    if (!key.isNullOrBlank()) {
+                        val activated = PremiumManager.getInstance(appContext).redeemLicenseKey(key)
+                        if (activated) {
+                            withContext(Dispatchers.Main) {
+                                loadProfileData()
+                                Toast.makeText(appContext, "Pro License Synced and Activated from Account!", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else if (profile.isPremium) {
+                        PremiumManager.getInstance(appContext).updatePremiumStatus(true)
+                        withContext(Dispatchers.Main) {
+                            loadProfileData()
+                            Toast.makeText(appContext, "AmniShield Pro Status Synced!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileFragment", "Background account sync error", e)
             }
         }
     }

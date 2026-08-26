@@ -117,8 +117,56 @@ class MainActivity : AppCompatActivity() {
             if (account != null) {
                 updateNavigationHeader(account)
                 Toast.makeText(this, getString(R.string.signed_in_as, account.email), Toast.LENGTH_SHORT).show()
+                syncAccountWithBackend(account)
             } else {
                 Toast.makeText(this, "Sign in failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun syncAccountWithBackend(account: com.alhaq.amnshield.data.AmnShieldAccount) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val rest = com.alhaq.amnshield.data.sync.SupabaseRest()
+                var profile: com.alhaq.amnshield.data.sync.SupabaseRest.UserProfile? = null
+
+                if (!account.idToken.isNullOrBlank()) {
+                    try {
+                        val session = rest.signInWithGoogleIdToken(account.idToken)
+                        if (session != null) {
+                            profile = rest.fetchProfile(session)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("MainActivity", "Supabase id_token exchange failed, falling back to email query", e)
+                    }
+                }
+
+                if (profile == null && !account.email.isNullOrBlank()) {
+                    try {
+                        profile = rest.fetchProfileByEmail(account.email)
+                    } catch (e: Exception) {
+                        android.util.Log.w("MainActivity", "Fetch profile by email failed", e)
+                    }
+                }
+
+                if (profile != null) {
+                    val key = profile.licenseKey
+                    if (!key.isNullOrBlank()) {
+                        val activated = premiumManager.redeemLicenseKey(key)
+                        if (activated) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@MainActivity, "Pro License Synced and Activated from Account!", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else if (profile.isPremium) {
+                        premiumManager.updatePremiumStatus(true)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "AmniShield Pro Status Synced!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Background account sync error", e)
             }
         }
     }
@@ -199,11 +247,13 @@ class MainActivity : AppCompatActivity() {
 
         // Modern back-press handling: prefer OnBackPressedDispatcher over the
         // deprecated Activity.onBackPressed override. Closes the navigation
-        // drawer when open, otherwise falls back to the system default.
+        // drawer when open, pops fragment backstack, otherwise falls back to system default.
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     drawerLayout.closeDrawer(GravityCompat.START)
+                } else if (supportFragmentManager.backStackEntryCount > 0) {
+                    supportFragmentManager.popBackStack()
                 } else {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
@@ -264,7 +314,7 @@ class MainActivity : AppCompatActivity() {
 
         val isAmnScheme = scheme == "amnishield" || scheme == "amnshield"
         val isWebActivation = (scheme == "https" || scheme == "http") &&
-                (host.contains("amnishield.com") || host.contains("amnshield.com") || host.contains("amnshield.org")) &&
+                (host.contains("amnishield.com") || host.contains("amnishield.com") || host.contains("amnshield.org")) &&
                 (path.contains("activate") || path.contains("license") || path.contains("auth") || path.contains("verify") || path.contains("pair") || host == "pair" || data.getQueryParameter("key") != null || data.getQueryParameter("token") != null || data.getQueryParameter("code") != null || data.getQueryParameter("pin") != null)
 
         if (isAmnScheme || isWebActivation) {
@@ -287,7 +337,7 @@ class MainActivity : AppCompatActivity() {
                                     .putString("paired_owner_id", result.ownerId)
                                     .putBoolean("is_paired_with_console", true)
                                     .apply()
-                                Toast.makeText(this@MainActivity, "Device Linked to Web Console!", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@MainActivity, "Device Linked to Cloud Sync Hub!", Toast.LENGTH_LONG).show()
                                 showDevicePairingSuccessDialog(pairPin, deviceName, result.isManaged)
                                 binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
                             } else {
@@ -319,7 +369,7 @@ class MainActivity : AppCompatActivity() {
                 if (payload != null) {
                     val activated = premiumManager.redeemLicenseKey(key)
                     if (activated) {
-                        Toast.makeText(this, "AmnShield Pro License Activated!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "AmniShield Pro License Activated!", Toast.LENGTH_LONG).show()
                         showProActivationSuccessDialog(payload)
                         binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
                     }
@@ -342,13 +392,13 @@ class MainActivity : AppCompatActivity() {
                                     if (verifiedPayload != null) {
                                         showProActivationSuccessDialog(verifiedPayload)
                                     } else {
-                                        Toast.makeText(this@MainActivity, "AmnShield Pro Activated!", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this@MainActivity, "AmniShield Pro Activated!", Toast.LENGTH_LONG).show()
                                     }
                                     binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
                                 }
                             } else if (profile?.isPremium == true) {
                                 premiumManager.updatePremiumStatus(true)
-                                Toast.makeText(this@MainActivity, "AmnShield Pro Activated!", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@MainActivity, "AmniShield Pro Activated!", Toast.LENGTH_LONG).show()
                                 binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
                             } else {
                                 Toast.makeText(this@MainActivity, "Account verified! No active Pro license found for $email.", Toast.LENGTH_LONG).show()
@@ -380,7 +430,7 @@ class MainActivity : AppCompatActivity() {
                         withContext(Dispatchers.Main) {
                             if (profile != null && !profile.licenseKey.isNullOrBlank()) {
                                 premiumManager.redeemLicenseKey(profile.licenseKey)
-                                Toast.makeText(this@MainActivity, "AmnShield Pro Activated!", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@MainActivity, "AmniShield Pro Activated!", Toast.LENGTH_LONG).show()
                                 binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
                             }
                         }
@@ -402,14 +452,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDevicePairingSuccessDialog(pin: String, deviceName: String, isManaged: Boolean) {
-        val modeText = if (isManaged) "Guardian / Parental Managed Mode" else "Personal Focus Mode"
+        val modeText = if (isManaged) "Protected Sync Mode" else "Personal Focus Mode"
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle("📱 Device Linked Successfully!")
-            .setMessage("Your device is now securely connected to the AmniShield Web Admin Console.\n\n• Device: $deviceName\n• Pairing Token: $pin\n• Mode: $modeText\n\nRules, blocklists, and schedules configured in your web console will now automatically sync to this device.")
+            .setMessage("Your device is now securely connected to the AmniShield Cloud Sync Hub.\n\n• Device: $deviceName\n• Pairing Token: $pin\n• Mode: $modeText\n\nRules, blocklists, and schedules configured in your account will now automatically sync to this device.")
             .setPositiveButton("Awesome", null)
             .show()
     }
     
+    private fun updateToolbarTitleForTab(tabId: Int) {
+        val title = when (tabId) {
+            R.id.navigation_stats -> "Usage & Stats"
+            R.id.navigation_blocks -> "Blocks & Rules"
+            R.id.navigation_focus -> "Quick Focus"
+            R.id.navigation_advanced -> "Advanced Protection"
+            else -> getString(R.string.app_name)
+        }
+        binding.toolbar.title = title
+        supportActionBar?.title = title
+    }
+
     private fun setupFragmentNavigation(savedInstanceState: Bundle?) {
         // Load StatsFragment or deep-linked tab by default
         if (savedInstanceState == null) {
@@ -425,9 +487,33 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.nav_host_fragment, initialFragment)
                 .commit()
             binding.bottomNavigation.selectedItemId = startTab
+            updateToolbarTitleForTab(startTab)
+        } else {
+            updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
+        }
+        
+        supportFragmentManager.addOnBackStackChangedListener {
+            val isBackStackEmpty = supportFragmentManager.backStackEntryCount == 0
+            if (::drawerToggle.isInitialized) {
+                drawerToggle.isDrawerIndicatorEnabled = isBackStackEmpty
+                supportActionBar?.setDisplayHomeAsUpEnabled(!isBackStackEmpty)
+                if (isBackStackEmpty) {
+                    drawerToggle.syncState()
+                    updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
+                } else {
+                    val currentFrag = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+                    if (currentFrag is SettingsFragment) {
+                        setToolbarTitle("Settings")
+                    }
+                }
+            }
         }
         
         binding.bottomNavigation.setOnItemSelectedListener { item ->
+            if (supportFragmentManager.backStackEntryCount > 0) {
+                supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            }
+            updateToolbarTitleForTab(item.itemId)
             when (item.itemId) {
                 R.id.navigation_stats -> {
                     supportFragmentManager.beginTransaction()
@@ -463,8 +549,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun selectTab(tabId: Int) {
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
         binding.bottomNavigation.selectedItemId = tabId
+        updateToolbarTitleForTab(tabId)
     }
+
+    fun getSelectedTabId(): Int = binding.bottomNavigation.selectedItemId
 
     fun setBottomNavVisible(visible: Boolean) {
         binding.bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
@@ -472,6 +564,11 @@ class MainActivity : AppCompatActivity() {
 
     fun setToolbarVisible(visible: Boolean) {
         binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    fun setToolbarTitle(title: CharSequence) {
+        binding.toolbar.title = title
+        supportActionBar?.title = title
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -490,6 +587,7 @@ class MainActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
+        updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
         checkAppLock()
         // Permissions will now be handled by PermissionsBottomSheet on first launch, 
         // or user can access them through settings if needed.
@@ -757,7 +855,7 @@ class MainActivity : AppCompatActivity() {
                     startActivity(intent, options.toBundle())
                 } else {
                     makeAccessibilityInfoDialog(
-                        "AmnShield",
+                        "AmniShield",
                         AmnShieldAccessibilityService::class.java
                     )
                 }
@@ -801,11 +899,11 @@ class MainActivity : AppCompatActivity() {
             openUrl("https://www.instagram.com/alhaqinitiative")
         }
         binding.btnDonate.setOnClickListener {
-            openUrl("https://alhaq-initiative.org/donate.html")
+            openUrl("https://alhaq.uk/support.html")
         }
 
         binding.btnCredits.setOnClickListener {
-            openUrl("https://alhaq-initiative.org/credits.html")
+            openUrl("https://alhaq.uk/legal/index.html")
         }
         binding.btnBackup.setOnClickListener {
             ZipUtils.showDirectoryPicker(directoryPicker)
@@ -991,35 +1089,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun shareCrashLog(context: Context) {
-        val errorManager = ErrorReportManager.getInstance(context)
-        val report = errorManager.exportReportsAsText()
-        if (report.contains("No crash logs found.") && report.contains("No feedback submitted.")) {
-            Toast.makeText(context, "No crash logs found", Toast.LENGTH_SHORT).show()
-            return
+        try {
+            val crashLogger = com.alhaq.amnshield.CrashLogger.getInstance(context)
+            val exportFile = crashLogger.getExportLogFile()
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                exportFile
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "AmniShield Diagnostic Logs")
+                putExtra(Intent.EXTRA_TEXT, "Attached are the AmniShield diagnostic system & crash logs.")
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                clipData = android.content.ClipData.newRawUri("Diagnostic Logs", uri)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Share Diagnostic Logs"))
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to share logs: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-
-        val attachmentFile = errorManager.createBundledReportFile()
-        if (attachmentFile == null) {
-            Toast.makeText(context, "Failed to prepare bundled report", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val attachmentUri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.provider",
-            attachmentFile
-        )
-
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "AmnShield Crash Log")
-            putExtra(Intent.EXTRA_TEXT, "Bundled crash report attached.")
-            putExtra(Intent.EXTRA_CC, SUPPORT_CC_ADDRESSES)
-            putExtra(Intent.EXTRA_STREAM, attachmentUri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-        }
-
-        context.startActivity(Intent.createChooser(intent, "Share Crash Log"))
     }
     private fun sendRefreshRequest(action: String) {
         val intent = Intent(action).setPackage(packageName)
@@ -1208,31 +1297,46 @@ class MainActivity : AppCompatActivity() {
         when (mode) {
 
             Constants.ANTI_UNINSTALL_TIMED_MODE -> {
-                val dateString = antiUninstallInfo.getString("date", null)
-                val parts: List<String> = dateString!!.split("/")
-                val selectedDate = Calendar.getInstance()
-                selectedDate.set(
-                    Integer.parseInt(parts[2]),  // Year
-                    Integer.parseInt(parts[0]) - 1,  // Month (0-based)
-                    Integer.parseInt(parts[1])  // Day
-                )
+                val unlockAtMillis = antiUninstallInfo.getLong("unlock_at_millis", 0L)
+                val targetUnlockMillis = if (unlockAtMillis > 0L) {
+                    unlockAtMillis
+                } else {
+                    val dateString = antiUninstallInfo.getString("date", null)
+                    if (dateString != null) {
+                        try {
+                            val parts = dateString.split("/")
+                            val cal = Calendar.getInstance().apply {
+                                set(parts[2].toInt(), parts[0].toInt() - 1, parts[1].toInt(), 23, 59, 59)
+                                set(Calendar.MILLISECOND, 999)
+                            }
+                            cal.timeInMillis
+                        } catch (e: Exception) {
+                            0L
+                        }
+                    } else {
+                        0L
+                    }
+                }
 
-
-                val today = Calendar.getInstance()
-
-                val daysDiff =
-                    (selectedDate.timeInMillis - today.timeInMillis) / (1000 * 60 * 60 * 24)
-                if (selectedDate.before(today) || daysDiff.toInt() == 0) {
+                val remainingMillis = targetUnlockMillis - System.currentTimeMillis()
+                if (targetUnlockMillis > 0L && remainingMillis <= 0L) {
                     Snackbar.make(
                         binding.root,
                         getString(R.string.anti_uninstall_removed),
                         Snackbar.LENGTH_SHORT
-                    )
-                        .show()
-                    antiUninstallInfo.edit().putBoolean("is_anti_uninstall_on", false).commit()
-                    sendRefreshRequest(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
-
+                    ).show()
+                    antiUninstallInfo.edit()
+                        .putBoolean("is_anti_uninstall_on", false)
+                        .remove("unlock_at_millis")
+                        .remove("date")
+                        .commit()
+                    sendRefreshRequest(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
                 } else {
+                    val daysDiff = if (remainingMillis > 0L) {
+                        kotlin.math.ceil(remainingMillis / (1000.0 * 60.0 * 60.0 * 24.0)).toInt().coerceAtLeast(1)
+                    } else {
+                        1
+                    }
 
                     MaterialAlertDialogBuilder(this)
                         .setTitle(getString(R.string.failed))
@@ -1240,7 +1344,6 @@ class MainActivity : AppCompatActivity() {
                         .setPositiveButton("Ok", null)
                         .show()
                 }
-
             }
 
             Constants.ANTI_UNINSTALL_PASSWORD_MODE -> {
@@ -1265,16 +1368,13 @@ class MainActivity : AppCompatActivity() {
                             }
                             antiUninstallInfo.edit().putBoolean("is_anti_uninstall_on", false)
                                 .commit()
-                            sendRefreshRequest(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
+                            sendRefreshRequest(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
 
                             Snackbar.make(
                                 binding.root,
                                 "Anti Uninstall removed",
                                 Snackbar.LENGTH_SHORT
-                            )
-                                .show()
-
-                            // checkPermissions() // Removed old permission check
+                            ).show()
                         } else {
                             Snackbar.make(
                                 binding.root,
@@ -1320,7 +1420,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         val aboutMessage = """
-            AmnShield v$versionName
+            AmniShield v$versionName
             
             A comprehensive digital wellbeing app designed to help you maintain focus, develop healthy digital habits, and protect yourself from distracting content.
             
@@ -1368,6 +1468,11 @@ class MainActivity : AppCompatActivity() {
             R.string.navigation_drawer_open,
             R.string.navigation_drawer_close
         )
+        drawerToggle.setToolbarNavigationClickListener {
+            if (supportFragmentManager.backStackEntryCount > 0) {
+                supportFragmentManager.popBackStack()
+            }
+        }
         drawerLayout.addDrawerListener(drawerToggle)
         drawerToggle.syncState()
         drawerToggle.drawerArrowDrawable.color =
@@ -1410,25 +1515,28 @@ class MainActivity : AppCompatActivity() {
     private fun openSettingsScreen() {
         val loader = savedPreferencesLoader
         val pinEnabled = loader.isPinSecurityEnabled()
-        val bypassEnabled = loader.isBypassPinLockEnabled()
-        val antiUninstallPrefs = getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
-        val isAntiUninstallOn = antiUninstallPrefs.getBoolean("is_anti_uninstall_on", false)
         val pinCode = loader.getPinCode()
 
-        val needsPin = pinEnabled && bypassEnabled && isAntiUninstallOn && pinCode.isNotEmpty() && !AmnShield.isBypassUnlocked
+        val needsPin = pinEnabled && pinCode.isNotEmpty() && !AmnShield.isBypassSessionActive()
 
         if (needsPin) {
             showBypassPinDialog(pinCode, onCancel = {
                 selectTab(R.id.navigation_stats)
             }) {
                 supportFragmentManager.beginTransaction()
+                    .setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out)
                     .replace(R.id.nav_host_fragment, SettingsFragment())
+                    .addToBackStack("settings")
                     .commit()
+                setToolbarTitle("Settings")
             }
         } else {
             supportFragmentManager.beginTransaction()
+                .setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out)
                 .replace(R.id.nav_host_fragment, SettingsFragment())
+                .addToBackStack("settings")
                 .commit()
+            setToolbarTitle("Settings")
         }
     }
 
@@ -1443,155 +1551,34 @@ class MainActivity : AppCompatActivity() {
 
         val composeView = androidx.compose.ui.platform.ComposeView(this).apply {
             setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        
-        composeView.setContent {
-            var pinText by remember { mutableStateOf("") }
-            var errorText by remember { mutableStateOf("") }
-            
-            AmnShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this@MainActivity)) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(
-                            text = "Settings Locked",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Enter your 4-digit PIN to modify blocker settings",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            repeat(4) { index ->
-                                val hasChar = index < pinText.length
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (hasChar) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                )
-                            }
+            setContent {
+                AmnShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this@MainActivity)) {
+                    com.alhaq.amnshield.ui.components.PinPromptContent(
+                        correctPin = correctPinCode,
+                        title = "Settings Locked",
+                        subtitle = "Enter your 4-digit PIN to modify blocker settings",
+                        allowForgotPin = true,
+                        onDismiss = {
+                            dialog.dismiss()
+                            onCancel()
+                        },
+                        onPinSuccess = {
+                            AmnShield.unlockBypassSession()
+                            dialog.dismiss()
+                            onSuccess()
+                        },
+                        onPinResetCompleted = {
+                            AmnShield.unlockBypassSession()
+                            dialog.dismiss()
+                            onSuccess()
                         }
-                        
-                        if (errorText.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = errorText,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(48.dp))
-                        
-                        val buttons = listOf(
-                            listOf("1", "2", "3"),
-                            listOf("4", "5", "6"),
-                            listOf("7", "8", "9"),
-                            listOf("Cancel", "0", "Delete")
-                        )
-                        
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            buttons.forEach { row ->
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                                ) {
-                                    row.forEach { char ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(72.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (char == "Cancel" || char == "Delete") Color.Transparent
-                                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                )
-                                                .clickable {
-                                                    when (char) {
-                                                        "Cancel" -> {
-                                                            dialog.dismiss()
-                                                            onCancel()
-                                                        }
-                                                        "Delete" -> {
-                                                            if (pinText.isNotEmpty()) {
-                                                                pinText = pinText.substring(0, pinText.length - 1)
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            if (pinText.length < 4) {
-                                                                pinText += char
-                                                                errorText = ""
-                                                                if (pinText.length == 4) {
-                                                                    if (pinText == correctPinCode) {
-                                                                        AmnShield.isBypassUnlocked = true
-                                                                        dialog.dismiss()
-                                                                        onSuccess()
-                                                                    } else {
-                                                                        pinText = ""
-                                                                        errorText = "Incorrect PIN code"
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = char,
-                                                style = if (char == "Cancel" || char == "Delete") MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (char == "Cancel") MaterialTheme.colorScheme.error else if (char == "Delete") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    )
                 }
             }
         }
         
         dialog.setContentView(composeView)
         dialog.setCancelable(false)
-        dialog.setOnKeyListener { _, keyCode, _ ->
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
-                dialog.dismiss()
-                onCancel()
-                true
-            } else {
-                false
-            }
-        }
         dialog.show()
     }
     
@@ -1862,8 +1849,7 @@ class MainActivity : AppCompatActivity() {
     // onBackPressed override removed; handled by OnBackPressedDispatcher in onCreate.
 
     private fun initializeNotificationChannels() {
-        val notificationManager = com.alhaq.amnshield.utils.NotificationManager(this)
-        notificationManager.createNotificationChannels()
+        com.alhaq.amnshield.utils.NotificationHelper.getInstance(this)
     }
     
     private fun scheduleDailyReportsIfPremium() {
@@ -1894,161 +1880,39 @@ class MainActivity : AppCompatActivity() {
 
         val composeView = androidx.compose.ui.platform.ComposeView(this).apply {
             setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        
-        composeView.setContent {
-            var pinText by remember { mutableStateOf("") }
-            var errorText by remember { mutableStateOf("") }
-            
-            AmnShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this@MainActivity)) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(
-                            text = "AmnShield Locked",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Enter your 4-digit PIN to access the app",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            repeat(4) { index ->
-                                val hasChar = index < pinText.length
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (hasChar) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                )
-                            }
+            setContent {
+                AmnShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this@MainActivity)) {
+                    com.alhaq.amnshield.ui.components.PinPromptContent(
+                        correctPin = correctPinCode,
+                        title = "AmniShield Locked",
+                        subtitle = "Enter your 4-digit PIN to access the app",
+                        allowForgotPin = true,
+                        onDismiss = {
+                            dialog.dismiss()
+                            finish()
+                        },
+                        onPinSuccess = {
+                            AmnShield.isAppUnlocked = true
+                            dialog.dismiss()
+                        },
+                        onPinResetCompleted = {
+                            AmnShield.isAppUnlocked = true
+                            dialog.dismiss()
                         }
-                        
-                        if (errorText.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = errorText,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(48.dp))
-                        
-                        val buttons = listOf(
-                            listOf("1", "2", "3"),
-                            listOf("4", "5", "6"),
-                            listOf("7", "8", "9"),
-                            listOf("Exit", "0", "Delete")
-                        )
-                        
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            buttons.forEach { row ->
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                                ) {
-                                    row.forEach { char ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(72.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (char == "Exit" || char == "Delete") Color.Transparent
-                                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                )
-                                                .clickable {
-                                                    when (char) {
-                                                        "Exit" -> {
-                                                            dialog.dismiss()
-                                                            finish()
-                                                        }
-                                                        "Delete" -> {
-                                                            if (pinText.isNotEmpty()) {
-                                                                pinText = pinText.substring(0, pinText.length - 1)
-                                                            }
-                                                        }
-                                                        else -> {
-                                                            if (pinText.length < 4) {
-                                                                pinText += char
-                                                                errorText = ""
-                                                                if (pinText.length == 4) {
-                                                                    if (pinText == correctPinCode) {
-                                                                        AmnShield.isAppUnlocked = true
-                                                                        dialog.dismiss()
-                                                                    } else {
-                                                                        pinText = ""
-                                                                        errorText = "Incorrect PIN code"
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = char,
-                                                style = if (char == "Exit" || char == "Delete") MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (char == "Exit") MaterialTheme.colorScheme.error else if (char == "Delete") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    )
                 }
             }
         }
         
         dialog.setContentView(composeView)
         dialog.setCancelable(false)
-        dialog.setOnKeyListener { _, keyCode, _ ->
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
-                dialog.dismiss()
-                finish()
-                true
-            } else {
-                false
-            }
-        }
         dialog.show()
     }
 
     private companion object {
 
         private val SUPPORT_CC_ADDRESSES = arrayOf(
-            "support@alhaq-initiative.org",
+            "support@alhaq.uk",
             "alhaq.dst@gmail.com"
         )
         private const val BRAND_LOGO_ASSET_PATH = "icons/Amnshield_Transparent_bg.png"
