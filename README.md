@@ -1,6 +1,6 @@
-# AmnShield — Android App
+# AmniShield — Android App
 
-AmnShield is a privacy-first digital wellness and content-blocking app for Android. It
+AmniShield is a privacy-first digital wellness and content-blocking app for Android. It
 combines app blocking, keyword filtering, focus mode, scheduled blocking, and launch limits
 into a single accessibility-service–based guardian.
 
