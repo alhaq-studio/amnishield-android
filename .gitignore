@@ -1,3 +1,4 @@
+# IDE and Local Cache, Build & Environment 
 *.iml
 .gradle
 /local.properties
@@ -13,6 +14,11 @@
 /captures
 .externalNativeBuild
 .cxx
+.idea/
+.kotlin/
+local
+*.iws
+*.out
 
 # ── Keystores & Certificates ──────────────────────────────────────────────
 keystore.properties
@@ -41,4 +47,3 @@ google-services.json
 Thumbs.db
 Desktop.ini
 *.log
-.idea
