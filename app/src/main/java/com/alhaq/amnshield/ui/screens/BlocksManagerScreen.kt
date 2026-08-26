@@ -31,6 +31,7 @@ import com.alhaq.amnshield.ui.state.ScheduleRule
 import com.alhaq.amnshield.ui.state.SchedulePeriod
 import com.alhaq.amnshield.ui.viewmodel.AmnShieldViewModel
 import com.alhaq.amnshield.utils.ScheduleUtils
+import com.alhaq.amnshield.ui.components.bounceClick
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,36 +58,39 @@ fun BlocksManagerScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = {
-                    Column {
-                        Text(
-                            text = "Blocks Screen",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            text = "Manage your active blocks and rules",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    if (onBack != null) {
+            if (onBack != null) {
+                TopAppBar(
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    title = {
+                        Column {
+                            Text(
+                                text = "Blocks & Rules",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                text = "Manage your active blocks and rules",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back"
                             )
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
-            )
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -123,8 +127,9 @@ fun BlocksManagerScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .background(
                                 if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                else MaterialTheme.colorScheme.surfaceContainerHigh
                             )
+                            .bounceClick()
                             .clickable { selectedFilter = filter }
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center
@@ -156,8 +161,8 @@ fun BlocksManagerScreen(
                         Box(
                             modifier = Modifier
                                 .size(72.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -169,7 +174,7 @@ fun BlocksManagerScreen(
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(36.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -181,7 +186,12 @@ fun BlocksManagerScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "There are no $selectedFilter rules configured right now. Tap Add Rule to create one.",
+                            text = when (selectedFilter) {
+                                "Schedules" -> "No recurring schedule rules created."
+                                "Limits" -> "No launch count or usage limits configured."
+                                "Cheat Hours" -> "No cheat hour windows configured."
+                                else -> "Tap '+ Add Rule' below to create your first boundary rule."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -190,11 +200,13 @@ fun BlocksManagerScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(bottom = 88.dp)
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp)
                 ) {
-                    items(filteredRules) { rule ->
+                    items(filteredRules, key = { it.id }) { rule ->
                         RuleItemCard(
                             rule = rule,
                             onToggleActive = { onToggleRule(rule.id) },
@@ -233,12 +245,14 @@ fun RuleItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .bounceClick()
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier

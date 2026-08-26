@@ -175,7 +175,7 @@ fun AmnShieldInputField(
                 Text(
                     text = placeholder,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                 ) 
             },
             leadingIcon = leadingIcon?.let {
@@ -203,10 +203,14 @@ fun AmnShieldInputField(
             ),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                 errorBorderColor = MaterialTheme.colorScheme.error,
+                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent
             )
@@ -426,7 +430,7 @@ fun AmnShieldStatBadge(
  */
 fun Modifier.bounceClick(
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -438,15 +442,18 @@ fun Modifier.bounceClick(
         ),
         label = "bounce_click_scale"
     )
-    this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
-        .clickable(
+    val base = this.graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+    if (onClick != null) {
+        base.clickable(
             interactionSource = interactionSource,
             indication = LocalIndication.current,
             enabled = enabled,
             onClick = onClick
         )
+    } else {
+        base
+    }
 }

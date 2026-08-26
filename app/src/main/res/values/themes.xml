@@ -48,6 +48,10 @@
         <item name="colorSurfaceContainerHigh">@color/md_theme_surfaceContainerHigh</item>
         <item name="colorSurfaceContainerHighest">@color/md_theme_surfaceContainerHighest</item>
         
+        <!-- Typography -->
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+
         <!-- Set default dialog and button styles -->
         <item name="alertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
         <item name="materialAlertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
@@ -63,9 +67,6 @@
         <item name="android:colorBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
     <!-- Modern Gradient Theme -->
@@ -281,11 +282,6 @@
 
     <!-- Emerald Theme (flat light, high readability) -->
     <style name="Theme.AmnShield.Emerald" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-
         <item name="colorPrimary">@color/emerald_primary</item>
         <item name="colorOnPrimary">@color/emerald_onPrimary</item>
         <item name="colorPrimaryContainer">@color/emerald_primaryContainer</item>
@@ -346,11 +342,6 @@
 
     <!-- Sunset Glow Theme -->
     <style name="Theme.AmnShield.Sunset" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-
         <item name="colorPrimary">@color/sunset_primary</item>
         <item name="colorOnPrimary">@color/sunset_onPrimary</item>
         <item name="colorPrimaryContainer">@color/sunset_primaryContainer</item>
@@ -444,6 +435,27 @@
         <item name="colorSurfaceInverse">#F0E8FF</item>
         <item name="colorOnSurfaceInverse">#1C1236</item>
         <item name="colorPrimaryInverse">@color/purple_primaryContainer</item>
+
+        <!-- Readability Defaults for Legacy & Material Components in Cosmic Theme -->
+        <item name="android:textColorPrimary">@color/purple_onSurface</item>
+        <item name="android:textColorSecondary">@color/purple_onSurfaceVariant</item>
+        <item name="android:textColorHint">@color/purple_outline</item>
+        <item name="android:editTextColor">@color/purple_onSurface</item>
+        <item name="titleTextColor">@color/purple_onSurface</item>
+        <item name="subtitleTextColor">@color/purple_onSurfaceVariant</item>
+
+        <!-- Dialogs & Chips -->
+        <item name="alertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
+        <item name="chipStyle">@style/Widget.AmnShield.Chip</item>
+
+        <!-- Widget Styles -->
+        <item name="cardViewStyle">@style/Widget.AmnShield.CardView</item>
+        <item name="materialCardViewStyle">@style/Widget.AmnShield.CardView</item>
+        <item name="materialCardViewElevatedStyle">@style/Widget.AmnShield.CardView</item>
+        <item name="materialCardViewOutlinedStyle">@style/Widget.AmnShield.CardView.Outlined</item>
+        <item name="textInputStyle">@style/Widget.AmnShield.TextInputLayout</item>
+        <item name="editTextStyle">@style/Widget.AmnShield.EditText</item>
         <item name="materialButtonStyle">@style/Widget.AmnShield.Button</item>
         <item name="materialButtonOutlinedStyle">@style/Widget.AmnShield.Button.Outlined</item>
         <item name="borderlessButtonStyle">@style/Widget.AmnShield.Button.Text</item>

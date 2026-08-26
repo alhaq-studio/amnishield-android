@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -39,6 +40,8 @@ import androidx.core.app.NotificationManagerCompat
 import com.alhaq.amnshield.notifications.SmartNotificationScheduler
 import com.alhaq.amnshield.utils.NotificationHelper
 import java.util.*
+
+import com.alhaq.amnshield.ui.components.bounceClick
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,39 +97,56 @@ fun RemindersScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
-                title = { Text("Notifications & Reminders", fontWeight = FontWeight.Bold) },
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                title = {
+                    Column {
+                        Text(
+                            text = "Notifications & Reminders",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Configure alerts, nudge schedules & daily reports",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Master Notification Switch Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (masterNotificationsEnabled) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    }
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -136,18 +156,29 @@ fun RemindersScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(
-                            Icons.Default.NotificationsActive,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (masterNotificationsEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = if (masterNotificationsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
                         Column {
-                            Text("All Notifications", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("All Notifications", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                             Text(
                                 if (masterNotificationsEnabled) "Enabled • Granular control below" else "Paused • Zero notifications will be sent",
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -166,15 +197,17 @@ fun RemindersScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("OS Permission Status", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("OS Permission Status", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     PermissionStatusRow(
@@ -208,13 +241,18 @@ fun RemindersScreen(
             // Smart Behavioral Engine Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Smart Behavioral Alerts", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Smart Behavioral Alerts", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     SwitchSettingRow(
@@ -228,7 +266,7 @@ fun RemindersScreen(
                         }
                     )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                     SwitchSettingRow(
                         title = "5-Minute Pre-Block Warnings",
@@ -246,13 +284,18 @@ fun RemindersScreen(
             // Daily Report Scheduler Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Scheduled Daily Report", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Scheduled Daily Report", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     SwitchSettingRow(
@@ -279,7 +322,7 @@ fun RemindersScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Scheduled Report Time:", fontSize = 14.sp)
+                            Text("Scheduled Report Time:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                             Button(
                                 onClick = {
                                     TimePickerDialog(context, { _, selectedHour, selectedMinute ->
@@ -293,9 +336,11 @@ fun RemindersScreen(
                                         scheduler.scheduleDailyReport(selectedHour, selectedMinute)
                                         Toast.makeText(context, "Scheduled for ${formatTime(selectedHour, selectedMinute)}", Toast.LENGTH_SHORT).show()
                                     }, reportHour, reportMinute, false).show()
-                                }
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.bounceClick()
                             ) {
-                                Text(formatTime(reportHour, reportMinute))
+                                Text(formatTime(reportHour, reportMinute), fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -305,13 +350,18 @@ fun RemindersScreen(
             // Focus Mode Reminders Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Focus & Protection Nudges", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Focus & Protection Nudges", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     SwitchSettingRow(
@@ -325,7 +375,7 @@ fun RemindersScreen(
                         }
                     )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                     SwitchSettingRow(
                         title = "Real-time Blocking Alerts",
@@ -343,13 +393,18 @@ fun RemindersScreen(
             // Achievements & Digital Wellbeing Tips
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Milestones & Wellbeing Tips", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Milestones & Wellbeing Tips", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
 
                     SwitchSettingRow(
@@ -363,7 +418,7 @@ fun RemindersScreen(
                         }
                     )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                     SwitchSettingRow(
                         title = "Daily Digital Wellbeing Tips",
@@ -386,12 +441,15 @@ fun RemindersScreen(
                     }
                     context.startActivity(intent)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick(),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             ) {
                 Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Open Android System Channel Settings", fontSize = 13.sp)
+                Text("Open Android System Channel Settings", fontWeight = FontWeight.SemiBold)
             }
 
             // Test Notification Button
@@ -404,8 +462,10 @@ fun RemindersScreen(
                     )
                     Toast.makeText(context, "Test notification sent!", Toast.LENGTH_SHORT).show()
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick(),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))

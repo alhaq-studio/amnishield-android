@@ -3,6 +3,7 @@ package com.alhaq.amnshield.ui.state
 import androidx.compose.ui.graphics.Color
 
 enum class AppTheme {
+    SYSTEM_DEFAULT,
     SUNSET_GLOW,
     EMERALD_CALM,
     COSMIC_NIGHT
@@ -87,7 +88,7 @@ data class AmnShieldState(
     val permissionNotificationsDone: Boolean = false,
 
     // Active theme
-    val currentTheme: AppTheme = AppTheme.EMERALD_CALM,
+    val currentTheme: AppTheme = AppTheme.SYSTEM_DEFAULT,
 
     // System Status
     val isMainServiceEnabled: Boolean = false,
@@ -179,6 +180,12 @@ data class AmnShieldState(
     val profilePin: String = "",
     val isAppLockEnabled: Boolean = false,
     val isBypassPinLockEnabled: Boolean = false,
+    val pinResetCooldownMinutes: Int = 5,
+    val emergencyAccessCooldownMinutes: Int = 5,
+    val pinResetRequestedTimestamp: Long = 0L,
+    val emergencyOverrideRequestedTimestamp: Long = 0L,
+    val isEmergencyOverrideActive: Boolean = false,
+    val isEmergencyWindowActive: Boolean = false,
     val isAdvancedMode: Boolean = true,
 
     // Sync & Data Privacy Settings

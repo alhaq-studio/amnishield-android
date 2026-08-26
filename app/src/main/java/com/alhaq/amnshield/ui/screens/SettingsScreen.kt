@@ -3,8 +3,11 @@ package com.alhaq.amnshield.ui.screens
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import com.alhaq.amnshield.Constants
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -12,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -39,6 +44,7 @@ fun SettingsScreen(
     onBackupRestore: () -> Unit,
     onReminders: () -> Unit,
     onShareCrashLogs: () -> Unit,
+    onDiagnostics: () -> Unit = {},
     onHelpFAQ: () -> Unit,
     onAbout: () -> Unit,
     onLanguage: () -> Unit,
@@ -48,22 +54,60 @@ fun SettingsScreen(
     onToggleAppUsageTracking: (Boolean) -> Unit = {},
     onToggleWebsiteUsageTracking: (Boolean) -> Unit = {},
     onToggleReelsTracking: (Boolean) -> Unit = {},
-    onBack: () -> Unit
+    onUpdatePinResetCooldown: (Int) -> Unit = {},
+    onUpdateEmergencyCooldown: (Int) -> Unit = {},
+    showTopAppBar: Boolean = false,
+    onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    var showPinCooldownDialog by remember { mutableStateOf(false) }
+    var showEmergencyCooldownDialog by remember { mutableStateOf(false) }
+
+    if (showPinCooldownDialog) {
+        CooldownSelectionDialog(
+            title = "PIN Reset Cooldown",
+            subtitle = "Enforce a minimum waiting delay before a forgotten PIN can be reset. Hard floor: 5 minutes.",
+            selectedMinutes = state.pinResetCooldownMinutes,
+            onDismiss = { showPinCooldownDialog = false },
+            onSelectMinutes = { mins ->
+                showPinCooldownDialog = false
+                onUpdatePinResetCooldown(mins)
+            }
+        )
+    }
+
+    if (showEmergencyCooldownDialog) {
+        CooldownSelectionDialog(
+            title = "Emergency Access Cooldown",
+            subtitle = "Enforce a minimum emergency delay before protection can be overridden in Timed Mode. Hard floor: 5 minutes.",
+            selectedMinutes = state.emergencyAccessCooldownMinutes,
+            onDismiss = { showEmergencyCooldownDialog = false },
+            onSelectMinutes = { mins ->
+                showEmergencyCooldownDialog = false
+                onUpdateEmergencyCooldown(mins)
+            }
+        )
+    }
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+            if (showTopAppBar) {
+                TopAppBar(
+                    title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
-            )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -80,8 +124,8 @@ fun SettingsScreen(
                     text = "PROFILE & ACCOUNT",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
@@ -90,10 +134,11 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .bounceClick { onNavigateToProfile() },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -103,8 +148,8 @@ fun SettingsScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
@@ -147,18 +192,19 @@ fun SettingsScreen(
                     text = "APPEARANCE",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
                         // Custom Theme Selection row
@@ -195,11 +241,14 @@ fun SettingsScreen(
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
+                                    val themePref = com.alhaq.amnshield.utils.ThemeUtils.getSelectedThemePref(context)
+                                    val isSystemDark = com.alhaq.amnshield.utils.ThemeUtils.isSystemInDarkMode(context)
                                     Text(
-                                        text = when (state.currentTheme) {
-                                            AppTheme.SUNSET_GLOW -> "Sunset Glow (Warm Sand)"
-                                            AppTheme.EMERALD_CALM -> "Emerald Calm (Pearl Teal)"
-                                            AppTheme.COSMIC_NIGHT -> "Cosmic Night (Deep Violet)"
+                                        text = when (themePref) {
+                                            com.alhaq.amnshield.utils.ThemeUtils.THEME_PURPLE -> "Cosmic Night (Deep Violet • Dark)"
+                                            com.alhaq.amnshield.utils.ThemeUtils.THEME_EMERALD -> "Emerald Calm (Pearl Teal • Light)"
+                                            com.alhaq.amnshield.utils.ThemeUtils.THEME_SUNSET -> "Sunset Glow (Warm Sand • Light)"
+                                            else -> "System Default (Auto: ${if (isSystemDark) "Cosmic Night" else "Emerald Calm"})"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -220,31 +269,41 @@ fun SettingsScreen(
                                     onDismissRequest = { expandedThemeMenu = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Sunset Glow (Warm Sand)") },
+                                        text = { Text("System Default (Auto Detect • Default)") },
                                         onClick = {
-                                            viewModel.updateTheme(AppTheme.SUNSET_GLOW)
+                                            viewModel.updateTheme(AppTheme.SYSTEM_DEFAULT)
                                             val prefs = context.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
-                                            prefs.edit().putString("theme_style", "sunset").apply()
+                                            prefs.edit().putString("theme_style", com.alhaq.amnshield.utils.ThemeUtils.THEME_SYSTEM).apply()
                                             expandedThemeMenu = false
                                             (context as? android.app.Activity)?.recreate()
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Emerald Calm (Pearl Teal)") },
-                                        onClick = {
-                                            viewModel.updateTheme(AppTheme.EMERALD_CALM)
-                                            val prefs = context.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
-                                            prefs.edit().putString("theme_style", "emerald").apply()
-                                            expandedThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Cosmic Night (Deep Violet)") },
+                                        text = { Text("Cosmic Night (Deep Violet • Dark)") },
                                         onClick = {
                                             viewModel.updateTheme(AppTheme.COSMIC_NIGHT)
                                             val prefs = context.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
-                                            prefs.edit().putString("theme_style", "purple").apply()
+                                            prefs.edit().putString("theme_style", com.alhaq.amnshield.utils.ThemeUtils.THEME_PURPLE).apply()
+                                            expandedThemeMenu = false
+                                            (context as? android.app.Activity)?.recreate()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Emerald Calm (Pearl Teal • Light)") },
+                                        onClick = {
+                                            viewModel.updateTheme(AppTheme.EMERALD_CALM)
+                                            val prefs = context.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
+                                            prefs.edit().putString("theme_style", com.alhaq.amnshield.utils.ThemeUtils.THEME_EMERALD).apply()
+                                            expandedThemeMenu = false
+                                            (context as? android.app.Activity)?.recreate()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Sunset Glow (Warm Sand • Light)") },
+                                        onClick = {
+                                            viewModel.updateTheme(AppTheme.SUNSET_GLOW)
+                                            val prefs = context.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
+                                            prefs.edit().putString("theme_style", com.alhaq.amnshield.utils.ThemeUtils.THEME_SUNSET).apply()
                                             expandedThemeMenu = false
                                             (context as? android.app.Activity)?.recreate()
                                         }
@@ -253,9 +312,9 @@ fun SettingsScreen(
                             }
                         }
 
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         Row(
@@ -271,7 +330,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(MaterialTheme.colorScheme.surface),
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -317,18 +376,19 @@ fun SettingsScreen(
                     text = "FEATURES",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
                         // Feature Toggle: App Usage Tracker
@@ -339,9 +399,9 @@ fun SettingsScreen(
                             onCheckedChange = { onToggleAppUsageTracking(it) }
                         )
 
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         // Feature Toggle: Website Usage Tracker
@@ -352,9 +412,9 @@ fun SettingsScreen(
                             onCheckedChange = { onToggleWebsiteUsageTracking(it) }
                         )
 
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         // Feature Toggle: Reels Doom-Scroll Tracker
@@ -365,9 +425,9 @@ fun SettingsScreen(
                             onCheckedChange = { onToggleReelsTracking(it) }
                         )
 
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         // Feature Toggle: Web Filter Engine
@@ -381,24 +441,126 @@ fun SettingsScreen(
                 }
             }
 
-            // HOME SCREEN WIDGETS
+            // SECURITY & COOLDOWNS
             item {
                 Text(
-                    text = "HOME SCREEN WIDGETS",
+                    text = "SECURITY & COOLDOWNS",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column {
+                        // PIN Reset Cooldown
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showPinCooldownDialog = true }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Timer,
+                                contentDescription = null,
+                                tint = Color(0xFF6366F1),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "PIN Reset Cooldown",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Minimum delay before forgotten PIN can be reset",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "${state.pinResetCooldownMinutes} mins",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        // Emergency Access Cooldown
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showEmergencyCooldownDialog = true }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.HourglassTop,
+                                contentDescription = null,
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Emergency Access Cooldown",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Minimum delay before Timed Mode override unlocks",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "${state.emergencyAccessCooldownMinutes} mins",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // HOME SCREEN WIDGETS
+            item {
+                Text(
+                    text = "HOME SCREEN WIDGETS",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -411,7 +573,7 @@ fun SettingsScreen(
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.ScreentimeWidgetProvider") }
                         )
 
-                        Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
                         WidgetPinRow(
                             icon = Icons.Outlined.Movie,
@@ -420,16 +582,16 @@ fun SettingsScreen(
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.ReelsMetricsWidgetProvider") }
                         )
 
-                        Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
                         WidgetPinRow(
                             icon = Icons.Outlined.Timer,
                             title = "Quick Focus Space Widget",
-                            description = "Start instant 15m, 30m, or 60m Focus sessions directly from your Home screen.",
+                            description = "Start instant Quick Focus sessions with customized duration presets directly from your Home screen.",
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnshield.ui.widgets.QuickFocusWidgetProvider") }
                         )
 
-                        Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
                         WidgetPinRow(
                             icon = Icons.Outlined.SelfImprovement,
@@ -447,24 +609,30 @@ fun SettingsScreen(
                     text = "GENERAL",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
                         SettingsNavigationRow(icon = Icons.Outlined.CloudUpload, title = "Backup & Restore", onClick = onBackupRestore)
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                        SettingsNavigationRow(icon = Icons.Outlined.Language, title = "Language", subtitle = "Choose your preferred language", onClick = onLanguage)
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
                         SettingsNavigationRow(
                             icon = Icons.Outlined.Notifications,
@@ -472,11 +640,64 @@ fun SettingsScreen(
                             subtitle = "Daily reports, doomscroll alerts, wellbeing tips",
                             onClick = onReminders
                         )
-                        Divider(
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
                         SettingsNavigationRow(icon = Icons.Outlined.BugReport, title = "Share Crash Logs", onClick = onShareCrashLogs)
+                    }
+                }
+            }
+
+            // PRIVACY & DATA RIGHTS
+            item {
+                Text(
+                    text = "PRIVACY & DATA RIGHTS",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column {
+                        SettingsNavigationRow(
+                            icon = Icons.Outlined.Shield,
+                            title = "Privacy Policy",
+                            subtitle = "UK GDPR, zero-telemetry disclosure, and rights",
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Constants.PRIVACY_POLICY_URL)))
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                        SettingsNavigationRow(
+                            icon = Icons.Outlined.DeleteSweep,
+                            title = "Account & Data Deletion Portal",
+                            subtitle = "How to request permanent cloud and account erasure",
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Constants.DATA_DELETION_URL)))
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -487,26 +708,32 @@ fun SettingsScreen(
                     text = "ABOUT",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
                 )
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column {
-                        SettingsNavigationRow(icon = Icons.Outlined.HelpOutline, title = "Help & FAQ", onClick = onHelpFAQ)
-                        Divider(
+                        SettingsNavigationRow(icon = Icons.AutoMirrored.Outlined.HelpOutline, title = "Help & FAQ", onClick = onHelpFAQ)
+                        HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
-                        SettingsNavigationRow(icon = Icons.Outlined.Info, title = "About AmnShield", onClick = onAbout)
+                        SettingsNavigationRow(icon = Icons.Outlined.Terminal, title = "Diagnostics & Logs", subtitle = "View and export local crash logs", onClick = onDiagnostics)
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                        SettingsNavigationRow(icon = Icons.Outlined.Info, title = "About AmniShield", onClick = onAbout)
                     }
                 }
             }
@@ -548,15 +775,16 @@ fun SettingsToggleRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -564,8 +792,8 @@ fun SettingsToggleRow(
 
             Text(
                 title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -592,15 +820,16 @@ fun SettingsNavigationRow(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -609,8 +838,8 @@ fun SettingsNavigationRow(
             Column {
                 Text(
                     title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 if (subtitle != null) {

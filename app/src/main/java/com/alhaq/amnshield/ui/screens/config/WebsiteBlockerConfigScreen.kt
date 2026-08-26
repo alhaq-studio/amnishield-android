@@ -26,15 +26,12 @@ import com.alhaq.amnshield.ui.activity.FragmentActivity
 import com.alhaq.amnshield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
+import com.alhaq.amnshield.ui.components.bounceClick
+
 private const val TAG = "WebsiteBlockerConfig"
 
 /**
  * Dedicated Jetpack Compose configuration screen for Website Blocker.
- * 
- * Manages behavioral settings and preferences:
- * - Master Website Blocker enabled switch
- * - Intercept warning screen behavior trigger
- * - Direct shortcut to Active Blocks Manager for website domains and schedule rules
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,14 +59,23 @@ fun WebsiteBlockerConfigScreen(
     Log.d(TAG, "Rendering WebsiteBlockerConfigScreen: enabled=$isFeatureEnabled, sitesCount=$blockedWebsitesCount, rulesCount=$websiteRulesCount")
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    Text(
-                        text = "Website Blocker Settings",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            text = "Website Blocker Settings",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Block distracting domains & adult URLs",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -80,7 +86,10 @@ fun WebsiteBlockerConfigScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -92,7 +101,7 @@ fun WebsiteBlockerConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Accessibility Service Banner if disabled
@@ -104,9 +113,10 @@ fun WebsiteBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -118,13 +128,16 @@ fun WebsiteBlockerConfigScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                            .background(
+                                if (isFeatureEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Language,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isFeatureEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -133,7 +146,7 @@ fun WebsiteBlockerConfigScreen(
                         Text(
                             text = "Enable Website Blocker",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isFeatureEnabled) "Intercepting restricted web domains" else "Website blocker suspended",
@@ -161,9 +174,10 @@ fun WebsiteBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -178,7 +192,7 @@ fun WebsiteBlockerConfigScreen(
                             Text(
                                 text = "Website Rules & URL Lists",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "$websiteRulesCount active rules • $blockedWebsitesCount domains configured",
@@ -197,8 +211,14 @@ fun WebsiteBlockerConfigScreen(
                             }
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.AddCircleOutline,
@@ -206,7 +226,7 @@ fun WebsiteBlockerConfigScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage Websites & Rules")
+                        Text("Manage Websites & Rules", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -215,14 +235,18 @@ fun WebsiteBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { onConfigureWarning() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onConfigureWarning() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -245,7 +269,7 @@ fun WebsiteBlockerConfigScreen(
                         Text(
                             text = "Warning Screen Customization",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Customize message, cooldown delays, and motivation",

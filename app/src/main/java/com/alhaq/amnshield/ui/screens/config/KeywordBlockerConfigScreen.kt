@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.alhaq.amnshield.Constants
 import com.alhaq.amnshield.services.AmnShieldAccessibilityService
 import com.alhaq.amnshield.ui.activity.FragmentActivity
+import com.alhaq.amnshield.ui.components.bounceClick
 import com.alhaq.amnshield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
@@ -69,14 +70,23 @@ fun KeywordBlockerConfigScreen(
     Log.d(TAG, "Rendering KeywordBlockerConfigScreen: enabled=$isFeatureEnabled, adultPack=$isAdultPackEnabled, feedbackMode=$feedbackMode")
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    Text(
-                        text = "Keyword Blocker Settings",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            text = "Keyword Blocker Settings",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Manage forbidden terms & sensitivity",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -87,7 +97,10 @@ fun KeywordBlockerConfigScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -99,7 +112,7 @@ fun KeywordBlockerConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Accessibility Service Banner if disabled
@@ -111,9 +124,10 @@ fun KeywordBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -125,13 +139,16 @@ fun KeywordBlockerConfigScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                            .background(
+                                if (isFeatureEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Spellcheck,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isFeatureEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -140,7 +157,7 @@ fun KeywordBlockerConfigScreen(
                         Text(
                             text = "Enable Keyword Blocker",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isFeatureEnabled) "Intercepting restricted keywords" else "Keyword blocker suspended",
@@ -168,9 +185,10 @@ fun KeywordBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -185,7 +203,7 @@ fun KeywordBlockerConfigScreen(
                             Text(
                                 text = "Keyword Rules & Lists",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "$keywordRulesCount active rules • $blockedKeywordsCount custom keywords" +
@@ -205,8 +223,14 @@ fun KeywordBlockerConfigScreen(
                             }
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.AddCircleOutline,
@@ -214,7 +238,7 @@ fun KeywordBlockerConfigScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage Keywords & Rules")
+                        Text("Manage Keywords & Rules", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -223,9 +247,10 @@ fun KeywordBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -252,7 +277,7 @@ fun KeywordBlockerConfigScreen(
                         Text(
                             text = "Adult Content Filter Pack",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Block 10,000+ pre-compiled adult & explicit terms",
@@ -280,14 +305,18 @@ fun KeywordBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { showFeedbackDialog = true }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showFeedbackDialog = true }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -310,7 +339,7 @@ fun KeywordBlockerConfigScreen(
                         Text(
                             text = "Intercept Feedback Style",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         val feedbackTitle = when (feedbackMode) {
                             Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> "Warning Screen Dialog"
@@ -336,14 +365,18 @@ fun KeywordBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { onConfigureWarning() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onConfigureWarning() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -366,7 +399,7 @@ fun KeywordBlockerConfigScreen(
                         Text(
                             text = "Warning Screen Customization",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Customize message, cooldown delays, and motivation",
@@ -386,14 +419,18 @@ fun KeywordBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { onConfigureSensitivity() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onConfigureSensitivity() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -416,7 +453,7 @@ fun KeywordBlockerConfigScreen(
                         Text(
                             text = "Detection Sensitivity",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Whole word matching, case sensitivity & OCR options",

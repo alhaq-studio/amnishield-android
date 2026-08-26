@@ -28,16 +28,12 @@ import com.alhaq.amnshield.ui.activity.FragmentActivity
 import com.alhaq.amnshield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
+import com.alhaq.amnshield.ui.components.bounceClick
+
 private const val TAG = "AppBlockerConfigScreen"
 
 /**
  * Dedicated Jetpack Compose configuration screen for App Blocker.
- * 
- * Manages behavioral settings and preferences:
- * - Master App Blocker enabled switch
- * - Category-based auto-blocking preferences
- * - Intercept warning screen behavior
- * - Direct shortcut to Active Blocks Manager for scheduling/rules
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +52,6 @@ fun AppBlockerConfigScreen(
     var selectedCategories by remember { mutableStateOf(loader.getAutoBlockCategories()) }
     var showCategoryDialog by remember { mutableStateOf(false) }
 
-    // Count distinct app rules currently configured
     val appRulesCount = remember {
         loader.loadAppBlockerScheduleRules()
             .filter {
@@ -74,14 +69,23 @@ fun AppBlockerConfigScreen(
     Log.d(TAG, "Rendering AppBlockerConfigScreen: enabled=$isFeatureEnabled, rulesCount=$appRulesCount")
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    Text(
-                        text = "App Blocker Settings",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            text = "App Blocker Settings",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Configure app restrictions & categories",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -92,7 +96,10 @@ fun AppBlockerConfigScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -104,7 +111,7 @@ fun AppBlockerConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Accessibility Service Banner if disabled
@@ -116,9 +123,10 @@ fun AppBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -130,13 +138,16 @@ fun AppBlockerConfigScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                            .background(
+                                if (isFeatureEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Apps,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isFeatureEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -145,7 +156,7 @@ fun AppBlockerConfigScreen(
                         Text(
                             text = "Enable App Blocker",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isFeatureEnabled) "Blocking active rules" else "App blocker suspended",
@@ -160,7 +171,6 @@ fun AppBlockerConfigScreen(
                             isFeatureEnabled = checked
                             loader.setAppBlockerFeatureEnabled(checked, updateManual = true)
 
-                            // Broadcast refresh intent
                             val refreshIntent = Intent(AmnShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER).apply {
                                 setPackage(context.packageName)
                             }
@@ -174,9 +184,10 @@ fun AppBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -191,7 +202,7 @@ fun AppBlockerConfigScreen(
                             Text(
                                 text = "App Blocking Rules",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "$appRulesCount active app rule" + if (appRulesCount != 1) "s" else "",
@@ -210,8 +221,14 @@ fun AppBlockerConfigScreen(
                             }
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Checklist,
@@ -219,7 +236,7 @@ fun AppBlockerConfigScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage App Rules & Limits")
+                        Text("Manage App Rules & Limits", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -228,14 +245,18 @@ fun AppBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { onConfigureWarning() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onConfigureWarning() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -258,7 +279,7 @@ fun AppBlockerConfigScreen(
                         Text(
                             text = "Warning Screen Behavior",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Customize message, cooldown delays, and motivation",
@@ -278,9 +299,10 @@ fun AppBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -306,7 +328,7 @@ fun AppBlockerConfigScreen(
                             Text(
                                 text = "Auto-Block App Categories",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = if (selectedCategories.isEmpty()) "No categories selected" else "${selectedCategories.size} categories auto-blocked",
@@ -328,16 +350,19 @@ fun AppBlockerConfigScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedButton(
                             onClick = { showCategoryDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bounceClick(),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Tune,
+                                imageVector = Icons.Default.Edit,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Select Categories (${selectedCategories.size})")
+                            Text("Configure Categories", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -345,7 +370,7 @@ fun AppBlockerConfigScreen(
         }
     }
 
-    // Category Multi-Choice Selection Dialog
+    // Category Selection Dialog
     if (showCategoryDialog) {
         val allCategories = remember { PackageWand.getAllCategories() }
         val tempSelected = remember { mutableStateListOf<String>().apply { addAll(selectedCategories) } }
@@ -397,14 +422,15 @@ fun AppBlockerConfigScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         val newSet = tempSelected.toSet()
                         selectedCategories = newSet
                         loader.setAutoBlockCategories(newSet)
                         Log.i(TAG, "Saved auto-block categories: $newSet")
                         showCategoryDialog = false
-                    }
+                    },
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Save", fontWeight = FontWeight.Bold)
                 }
@@ -431,7 +457,8 @@ fun ServiceRequiredCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -461,12 +488,15 @@ fun ServiceRequiredCard(
             Button(
                 onClick = onEnableClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
                 ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
             ) {
-                Text("Enable Service", color = MaterialTheme.colorScheme.onError)
+                Text("Enable Service", fontWeight = FontWeight.Bold)
             }
         }
     }

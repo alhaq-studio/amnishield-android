@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.alhaq.amnshield.blockers.ReelBlocker
 import com.alhaq.amnshield.services.AmnShieldAccessibilityService
 import com.alhaq.amnshield.ui.activity.FragmentActivity
+import com.alhaq.amnshield.ui.components.bounceClick
 import com.alhaq.amnshield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
@@ -53,11 +54,11 @@ fun ReelBlockerConfigScreen(
     val loader = remember { SavedPreferencesLoader(context) }
 
     var isFeatureEnabled by remember { mutableStateOf(loader.isReelBlockerEnabled()) }
-    var blockResponseMode by remember { mutableStateOf(loader.getReelBlockerBlockResponseMode()) }
     var isYoutubeEnabled by remember { mutableStateOf(loader.isReelBlockerYoutubeEnabled()) }
     var isInstagramEnabled by remember { mutableStateOf(loader.isReelBlockerInstagramEnabled()) }
     var isTiktokEnabled by remember { mutableStateOf(loader.isReelBlockerTiktokEnabled()) }
     var isBrowserEnabled by remember { mutableStateOf(loader.isReelBlockerBrowserEnabled()) }
+    var blockResponseMode by remember { mutableStateOf(loader.getReelBlockerBlockResponseMode()) }
 
     val reelsRulesCount = remember {
         loader.loadAppBlockerScheduleRules()
@@ -70,14 +71,23 @@ fun ReelBlockerConfigScreen(
     Log.d(TAG, "Rendering ReelBlockerConfigScreen: enabled=$isFeatureEnabled, rulesCount=$reelsRulesCount")
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    Text(
-                        text = "Short Video & Reels Settings",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            text = "Short Video & Reels Settings",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Block short-form scroll feeds & addiction",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -88,7 +98,10 @@ fun ReelBlockerConfigScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -100,7 +113,7 @@ fun ReelBlockerConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Accessibility Service Banner if disabled
@@ -112,9 +125,10 @@ fun ReelBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -126,13 +140,16 @@ fun ReelBlockerConfigScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                            .background(
+                                if (isFeatureEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayCircleOutline,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isFeatureEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -141,7 +158,7 @@ fun ReelBlockerConfigScreen(
                         Text(
                             text = "Enable Reels Blocker",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isFeatureEnabled) "Intercepting short-form videos" else "Reels blocker suspended",
@@ -169,9 +186,10 @@ fun ReelBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -186,7 +204,7 @@ fun ReelBlockerConfigScreen(
                             Text(
                                 text = "Reels Rules & Daily Limits",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "$reelsRulesCount active reels schedule rule" + if (reelsRulesCount != 1) "s" else "",
@@ -205,8 +223,14 @@ fun ReelBlockerConfigScreen(
                             }
                             context.startActivity(intent)
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.AddCircleOutline,
@@ -214,7 +238,7 @@ fun ReelBlockerConfigScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage Reels Rules & Limits")
+                        Text("Manage Reels Rules & Limits", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -223,15 +247,16 @@ fun ReelBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Block Action",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
@@ -255,7 +280,7 @@ fun ReelBlockerConfigScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                     )
 
                     ResponseModeOptionRow(
@@ -272,7 +297,7 @@ fun ReelBlockerConfigScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                     )
 
                     ResponseModeOptionRow(
@@ -293,15 +318,16 @@ fun ReelBlockerConfigScreen(
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Supported Platforms",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
@@ -320,7 +346,7 @@ fun ReelBlockerConfigScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                     )
 
                     PlatformToggleRow(
@@ -338,7 +364,7 @@ fun ReelBlockerConfigScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                     )
 
                     PlatformToggleRow(
@@ -356,7 +382,7 @@ fun ReelBlockerConfigScreen(
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                     )
 
                     PlatformToggleRow(
@@ -374,18 +400,22 @@ fun ReelBlockerConfigScreen(
                 }
             }
 
-            // 4. Intercept Warning Screen Settings
+            // 5. Intercept Warning Screen Settings
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { onConfigureWarning() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onConfigureWarning() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -408,7 +438,7 @@ fun ReelBlockerConfigScreen(
                         Text(
                             text = "Warning Screen Behavior",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Customize message, cooldown delays, and motivation",

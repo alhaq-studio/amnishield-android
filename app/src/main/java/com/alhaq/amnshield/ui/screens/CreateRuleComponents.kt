@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Launch
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -33,10 +35,10 @@ fun BoundaryHeader(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -45,23 +47,23 @@ fun BoundaryHeader(
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -79,7 +81,7 @@ fun BoundaryHeader(
                         imageVector = Icons.Outlined.Tune,
                         contentDescription = configureLabel,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -202,9 +204,9 @@ fun ConfigArea(
                 "App Blocker" -> {
                     Text(
                         "App Selection Picker",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "Select which applications will be restricted during this active schedule window.",
@@ -233,7 +235,8 @@ fun ConfigArea(
                                         if (isChecked) viewModel.removeSelectedApp(pkg) else viewModel.addSelectedApp(pkg)
                                     }
                                     .padding(vertical = 6.dp, horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Checkbox(
                                     checked = isChecked,
@@ -241,7 +244,6 @@ fun ConfigArea(
                                         if (checked) viewModel.addSelectedApp(pkg) else viewModel.removeSelectedApp(pkg)
                                     }
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(appName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     Text(pkg, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -258,11 +260,10 @@ fun ConfigArea(
                         OutlinedTextField(
                             value = viewModel.customAppInput,
                             onValueChange = { viewModel.customAppInput = it },
-                            placeholder = { Text("Add custom package (e.g. com.reddit)") },
+                            placeholder = { Text("Custom package (e.g. com.game)") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            textStyle = MaterialTheme.typography.bodySmall
+                            shape = RoundedCornerShape(8.dp)
                         )
                         Button(
                             onClick = { viewModel.addCustomApp() },
@@ -277,9 +278,9 @@ fun ConfigArea(
                 "Keyword Blocker" -> {
                     Text(
                         "Keyword Block Rules",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "All content containing these keywords will be filtered and blocked instantly under this active window.",
@@ -348,9 +349,9 @@ fun ConfigArea(
                 "Website Blocker" -> {
                     Text(
                         "Restricted Website Domains",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "Specify websites that should be completely blocked in any browser during this schedule window.",
@@ -404,9 +405,9 @@ fun ConfigArea(
                 "Reels Blocker" -> {
                     Text(
                         "Target Short-Video Platforms",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "We will aggressively interrupt and exit full-screen Reels scrolling on checked apps.",
@@ -440,9 +441,9 @@ fun ConfigArea(
                 "Notification Shielder" -> {
                     Text(
                         "Notification Distraction Shielder",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "Dodge the temptation loop. Shield notification banners and hide notifications during this active window.",
@@ -503,7 +504,7 @@ fun RestrictionModeSelection(
         ) {
             val types = listOf(
                 Triple("Block Schedule", "Block", Icons.Outlined.Lock),
-                Triple("Launch Limit", "Limit", Icons.Outlined.Launch),
+                Triple("Launch Limit", "Limit", Icons.AutoMirrored.Outlined.Launch),
                 Triple("Cheat Window", "Cheat", Icons.Outlined.HourglassEmpty)
             )
             types.forEach { (typeKey, displayLabel, icon) ->
@@ -686,9 +687,9 @@ fun AddNewTimeWindow(
         ) {
             Text(
                 "Add Another Time Window",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             
             Row(
@@ -962,7 +963,7 @@ fun CreateRuleTopAppBar(
                                 text = { Text("Rule Guide & Tips") },
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.Outlined.HelpOutline,
+                                        imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                                         contentDescription = null
                                     )
                                 },
@@ -999,7 +1000,10 @@ fun CreateRuleTopAppBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurface
         )
     )
 }

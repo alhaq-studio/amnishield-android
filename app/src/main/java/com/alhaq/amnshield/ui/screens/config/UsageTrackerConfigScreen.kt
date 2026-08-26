@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.alhaq.amnshield.ui.components.bounceClick
 import com.alhaq.amnshield.utils.SavedPreferencesLoader
 
 private const val TAG = "UsageTrackerConfigScreen"
@@ -42,31 +43,38 @@ fun UsageTrackerConfigScreen(
     onBack: () -> Unit,
     onSelectOverlayAppsClick: () -> Unit,
     onConfigureTweaksClick: () -> Unit,
-    onViewReelsMetricsClick: () -> Unit = {},
+    onViewReelsMetricsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
 
-    // Core feature toggles
-    var isReelsTrackingEnabled by remember { mutableStateOf(loader.isReelsTrackingEnabled(true)) }
-    var isReelsOverlayEnabled by remember { mutableStateOf(loader.isReelsOverlayCounterEnabled(true)) }
-    var isAppUsageTrackingEnabled by remember { mutableStateOf(loader.isAppUsageTrackingEnabled(true)) }
-    var isWebsiteUsageTrackingEnabled by remember { mutableStateOf(loader.isWebsiteUsageTrackingEnabled(true)) }
-    var overlayMode by remember { mutableIntStateOf(loader.getOverlayCounterDisplayMode()) }
-    var targetAppsCount by remember { mutableIntStateOf(loader.getReelsOverlayApps().size) }
+    var isReelsTrackingEnabled by remember { mutableStateOf(loader.isReelsTrackingEnabled()) }
+    var isReelsOverlayEnabled by remember { mutableStateOf(loader.isReelsOverlayCounterEnabled()) }
+    var overlayMode by remember { mutableStateOf(loader.getOverlayCounterDisplayMode()) }
+    val targetAppsCount = remember { loader.getReelsOverlayApps().size }
 
-    Log.d(TAG, "Rendering UsageTrackerConfigScreen: reelsTracking=$isReelsTrackingEnabled, appUsageTracking=$isAppUsageTrackingEnabled, websiteTracking=$isWebsiteUsageTrackingEnabled")
+    var isAppUsageTrackingEnabled by remember { mutableStateOf(loader.isAppUsageTrackingEnabled()) }
+    var isWebsiteUsageTrackingEnabled by remember { mutableStateOf(loader.isWebsiteUsageTrackingEnabled()) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    Text(
-                        text = "Usage Tracker Settings",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            text = "Usage Tracker Settings",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Configure live overlay & usage tracking",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -77,7 +85,10 @@ fun UsageTrackerConfigScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -89,7 +100,7 @@ fun UsageTrackerConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Accessibility Service Banner if disabled
@@ -101,11 +112,12 @@ fun UsageTrackerConfigScreen(
             // 1. TOGGLE 1: REELS & SHORTS DOOM-SCROLLING TRACKING & OVERLAY
             // =========================================================================
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -161,7 +173,7 @@ fun UsageTrackerConfigScreen(
                                 .padding(top = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                             // Sub-toggle: Floating Counter Overlay
                             Row(
@@ -179,7 +191,7 @@ fun UsageTrackerConfigScreen(
                                     Text(
                                         text = "Floating Doom-Scrolling Overlay",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = "Displays live scroll count badge over selected apps",
@@ -241,8 +253,11 @@ fun UsageTrackerConfigScreen(
                                 // Target Apps Button
                                 OutlinedButton(
                                     onClick = onSelectOverlayAppsClick,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .bounceClick(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Apps,
@@ -250,19 +265,21 @@ fun UsageTrackerConfigScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Overlay Target Apps ($targetAppsCount selected)")
+                                    Text("Overlay Target Apps ($targetAppsCount selected)", fontWeight = FontWeight.SemiBold)
                                 }
                             }
 
                             // Link to Live Reels Metrics Screen
                             OutlinedCard(
                                 onClick = onViewReelsMetricsClick,
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.outlinedCardColors(
                                     containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)
                                 ),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .bounceClick()
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -307,11 +324,12 @@ fun UsageTrackerConfigScreen(
             // 2. TOGGLE 2: GLOBAL APP USAGE DATA TRACKING & DYNAMIC BLURRING
             // =========================================================================
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -449,11 +467,12 @@ fun UsageTrackerConfigScreen(
             // 3. TOGGLE 3: WEBSITE BROWSING USAGE TRACKING & PRIVACY
             // =========================================================================
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -592,9 +611,9 @@ fun UsageTrackerConfigScreen(
                             .fillMaxWidth()
                             .background(
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                RoundedCornerShape(10.dp)
+                                RoundedCornerShape(12.dp)
                             )
-                            .padding(10.dp),
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -618,16 +637,20 @@ fun UsageTrackerConfigScreen(
             // 4. TRACKER DISPLAY & BEHAVIORAL TWEAKS
             // =========================================================================
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bounceClick()
+                    .clickable { onConfigureTweaksClick() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onConfigureTweaksClick() }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -650,7 +673,7 @@ fun UsageTrackerConfigScreen(
                         Text(
                             text = "Badge Position & Display Tweaks",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Configure overlay position, interval and timeout options",
@@ -669,11 +692,12 @@ fun UsageTrackerConfigScreen(
             // Open Source Credits Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier

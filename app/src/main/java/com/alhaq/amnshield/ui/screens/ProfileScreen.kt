@@ -1,8 +1,12 @@
 package com.alhaq.amnshield.ui.screens
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import com.alhaq.amnshield.Constants
+import org.json.JSONObject
+import org.json.JSONArray
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -85,6 +90,7 @@ fun ProfileScreen(
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showAvatarPickerSheet by remember { mutableStateOf(false) }
     var showPairingDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var pairingPinInput by remember { mutableStateOf("") }
     var isPairingInProgress by remember { mutableStateOf(false) }
     var pairingStatusMsg by remember { mutableStateOf<String?>(null) }
@@ -110,7 +116,7 @@ fun ProfileScreen(
                         isPairingInProgress = false
                         if (result.success) {
                             isPairingSuccess = true
-                            pairingStatusMsg = "🎉 Linked to Web Console successfully!"
+                            pairingStatusMsg = "🎉 Linked to Cloud Sync Hub successfully!"
                             val savedPrefs = com.alhaq.amnshield.utils.SavedPreferencesLoader(context)
                             savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
                             if (result.policyPayload != null) {
@@ -217,11 +223,14 @@ fun ProfileScreen(
                 title = { Text("Profile & Identity", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -378,7 +387,7 @@ fun ProfileScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "AmnShield Guardian • Level 8",
+                                text = "AmniShield Guardian • Level 8",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
@@ -627,7 +636,7 @@ fun ProfileScreen(
                         AmnShieldInputField(
                             value = email,
                             onValueChange = { email = it },
-                            placeholder = "e.g. info@amnshield.com",
+                            placeholder = "e.g. info@amnishield.com",
                             label = "Security Email Address",
                             leadingIcon = Icons.Default.Email
                         )
@@ -728,7 +737,7 @@ fun ProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.ExitToApp,
+                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                     contentDescription = "Sign Out",
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(18.dp)
@@ -790,10 +799,10 @@ fun ProfileScreen(
                 }
             }
 
-            // WEB ADMIN CONSOLE PAIRING CARD
+            // ACCOUNT & CLOUD SYNC CARD
             item {
                 Text(
-                    text = "WEB ADMIN CONSOLE",
+                    text = "ACCOUNT & CLOUD SYNC",
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -838,7 +847,7 @@ fun ProfileScreen(
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(
-                                        text = "Web Admin Console",
+                                        text = "Account & Cloud Sync",
                                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -857,7 +866,7 @@ fun ProfileScreen(
                                     }
                                 }
                                 Text(
-                                    text = "app.amnishield.com",
+                                    text = "AmniShield Sync Hub",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -866,9 +875,9 @@ fun ProfileScreen(
 
                         Text(
                             text = if (isPairedWithConsole)
-                                "This phone is linked to your Web Admin Dashboard. Focus rules, schedules, and remote blocklists automatically synchronize."
+                                "This phone is linked to your AmniShield Cloud Sync Hub. Focus rules, schedules, and blocklists automatically synchronize across all your connected devices."
                             else
-                                "Link this phone to your Web Admin Dashboard using a 6-digit PIN or QR code to sync focus rules and remote blocklists.",
+                                "Link this phone to your AmniShield Cloud Sync Hub using a 6-digit PIN or QR code to sync focus rules and blocklists across your devices.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -881,7 +890,7 @@ fun ProfileScreen(
                             ) {
                                 Button(
                                     onClick = {
-                                        Toast.makeText(context, "Syncing latest Console policies...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Syncing latest policies...", Toast.LENGTH_SHORT).show()
                                         coroutineScope.launch(Dispatchers.IO) {
                                             val ok = com.alhaq.amnshield.data.sync.PolicySyncManager.syncNow(context)
                                             withContext(Dispatchers.Main) {
@@ -908,7 +917,7 @@ fun ProfileScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Sync Policies",
+                                        text = "Sync Now",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp
                                     )
@@ -920,7 +929,7 @@ fun ProfileScreen(
                                         savedPrefs.setConsoleManaged(false)
                                         isPairedWithConsole = false
                                         pairedDeviceId = null
-                                        Toast.makeText(context, "Device Unpaired from Web Console", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier
                                         .weight(1f)
@@ -1089,6 +1098,120 @@ fun ProfileScreen(
                                 checked = state.smartRecommendationsEnabled,
                                 onCheckedChange = { viewModel.toggleSmartRecommendations() }
                             )
+                        }
+                    }
+                }
+            }
+
+            // DATA SOVEREIGNTY & ACCOUNT CONTROL
+            item {
+                Text(
+                    text = "DATA SOVEREIGNTY & ACCOUNT RIGHTS",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.8.sp
+                    )
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Export Data JSON Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Export Account & Rule Data (JSON)",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Download / Share a structured snapshot of your active rules, telemetry, and profile.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { exportUserData(context, state, name, email, bio, goalMinutes, profileType) },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            ) {
+                                Icon(Icons.Outlined.FileDownload, contentDescription = "Export Data")
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                        // Delete Account & Purge Data (Danger Zone)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Delete Account & Purge Data",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    text = "Unlink this device from cloud sync, wipe local profile data, and reset tokens.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { showDeleteAccountDialog = true },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            ) {
+                                Icon(Icons.Outlined.DeleteForever, contentDescription = "Delete Account")
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                        // Legal & Privacy Portal Links
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = { openUrl(context, Constants.PRIVACY_POLICY_URL) }
+                            ) {
+                                Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Privacy Policy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            TextButton(
+                                onClick = { openUrl(context, Constants.DATA_DELETION_URL) }
+                            ) {
+                                Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Deletion Portal", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }
@@ -1302,13 +1425,13 @@ fun ProfileScreen(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(imageVector = Icons.Default.PhonelinkSetup, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Pair Web Console", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text("Link with Cloud Sync Hub", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Enter the 6-digit security PIN generated on app.amnishield.com to link this device.",
+                        text = "Enter the 6-digit sync PIN from your AmniShield account or scan the QR code to link this device.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1342,7 +1465,7 @@ fun ProfileScreen(
                             showPairingDialog = false
                             val options = ScanOptions().apply {
                                 setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                setPrompt("Align QR code from app.amnishield.com inside the frame")
+                                setPrompt("Align QR code from AmniShield Sync Hub inside the frame")
                                 setBeepEnabled(true)
                                 setBarcodeImageEnabled(false)
                                 setOrientationLocked(true)
@@ -1374,7 +1497,7 @@ fun ProfileScreen(
                                     isPairingInProgress = false
                                     if (result.success) {
                                         isPairingSuccess = true
-                                        pairingStatusMsg = "🎉 Linked to Web Console successfully!"
+                                        pairingStatusMsg = "🎉 Linked to Cloud Sync Hub successfully!"
                                         val savedPrefs = com.alhaq.amnshield.utils.SavedPreferencesLoader(context)
                                         savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
                                         if (result.policyPayload != null) {
@@ -1416,6 +1539,140 @@ fun ProfileScreen(
                 }
             }
         )
+    }
+
+    // DELETE ACCOUNT & PURGE DATA CONFIRMATION DIALOG
+    if (showDeleteAccountDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountDialog = false },
+            icon = {
+                Icon(
+                    Icons.Outlined.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Delete Account & Purge Data?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "This will immediately unlink this device from the AmniShield Sync Hub, purge your cloud-paired tokens, clear local focus profile settings, and sign you out.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "For full account deletion from our active cloud databases, visit the Deletion Portal or contact support@alhaq.uk.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteAccountDialog = false
+                        // Reset local profile
+                        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                        prefs.edit()
+                            .putString("profile_name", "AmniShield User")
+                            .putString("profile_email", "")
+                            .putString("profile_bio", "")
+                            .putBoolean("is_paired_with_console", false)
+                            .remove("paired_device_id")
+                            .apply()
+
+                        name = "AmniShield User"
+                        email = ""
+                        bio = ""
+                        isPairedWithConsole = false
+                        pairedDeviceId = null
+
+                        val savedPrefs = com.alhaq.amnshield.utils.SavedPreferencesLoader(context)
+                        savedPrefs.setConsoleManaged(false)
+
+                        onGoogleSignOut()
+                        Toast.makeText(context, "Account unlinked and local profile data purged.", Toast.LENGTH_LONG).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Purge & Unlink", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+private fun exportUserData(
+    context: Context,
+    state: AmnShieldState,
+    name: String,
+    email: String,
+    bio: String,
+    goalMinutes: Int,
+    profileType: String
+) {
+    try {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val json = JSONObject().apply {
+            put("export_version", "2.0")
+            put("studio", "Al-Haq Studio (alhaq.uk)")
+            put("export_timestamp", java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }.format(java.util.Date()))
+            put("user_profile", JSONObject().apply {
+                put("display_name", name)
+                put("email", email)
+                put("bio", bio)
+                put("goal_minutes", goalMinutes)
+                put("profile_type", profileType)
+                put("is_google_signed_in", prefs.getBoolean("is_google_signed_in", false))
+                put("is_paired_with_console", prefs.getBoolean("is_paired_with_console", false))
+                put("paired_device_id", prefs.getString("paired_device_id", null))
+            })
+            put("blocking_rules", JSONObject().apply {
+                put("web_filter_enabled", state.isWebFilterEnabled)
+                put("usage_limit_enabled", state.isUsageLimitEnabled)
+                put("sync_rules_enabled", state.syncRulesEnabled)
+                put("smart_recommendations_enabled", state.smartRecommendationsEnabled)
+                put("anti_uninstall_active", state.isAntiUninstallEnabled)
+                put("blocked_apps_count", state.appsUsage.size)
+                put("blocked_domains_count", state.customBlockedWebsites.size)
+                put("blocked_keywords_count", state.keywords.size)
+            })
+        }
+
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "AmniShield_User_Data_Export.json")
+            putExtra(Intent.EXTRA_TEXT, json.toString(2))
+        }
+        context.startActivity(Intent.createChooser(sendIntent, "Export AmniShield Data"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openUrl(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Could not open browser for URL: $url", Toast.LENGTH_SHORT).show()
     }
 }
 
