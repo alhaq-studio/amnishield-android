@@ -24,6 +24,7 @@ local
 keystore.properties
 deenshield-release-key.jks
 amnishield-release-key.jks
+amnshield-release-key.jks
 upload_certificate.pem
 Signing Report-DeenShield.txt
 Signing Report-AmniShield.txt
