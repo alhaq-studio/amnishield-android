@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+﻿<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">AmniShield</string>
     <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
     <string name="launcher_options">د لانچر اختیارونه</string>
@@ -165,8 +165,6 @@
     <string name="accept">منل</string>
     <string name="accessibility_perm_desc">AmniShield د کارونې تعقیب لپاره لاسرسی کاروي. ټول معلومات ستاسو په موبایل کې پروسس کیږي.</string>
     <string name="reject">ردول</string>
-    <string name="peel_the_onions">د پیازو پوست کول</string>
-    <string name="fix_your_life">خپل ژوند سم کړئ</string>
     <string name="perform_actions_like_a_back_press">د شاتګ تڼۍ غوندې کړنې ترسره کول</string>
     <string name="read_content_on_screen">د سکرین منځپانګه لوستل</string>
     <string name="this_will_allow_amnishield_to">دا به امن شیلډ ته اجازه ورکړي چې:</string>
@@ -177,7 +175,6 @@
     <string name="device_perm_draw_over_other_apps">AmniShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay tracks the number of reels watched and the time spent, helping users be more aware of their usage in real time.</string>
     <string name="show_time_elapsed_on_phone">په ګرځنده کې تېر شوی وخت ښکاره کړئ</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Calculate how many reels/ tiktok/ short videos you scroll per day</string>
-    <string name="plan_a_robbery">د غلا پلان</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">مهرباني وکړئ په نورو اپلیکیشنونو د ښودلو اجازه ورکړئ</string>
     <string name="find_amnishield_and_press_enable">امن شیلډ ومومئ او فعالول کېکاږئ</string>
     <string name="discard_changes">بدلونونه پریږدئ؟</string>
@@ -518,5 +515,6 @@
     <string name="purple_gradient">بنفشي ګرادینټ</string>
     <string name="emerald_theme">زمرد</string>
 </resources>
+
 
 

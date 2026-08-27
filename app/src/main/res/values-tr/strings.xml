@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources xmlns:tools="http://schemas.android.com/tools">
 
@@ -342,10 +342,6 @@
 
     <string name="reject">Reddet</string>
 
-    <string name="peel_the_onions">Soğanları soyun</string>
-
-    <string name="fix_your_life">Hayatınızı düzene sokun</string>
-
     <string name="perform_actions_like_a_back_press">Geri tuşuna basma gibi eylemler gerçekleştirme</string>
 
     <string name="read_content_on_screen">Ekrandaki içeriği okuma</string>
@@ -363,8 +359,6 @@
     <string name="show_time_elapsed_on_phone">Telefonda geçen süreyi göster</string>
 
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Dikkat dağıtıcı uygulamalarda geçirilen süreyi gösteren bir ekran zamanlayıcısı görüntüle</string>
-
-    <string name="plan_a_robbery">Bir soygun planla</string>
 
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Bu özelliğe erişmek için lütfen diğer uygulamaların üzerinde gösterim izni verin</string>
 
@@ -969,3 +963,4 @@
     <string name="continue_without_sending">Göndermeden devam et</string>
 
 </resources>
+

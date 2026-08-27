@@ -1159,110 +1159,7 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(action).setPackage(packageName)
         sendBroadcast(intent)
     }
-//    private fun isAccessibilityServiceEnabled(serviceClass: Class<out AccessibilityService>): Boolean { // Removed old permission check
-//        val serviceName = ComponentName(this, serviceClass).flattenToString()
-//        val enabledServices = Settings.Secure.getString(
-//            contentResolver,
-//            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-//        ) ?: return false
-//        val isAccessibilityEnabled = Settings.Secure.getInt(
-//            contentResolver,
-//            Settings.Secure.ACCESSIBILITY_ENABLED,
-//            0
-//        )
-//        return isAccessibilityEnabled == 1 && enabledServices.contains(serviceName)
-//    }
 
-//    private fun makeDeviceAdminPermissionDialog() { // Removed old permission dialog
-//        val dialogDeviceAdmin =
-//            DialogPermissionInfoBinding.inflate(layoutInflater)
-//        dialogDeviceAdmin.title.text = getString(R.string.enable_2, "Device Admin")
-//        dialogDeviceAdmin.desc.text = getString(R.string.device_admin_perm)
-//        dialogDeviceAdmin.point1.text =
-//            getString(R.string.prevent_uninstallation_attempts_until_a_set_condition_is_met)
-//        dialogDeviceAdmin.point2.visibility = View.GONE
-//        val dialog = MaterialAlertDialogBuilder(this)
-//            .setView(dialogDeviceAdmin.root)
-//            .show()
-//
-//        dialogDeviceAdmin.btnReject.setOnClickListener {
-//            dialog.dismiss()
-//        }
-//        dialogDeviceAdmin.btnAccept.setOnClickListener {
-//            dialog.dismiss()
-//            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-//            val componentName = ComponentName(this, AdminReceiver::class.java)
-//            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-//            intent.putExtra(
-//                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-//                "Enable admin to enable anti uninstall."
-//            )
-//            startActivity(intent, options.toBundle())
-//
-//        }
-//    }
-
-//    private fun makeDrawOverOtherAppsDialog() { // Removed old permission dialog
-//        val dialogDisplayOverOtherApps =
-//            DialogPermissionInfoBinding.inflate(layoutInflater)
-//        dialogDisplayOverOtherApps.title.text =
-//            getString(R.string.enable_2, "Display Over Other Apps")
-//        dialogDisplayOverOtherApps.desc.text = getString(R.string.device_perm_draw_over_other_apps)
-//        dialogDisplayOverOtherApps.point1.text = getString(R.string.show_time_elapsed_on_phone)
-//        dialogDisplayOverOtherApps.point2.text =
-//            getString(R.string.calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day)
-//        dialogDisplayOverOtherApps.point4.text = getString(R.string.plan_a_robbery)
-//        val dialog = MaterialAlertDialogBuilder(this)
-//            .setView(dialogDisplayOverOtherApps.root)
-//            .show()
-//
-//        dialogDisplayOverOtherApps.btnReject.setOnClickListener {
-//            dialog.dismiss()
-//        }
-//        dialogDisplayOverOtherApps.btnAccept.setOnClickListener {
-//            dialog.dismiss()
-//            Toast.makeText(
-//                this,
-//                getString(R.string.find_amnishield_and_press_enable), Toast.LENGTH_LONG
-//            ).show()
-//            val intent = Intent(
-//                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-//                Uri.parse("package:$packageName")
-//            )
-//            startActivity(intent, options.toBundle())
-//
-//        }
-//    }
-
-    // makeShizukuInfoDialog removed - Shizuku dependency removed
-
-//    private fun makeAccessibilityInfoDialog(title: String, cls: Class<*>) { // Removed old permission dialog
-//        if (isAccessibilityServiceEnabled(AmniShieldAccessibilityService::class.java)) {
-//            return
-//        }
-//        val dialogAccessibilityServiceInfoBinding =
-//            DialogPermissionInfoBinding.inflate(layoutInflater)
-//        dialogAccessibilityServiceInfoBinding.title.text = getString(R.string.enable_2, title)
-//
-//        val dialog = MaterialAlertDialogBuilder(this)
-//            .setView(dialogAccessibilityServiceInfoBinding.root)
-//            .show()
-//
-//        dialogAccessibilityServiceInfoBinding.btnReject.setOnClickListener {
-//            dialog.dismiss()
-//        }
-//        dialogAccessibilityServiceInfoBinding.btnAccept.setOnClickListener {
-//            Toast.makeText(this, "Find \'$title\' and press enable", Toast.LENGTH_LONG).show()
-//            openAccessibilityServiceScreen(cls)
-//            dialog.dismiss()
-//        }
-//        dialogAccessibilityServiceInfoBinding.btnGuide.visibility = View.VISIBLE
-//        dialogAccessibilityServiceInfoBinding.btnGuide.setOnClickListener {
-//            val intent = Intent(this, FragmentActivity::class.java)
-//            intent.putExtra("fragment", AccessibilityGuide.FRAGMENT_ID)
-//            startActivity(intent, options.toBundle())
-//        }
-//    }
 
 
     private fun createFocusModeShortcut() {
@@ -1318,22 +1215,6 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
-
-//    private fun openAccessibilityServiceScreen(cls: Class<*>) { // Removed old permission handling
-//        try {
-//            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-//            val componentName = ComponentName(this, cls)
-//            intent.putExtra(":settings:fragment_args_key", componentName.flattenToString())
-//            val bundle = Bundle()
-//            bundle.putString(":settings:fragment_args_key", componentName.flattenToString())
-//            intent.putExtra(":settings:show_fragment_args", bundle)
-//            startActivity(intent, options.toBundle())
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//            // Fallback to general Accessibility Settings
-//            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-//        }
-//    }
 
     @SuppressLint("ApplySharedPref")
     private fun makeRemoveAntiUninstallDialog() {

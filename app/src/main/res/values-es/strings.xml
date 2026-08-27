@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+﻿<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">AmniShield</string>
     <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
     <string name="launcher_options">Opciones del lanzador</string>
@@ -165,8 +165,6 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="accept">Aceptar</string>
     <string name="accessibility_perm_desc">AmniShield usa el permiso de Accesibilidad para monitorizar apps y rastrear uso. Todo se procesa localmente en tu dispositivo. Al pulsar Aceptar, aceptas los términos.</string>
     <string name="reject">Rechazar</string>
-    <string name="peel_the_onions">Pelar las cebollas</string>
-    <string name="fix_your_life">Arregla tu vida</string>
     <string name="perform_actions_like_a_back_press">Realizar acciones como pulsar atrás</string>
     <string name="read_content_on_screen">Leer contenido en pantalla</string>
     <string name="this_will_allow_amnishield_to">Esto permitirá a AmniShield:</string>
@@ -177,7 +175,6 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="device_perm_draw_over_other_apps">AmniShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay tracks the number of reels watched and the time spent, helping users be more aware of their usage in real time.</string>
     <string name="show_time_elapsed_on_phone">Mostrar tiempo transcurrido en el móvil</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Calculate how many reels/ tiktok/ short videos you scroll per day</string>
-    <string name="plan_a_robbery">Planear un robo</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Concede el permiso de mostrar sobre otras aplicaciones para esta función</string>
     <string name="find_amnishield_and_press_enable">Busca AmniShield y pulsa Activar</string>
     <string name="discard_changes">¿Descartar cambios?</string>
@@ -518,5 +515,6 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="purple_gradient">Degradado púrpura</string>
     <string name="emerald_theme">Esmeralda</string>
 </resources>
+
 
 

@@ -40,6 +40,7 @@ class PermissionGuideHelper(private val activity: Activity) {
     /**
      * Check if usage stats permission is granted
      */
+    @Suppress("DEPRECATION")
     fun isUsageStatsGranted(): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -49,7 +50,6 @@ class PermissionGuideHelper(private val activity: Activity) {
                 context.packageName
             )
         } else {
-            @Suppress("DEPRECATION")
             appOps.checkOpNoThrow(
                 android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
                 android.os.Process.myUid(),

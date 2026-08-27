@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+﻿<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">AmniShield</string>
     <string name="api_permission_title">AmniShield API Permission</string>
     <string name="api_permission_message">The application <b>%s</b> is requesting permission to access the AmniShield Blocker API. This will allow the app to view and modify blocklists, focus mode, and other wellbeing settings.</string>
@@ -183,8 +183,6 @@
     <string name="accept">Accept</string>
     <string name="accessibility_perm_desc">AmniShield uses the Accessibility permission to provide features like app monitoring and usage tracking to enhance your experience. This permission allows AmniShield to detect app activities and help manage device usage effectively. Rest assured, all data is processed locally on your device and is never sent to any server or third party. Your privacy and data security are our top priorities.     By pressing Accept, you acknowledge and agree to the above .</string>
     <string name="reject">Reject</string>
-    <string name="peel_the_onions">Peel the onions</string>
-    <string name="fix_your_life">Fix your life</string>
     <string name="perform_actions_like_a_back_press">Perform actions like a back press</string>
     <string name="read_content_on_screen">Read content on screen</string>
     <string name="this_will_allow_amnishield_to">This will allow AmniShield to:</string>
@@ -195,7 +193,6 @@
     <string name="device_perm_draw_over_other_apps">AmniShield uses the \"Display over other apps\" permission to show a small floating overlay on the screen. This overlay displays the time spent on distracting apps, helping you stay mindful of your digital usage in real time.</string>
     <string name="show_time_elapsed_on_phone">Show time elapsed on phone</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Display an on-screen timer showing time spent in distracting apps</string>
-    <string name="plan_a_robbery">Plan a robbery</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Please provide display over other apps permission to access this feature</string>
     <string name="find_amnishield_and_press_enable">Find AmniShield and press enable</string>
     <string name="discard_changes">Discard Changes?</string>
@@ -597,5 +594,6 @@
     <string name="reset_pin_title">Reset PIN</string>
     <string name="forgot_pin">Forgot PIN?</string>
 </resources>
+
 
 

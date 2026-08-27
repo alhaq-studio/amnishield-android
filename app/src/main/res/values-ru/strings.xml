@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <resources xmlns:tools="http://schemas.android.com/tools">
 
@@ -342,10 +342,6 @@
 
     <string name="reject">Отклонить</string>
 
-    <string name="peel_the_onions">Очистить лук</string>
-
-    <string name="fix_your_life">Наладить жизнь</string>
-
     <string name="perform_actions_like_a_back_press">Выполнять действия, такие как нажатие кнопки «Назад»</string>
 
     <string name="read_content_on_screen">Читать содержимое на экране</string>
@@ -363,8 +359,6 @@
     <string name="show_time_elapsed_on_phone">Показывать прошедшее время на телефоне</string>
 
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Отображать таймер экранного времени в отвлекающих приложениях</string>
-
-    <string name="plan_a_robbery">Спланировать ограбление</string>
 
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Предоставьте разрешение «Поверх других приложений» для этой функции</string>
 
@@ -969,3 +963,4 @@
     <string name="continue_without_sending">Продолжить без отправки</string>
 
 </resources>
+

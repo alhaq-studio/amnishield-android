@@ -43,6 +43,7 @@ class PermissionsManager(private val context: Context) {
         return Settings.canDrawOverlays(context)
     }
 
+    @Suppress("DEPRECATION")
     fun isUsageStatsPermissionGranted(): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

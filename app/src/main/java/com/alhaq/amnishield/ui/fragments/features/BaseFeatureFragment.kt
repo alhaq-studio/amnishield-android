@@ -106,9 +106,9 @@ abstract class BaseFeatureFragment : Fragment() {
     dialogBinding.title.text = getString(R.string.enable_2, getString(R.string.display_time_elapsed))
         dialogBinding.desc.text = getString(R.string.device_perm_draw_over_other_apps)
         dialogBinding.point1.text = getString(R.string.show_time_elapsed_on_phone)
-    dialogBinding.point2.text = getString(R.string.calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day)
-    dialogBinding.point3.visibility = View.GONE
-    dialogBinding.point4.text = getString(R.string.plan_a_robbery)
+        dialogBinding.point2.text = getString(R.string.calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day)
+        dialogBinding.point3.visibility = View.GONE
+        dialogBinding.point4.visibility = View.GONE
         dialogBinding.btnGuide.visibility = View.GONE
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
