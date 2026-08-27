@@ -97,13 +97,7 @@
     <string name="minutes">minutes</string>
     <string name="app_icon">app_icon</string>
 
-    <string name="accessibility_service_description">
-        AmniShield requires the Accessibility Service to power its core features. The service allows the app to:
-        \n\n- See which app you are using: This is necessary to enforce your App Blocker and Focus Mode rules.
-        \n- Read on-screen content: This is used by the Keyword Blocker to identify and block unwanted content in real-time.
-        \n- Perform actions: The service can perform \"back\" or \"home\" gestures to block apps and close distracting content.
-        \n\n**Your privacy is our top priority.** All data processing is done entirely on your device. Your on-screen content and app usage are never logged, stored, or shared with us or any third party.
-    </string>
+    <string name="accessibility_service_description">AmniShield uses the AccessibilityService API for digital wellness and distraction blocking:\n\n• App &amp; URL Blocker: Detects active foreground app packages and browser URLs to enforce your scheduled blocks, focus sessions, and launch limits.\n\n• Keyword &amp; Search Inspection: Reads on-screen text and search inputs to detect and block explicit content, adult keywords, and harmful websites.\n\n• Navigation &amp; Reel Redirection: Performs automated \"Back\" or \"Home\" gestures to safely navigate away from blocked apps and short video reels (YouTube Shorts, Instagram Reels, TikTok).\n\nData Privacy: Zero personal or sensitive user data is collected, stored, or transmitted using this service. All filtering executes 100% locally on-device.</string>
 
     <string name="admin_permission_desc">AmniShield Anti-Uninstall</string>
     <string name="title">Title</string>
@@ -512,8 +506,9 @@
     <string name="accessibility_disclosure_title">Accessibility Service Disclosure</string>
     <string name="accessibility_disclosure_intro">AmniShield uses the AccessibilityService API for digital wellness and distraction blocking:</string>
     <string name="accessibility_disclosure_usage_title">Why is Accessibility used?</string>
-    <string name="accessibility_disclosure_point_apps">• App &amp; URL Blocker: Detects active app packages and browser URLs to enforce your blocking schedules and limits.</string>
-    <string name="accessibility_disclosure_point_keywords">• Keyword &amp; Reels Filter: Detects blocked keywords and short video feeds to safely redirect you away.</string>
+    <string name="accessibility_disclosure_point_apps">• App &amp; URL Blocker: Detects active foreground apps and browser URLs to enforce your scheduled blocks, focus sessions, and launch limits.</string>
+    <string name="accessibility_disclosure_point_keywords">• Keyword &amp; Search Inspection: Reads on-screen text and search inputs to detect and block explicit content, adult keywords, and harmful websites.</string>
+    <string name="accessibility_disclosure_point_gestures">• Navigation &amp; Reel Redirection: Performs automated \"Back\" or \"Home\" gestures to safely navigate away from blocked apps and short video feeds (YouTube Shorts, Instagram Reels, TikTok).</string>
     <string name="accessibility_disclosure_privacy_title">🔒 Data Privacy Guarantee</string>
     <string name="accessibility_disclosure_privacy_desc">Data Privacy: Zero personal or sensitive user data is collected, stored, or transmitted using this service.</string>
     <string name="accessibility_disclosure_agree">Agree &amp; Enable</string>
