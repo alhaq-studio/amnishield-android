@@ -15,7 +15,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.alhaq.amnshield"
+    namespace = "com.alhaq.amnishield"
     compileSdk = 36
 
     signingConfigs {

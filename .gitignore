@@ -23,10 +23,10 @@ local
 # ── Keystores & Certificates ──────────────────────────────────────────────
 keystore.properties
 deenshield-release-key.jks
-amnshield-release-key.jks
+amnishield-release-key.jks
 upload_certificate.pem
 Signing Report-DeenShield.txt
-Signing Report-AmnShield.txt
+Signing Report-AmniShield.txt
 
 # ── Node / JS (Firebase Admin SDK, tooling, etc.) ──────────────────────────
 node_modules/

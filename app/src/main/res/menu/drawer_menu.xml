@@ -24,11 +24,16 @@
             android:id="@+id/nav_premium"
             android:icon="@drawable/ic_premium"
             android:title="@string/premium_nav_upgrade" />
+
+        <item
+            android:id="@+id/nav_roadmap"
+            android:icon="@drawable/baseline_task_alt_24"
+            android:title="@string/nav_roadmap" />
             
         <item
             android:id="@+id/nav_donate"
             android:icon="@drawable/baseline_volunteer_activism_24"
-            android:title="@string/donate" />
+            android:title="@string/nav_support_hub" />
 
         <item
             android:id="@+id/nav_advanced"
@@ -37,7 +42,30 @@
 
         <item
             android:id="@+id/nav_settings"
-            android:icon="@drawable/ic_amnshield_settings"
+            android:icon="@drawable/ic_amnishield_settings"
             android:title="@string/settings" />
+    </group>
+
+    <!-- Community & Links -->
+    <group>
+        <item
+            android:id="@+id/nav_website"
+            android:icon="@drawable/baseline_public_24"
+            android:title="@string/nav_website" />
+
+        <item
+            android:id="@+id/nav_github"
+            android:icon="@drawable/baseline_code_24"
+            android:title="@string/nav_github" />
+
+        <item
+            android:id="@+id/nav_star_github"
+            android:icon="@drawable/baseline_star_24"
+            android:title="@string/nav_star_github" />
+
+        <item
+            android:id="@+id/nav_other_projects"
+            android:icon="@drawable/baseline_apps_24"
+            android:title="@string/nav_other_projects" />
     </group>
 </menu>

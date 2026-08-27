@@ -4,13 +4,13 @@
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"
         android:shortcutShortLabel="@string/focus_mode"
-        android:shortcutId="amnshield_focus_mode_shortcut"
+        android:shortcutId="amnishield_focus_mode_shortcut"
         android:shortcutLongLabel="@string/focus_mode">
         <intent
             android:action="android.intent.action.MAIN"
             android:targetPackage="@string/app_package_id"
-            android:targetClass="com.alhaq.amnshield.ui.activity.ShortcutActivity" />
-        <categories android:name="com.alhaq.amnshield.shortcuts" />
+            android:targetClass="com.alhaq.amnishield.ui.activity.ShortcutActivity" />
+        <categories android:name="com.alhaq.amnishield.shortcuts" />
         <capability-binding android:key="actions.intent.CREATE_MESSAGE" />
     </shortcut>
     <!-- Specify more shortcuts here. -->

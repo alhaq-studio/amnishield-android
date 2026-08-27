@@ -1,4 +1,4 @@
-# AmnShield ProGuard & R8 Optimization Rules - Production v0.16.0
+# AmniShield ProGuard & R8 Optimization Rules - Production v0.16.0
 
 # -----------------------------------------------------------------------------
 # Optimization & Code Shrinking
@@ -16,18 +16,18 @@
 -keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
 
 # -----------------------------------------------------------------------------
-# AmnShield Core Data Models & State (Serialized / Reflectively accessed)
+# AmniShield Core Data Models & State (Serialized / Reflectively accessed)
 # -----------------------------------------------------------------------------
--keep class com.alhaq.amnshield.data.** { *; }
--keepclassmembers class com.alhaq.amnshield.data.** { *; }
--keep class com.alhaq.amnshield.data.sync.** { *; }
--keepclassmembers class com.alhaq.amnshield.data.sync.** { *; }
+-keep class com.alhaq.amnishield.data.** { *; }
+-keepclassmembers class com.alhaq.amnishield.data.** { *; }
+-keep class com.alhaq.amnishield.data.sync.** { *; }
+-keepclassmembers class com.alhaq.amnishield.data.sync.** { *; }
 
--keep class com.alhaq.amnshield.ui.state.** { *; }
--keepclassmembers class com.alhaq.amnshield.ui.state.** { *; }
+-keep class com.alhaq.amnishield.ui.state.** { *; }
+-keepclassmembers class com.alhaq.amnishield.ui.state.** { *; }
 
--keep class com.alhaq.amnshield.premium.** { *; }
--keepclassmembers class com.alhaq.amnshield.premium.** { *; }
+-keep class com.alhaq.amnishield.premium.** { *; }
+-keepclassmembers class com.alhaq.amnishield.premium.** { *; }
 
 # -----------------------------------------------------------------------------
 # Android System Components & Services
@@ -40,15 +40,15 @@
 -keep public class * extends android.view.View
 
 # Accessibility Service & VPN Service
--keep class com.alhaq.amnshield.services.** { *; }
--keepclassmembers class com.alhaq.amnshield.services.** { *; }
+-keep class com.alhaq.amnishield.services.** { *; }
+-keepclassmembers class com.alhaq.amnishield.services.** { *; }
 -keep class * extends android.net.VpnService { *; }
 
 # Device Admin Receiver
 -keep class * extends android.app.admin.DeviceAdminReceiver { *; }
 
 # ViewBinding
--keep class com.alhaq.amnshield.databinding.** { *; }
+-keep class com.alhaq.amnishield.databinding.** { *; }
 
 # -----------------------------------------------------------------------------
 # Third-Party Libraries & Frameworks

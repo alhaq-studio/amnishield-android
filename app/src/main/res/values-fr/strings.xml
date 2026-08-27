@@ -169,7 +169,7 @@ Vous ne pouvez pas accéder aux Paramètres avant son expiration.</string>
     <string name="fix_your_life">Réparer ta vie</string>
     <string name="perform_actions_like_a_back_press">Effectuer des actions comme appuyer sur retour</string>
     <string name="read_content_on_screen">Lire le contenu à l\'écran</string>
-    <string name="this_will_allow_amnshield_to">Ceci permettra à AmniShield de :</string>
+    <string name="this_will_allow_amnishield_to">Ceci permettra à AmniShield de :</string>
     <string name="enable_2">Activer %1$s</string>
     <string name="device_admin_perm">AmniShield utilise l\'autorisation d\'administrateur de l\'appareil pour empêcher la désinstallation pendant la durée définie.</string>
     <string name="prevent_uninstallation_attempts_until_a_set_condition_is_met">Empêcher les tentatives de désinstallation jusqu\'à ce qu\'une condition soit remplie</string>
@@ -179,7 +179,7 @@ Vous ne pouvez pas accéder aux Paramètres avant son expiration.</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Calculate how many reels/ tiktok/ short videos you scroll per day</string>
     <string name="plan_a_robbery">Planifier un cambriolage</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Veuillez autoriser l\'affichage par-dessus d\'autres applications</string>
-    <string name="find_amnshield_and_press_enable">Trouvez AmniShield et appuyez sur Activer</string>
+    <string name="find_amnishield_and_press_enable">Trouvez AmniShield et appuyez sur Activer</string>
     <string name="discard_changes">Abandonner les modifications ?</string>
     <string name="are_you_sure_you_want_to_discard_all_changes_and_exit">Voulez-vous vraiment annuler toutes les modifications et quitter ?</string>
     <string name="yes">Oui</string>
@@ -218,7 +218,7 @@ Vous ne pouvez pas accéder aux Paramètres avant son expiration.</string>
     <string name="stats">Statistiques</string>
     
     <!-- Home Screen -->
-    <string name="welcome_to_amnshield">Bienvenue dans AmniShield</string>
+    <string name="welcome_to_amnishield">Bienvenue dans AmniShield</string>
     <string name="protect_your_digital_wellbeing">Protégez votre bien-être numérique avec des outils puissants</string>
     <string name="quick_actions">Actions rapides</string>
     <string name="hide_welcome_card">Masquer la carte de bienvenue</string>
@@ -252,7 +252,7 @@ Vous ne pouvez pas accéder aux Paramètres avant son expiration.</string>
     <string name="share_crash_logs">Partager les journaux de plantage</string>
     <string name="help_and_faq">Aide et FAQ</string>
     <string name="help_and_faq_description">Questions courantes et dépannage</string>
-    <string name="about_amnshield">À propos d\'AmniShield</string>
+    <string name="about_amnishield">À propos d\'AmniShield</string>
     <string name="app_version">Version 0.26.4.2026</string>
     <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>

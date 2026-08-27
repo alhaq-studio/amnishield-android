@@ -92,17 +92,17 @@ jobs:
         run: |
           TAG="${{ github.ref_name }}"
           cp app/build/outputs/apk/universal/release/app-universal-release.apk \
-             AmnShield-${TAG}-universal.apk
+             AmniShield-${TAG}-universal.apk
           cp app/build/outputs/apk/fdroid/release/app-fdroid-release.apk \
-             AmnShield-${TAG}-fdroid.apk
+             AmniShield-${TAG}-fdroid.apk
 
       # ── Publish to GitHub Releases ──────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "AmnShield ${{ github.ref_name }}"
+          name: "AmniShield ${{ github.ref_name }}"
           body: |
-            ## AmnShield ${{ github.ref_name }}
+            ## AmniShield ${{ github.ref_name }}
 
             > ✅ All unit tests passed before this release was published.
 
@@ -110,8 +110,8 @@ jobs:
 
             | APK | Who should use this? |
             |-----|----------------------|
-            | `AmnShield-${{ github.ref_name }}-universal.apk` | Most Android users — sideloading on standard phones with Google Play Services |
-            | `AmnShield-${{ github.ref_name }}-fdroid.apk` | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) — no Google dependencies |
+            | `AmniShield-${{ github.ref_name }}-universal.apk` | Most Android users — sideloading on standard phones with Google Play Services |
+            | `AmniShield-${{ github.ref_name }}-fdroid.apk` | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) — no Google dependencies |
 
             ### Installing
             1. Download the APK for your device type above.
@@ -122,8 +122,8 @@ jobs:
             - The **Play Store** flavor is distributed exclusively through the Google Play Console — not available here.
             - See [TESTING_GUIDE.md](https://github.com/${{ github.repository }}/blob/main/TESTING_GUIDE.md) for full feature documentation.
           files: |
-            AmnShield-${{ github.ref_name }}-universal.apk
-            AmnShield-${{ github.ref_name }}-fdroid.apk
+            AmniShield-${{ github.ref_name }}-universal.apk
+            AmniShield-${{ github.ref_name }}-fdroid.apk
           draft: false
           prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') }}
         env:

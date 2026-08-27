@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Cloud / device-to-device backup rules for AmnShield.
+    Cloud / device-to-device backup rules for AmniShield.
 
     Sensitive prefs are excluded so that the anti-uninstall password,
     premium status, compassionate access grants, and protected-app
@@ -18,6 +18,6 @@
     <exclude domain="sharedpref" path="view_blocker.xml" />
     <exclude domain="sharedpref" path="reel_blocker.xml" />
     <exclude domain="sharedpref" path="focus_mode.xml" />
-    <exclude domain="sharedpref" path="amnshield_sync_secrets.xml" />
-    <exclude domain="sharedpref" path="amnshield_sync_secrets_fallback.xml" />
+    <exclude domain="sharedpref" path="amnishield_sync_secrets.xml" />
+    <exclude domain="sharedpref" path="amnishield_sync_secrets_fallback.xml" />
 </full-backup-content>

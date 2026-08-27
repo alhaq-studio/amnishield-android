@@ -1,0 +1,985 @@
+package com.alhaq.amnishield.ui.screens
+
+import android.content.Intent
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import java.util.UUID
+import com.alhaq.amnishield.security.AuthResolver
+import com.alhaq.amnishield.security.AuthType
+import com.alhaq.amnishield.ui.components.PasswordPromptDialog
+import com.alhaq.amnishield.ui.components.RuleSecurityLevelSection
+import com.alhaq.amnishield.ui.state.AmniShieldState
+import com.alhaq.amnishield.ui.state.ScheduleRule
+import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
+import com.alhaq.amnishield.utils.SavedPreferencesLoader
+import com.alhaq.amnishield.data.blockers.PreloadedPacks
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateKeywordBlockerRuleScreen(
+    state: AmniShieldState,
+    viewModel: AmniShieldViewModel,
+    initialType: String = "Block Schedule",
+    editingRule: ScheduleRule? = null,
+    onSaveRule: (ScheduleRule) -> Unit,
+    onBack: () -> Unit,
+    onDeleteRule: ((String) -> Unit)? = null,
+    onNavigateToPremium: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val authResolver = remember { AuthResolver(context) }
+
+    var showGuideDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showAuthPromptForSave by remember { mutableStateOf(false) }
+    var showAuthPromptForDelete by remember { mutableStateOf(false) }
+
+    var authType by remember(editingRule) {
+        mutableStateOf(editingRule?.authType ?: AuthType.NONE)
+    }
+    var customPin by remember { mutableStateOf("") }
+    var customPinConfirm by remember { mutableStateOf("") }
+
+    val initialName = remember(editingRule) {
+        editingRule?.name ?: "Keyword Blocker Rule"
+    }
+
+    var ruleName by remember { mutableStateOf(initialName) }
+
+    // 1. Always Block vs Block Schedule
+    var isAlwaysBlockEnabled by remember(editingRule) {
+        mutableStateOf(editingRule?.isAlwaysBlockEnabled ?: (editingRule == null))
+    }
+    var isScheduleEnabled by remember(editingRule) {
+        mutableStateOf(editingRule?.isScheduleEnabled ?: false)
+    }
+    var scheduleStartTime by remember(editingRule) {
+        mutableStateOf(editingRule?.startTime ?: "09:00")
+    }
+    var scheduleEndTime by remember(editingRule) {
+        mutableStateOf(editingRule?.endTime ?: "17:00")
+    }
+    val scheduleDays = remember(editingRule) {
+        mutableStateListOf<String>().apply {
+            if (editingRule != null) {
+                addAll(editingRule.days)
+            } else {
+                addAll(listOf("Mon", "Tue", "Wed", "Thu", "Fri"))
+            }
+        }
+    }
+
+    // 2. Cheat Hours
+    var isCheatEnabled by remember(editingRule) {
+        mutableStateOf(editingRule?.isCheatEnabled ?: false)
+    }
+    var cheatStartTime by remember(editingRule) {
+        mutableStateOf(editingRule?.cheatStartTime ?: "12:00")
+    }
+    var cheatEndTime by remember(editingRule) {
+        mutableStateOf(editingRule?.cheatEndTime ?: "13:00")
+    }
+    val cheatDays = remember(editingRule) {
+        mutableStateListOf<String>().apply {
+            if (editingRule != null) {
+                addAll(editingRule.cheatDays)
+            } else {
+                addAll(listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"))
+            }
+        }
+    }
+
+    // Time Pickers Dialog State
+    var activeTimePicker by remember { mutableStateOf("") }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    // Keywords State
+    val loader = remember { SavedPreferencesLoader(context) }
+    val blockedKeywords = remember {
+        mutableStateListOf<String>().apply {
+            addAll(loader.loadBlockedKeywords())
+        }
+    }
+    var newKeyword by remember { mutableStateOf("") }
+
+    val presetKeywords = listOf("adult", "gambling", "social", "crypto", "dating", "gaming", "betting")
+
+    val saveEnabled = ruleName.isNotBlank() && (isAlwaysBlockEnabled || isScheduleEnabled || isCheatEnabled)
+
+    val openKeywordBlockerConfig = {
+        val intent = Intent(context, com.alhaq.amnishield.ui.activity.FragmentActivity::class.java).apply {
+            putExtra("feature_type", "keyword_blocker")
+        }
+        context.startActivity(intent)
+    }
+
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            CreateRuleTopAppBar(
+                title = if (editingRule != null) "Edit Keyword Rule" else "Create Keyword Rule",
+                onBack = onBack,
+                onConfigure = openKeywordBlockerConfig,
+                configureLabel = "Configure Keyword Blocker",
+                onReset = {
+                    ruleName = "Keyword Blocker Rule"
+                    isAlwaysBlockEnabled = true
+                    isScheduleEnabled = false
+                    scheduleStartTime = "09:00"
+                    scheduleEndTime = "17:00"
+                    scheduleDays.clear()
+                    scheduleDays.addAll(listOf("Mon", "Tue", "Wed", "Thu", "Fri"))
+                    isCheatEnabled = false
+                    cheatStartTime = "12:00"
+                    cheatEndTime = "13:00"
+                    cheatDays.clear()
+                    cheatDays.addAll(listOf("Sat", "Sun"))
+                },
+                onDelete = if (editingRule != null && onDeleteRule != null) {
+                    {
+                        if (editingRule.authType != AuthType.NONE) {
+                            showAuthPromptForDelete = true
+                        } else {
+                            showDeleteConfirmDialog = true
+                        }
+                    }
+                } else null
+            )
+        },
+        bottomBar = {
+            CreateRuleBottomActionBar(
+                onCancel = onBack,
+                onSave = {
+                    if (saveEnabled) {
+                        if (authType != AuthType.NONE && !state.isPremiumUser) {
+                            onNavigateToPremium()
+                            return@CreateRuleBottomActionBar
+                        }
+                        val (hash, salt) = when (authType) {
+                            AuthType.RULE_PIN -> {
+                                if (customPin.isNotBlank()) authResolver.createRulePin(customPin)
+                                else Pair(editingRule?.rulePasswordHash, editingRule?.rulePasswordSalt)
+                            }
+                            else -> Pair(null, null)
+                        }
+
+                        val newRule = ScheduleRule(
+                            id = editingRule?.id ?: UUID.randomUUID().toString(),
+                            name = ruleName,
+                            appOrCategory = "Keywords Blocker",
+                            restrictionType = "Keyword Blocker",
+                            startTime = scheduleStartTime,
+                            endTime = scheduleEndTime,
+                            days = scheduleDays.toList(),
+                            limitValue = 0,
+                            isActive = true,
+                            periods = emptyList(),
+                            targetBlockerType = "Keyword Blocker",
+                            selectedApps = emptyList(),
+                            selectedKeywords = blockedKeywords.toList(),
+                            selectedWebsites = emptyList(),
+                            selectedPlatforms = emptyList(),
+                            selectedBlockers = listOf("Keyword Blocker"),
+                            isAlwaysBlockEnabled = isAlwaysBlockEnabled,
+                            isScheduleEnabled = isScheduleEnabled,
+                            isCheatEnabled = isCheatEnabled,
+                            cheatStartTime = cheatStartTime,
+                            cheatEndTime = cheatEndTime,
+                            cheatDays = cheatDays.toList(),
+                            authType = authType,
+                            rulePasswordHash = hash,
+                            rulePasswordSalt = salt
+                        )
+
+                        val performSave = {
+                            loader.saveBlockedKeywords(blockedKeywords.toSet())
+                            loader.setKeywordBlockerFeatureEnabled(true, updateManual = true)
+
+                            val refreshIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+                            refreshIntent.setPackage(context.packageName)
+                            context.sendBroadcast(refreshIntent)
+
+                            val refreshListIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                            refreshListIntent.setPackage(context.packageName)
+                            context.sendBroadcast(refreshListIntent)
+
+                            onSaveRule(newRule)
+                        }
+
+                        if (editingRule != null && editingRule.authType != AuthType.NONE) {
+                            showAuthPromptForSave = true
+                        } else {
+                            performSave()
+                        }
+                    }
+                },
+                saveEnabled = saveEnabled
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header Info Banner
+            BoundaryHeader(
+                title = "Keyword Protection Rules",
+                subtitle = "Filter explicit search queries, titles, and webpage content automatically.",
+                icon = Icons.Outlined.Lock,
+                onConfigure = openKeywordBlockerConfig,
+                configureLabel = "Keyword Blocker Settings"
+            )
+
+            // Rule Name Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    RuleNameSection(
+                        ruleName = ruleName,
+                        onRuleNameChange = { ruleName = it }
+                    )
+                }
+            }
+
+            // Blacklisted Keywords Management Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Blacklisted Keywords",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Text(
+                            text = "${blockedKeywords.size} active",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Input Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = newKeyword,
+                            onValueChange = { newKeyword = it },
+                            placeholder = { Text("Add new keyword (e.g. gambling)") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
+                        IconButton(
+                            onClick = {
+                                val kw = newKeyword.trim().lowercase()
+                                if (kw.isNotEmpty() && !blockedKeywords.contains(kw)) {
+                                    blockedKeywords.add(kw)
+                                    loader.saveBlockedKeywords(blockedKeywords.toSet())
+                                    val intent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                                    context.sendBroadcast(intent.setPackage(context.packageName))
+                                    newKeyword = ""
+                                }
+                            },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape),
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary)
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "Add Keyword")
+                        }
+                    }
+
+                    // Preloaded Blacklist Packs Section
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Preloaded Blacklist Packs",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "One-tap import curated keyword packs or skip to add custom ones below.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PreloadedPacks.keywordPacks.forEach { pack ->
+                            val allAdded = pack.items.all { blockedKeywords.contains(it) }
+                            val countAdded = pack.items.count { blockedKeywords.contains(it) }
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (allAdded) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (allAdded) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = pack.icon,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = pack.title,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = if (allAdded) "All ${pack.items.size} keywords imported"
+                                                       else if (countAdded > 0) "$countAdded of ${pack.items.size} keywords added"
+                                                       else pack.description,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            if (allAdded) {
+                                                blockedKeywords.removeAll(pack.items)
+                                            } else {
+                                                pack.items.forEach { kw ->
+                                                    if (!blockedKeywords.contains(kw)) {
+                                                        blockedKeywords.add(kw)
+                                                    }
+                                                }
+                                            }
+                                            loader.saveBlockedKeywords(blockedKeywords.toSet())
+                                            val intent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                                            context.sendBroadcast(intent.setPackage(context.packageName))
+                                        },
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (allAdded) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary,
+                                            contentColor = if (allAdded) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimary
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                        modifier = Modifier.height(34.dp)
+                                    ) {
+                                        Text(
+                                            text = if (allAdded) "Remove" else if (countAdded > 0) "Add Rest" else "Import Pack",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Active Keywords List
+                    if (blockedKeywords.isEmpty()) {
+                        Text(
+                            text = "No keywords blocked yet. Add custom keywords or select presets above.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            blockedKeywords.forEach { keyword ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = keyword,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove",
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clickable {
+                                                    blockedKeywords.remove(keyword)
+                                                    loader.saveBlockedKeywords(blockedKeywords.toSet())
+                                                    val intent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                                                    context.sendBroadcast(intent.setPackage(context.packageName))
+                                                }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Protection Mode & Schedule Settings Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Protection Schedule",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // Always Block (24/7) Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Shield,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Column {
+                                Text(
+                                    text = "Always Block (24/7)",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Filter keywords all day, every day",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isAlwaysBlockEnabled,
+                            onCheckedChange = {
+                                isAlwaysBlockEnabled = it
+                                if (it) {
+                                    isScheduleEnabled = false
+                                }
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // Block Schedule Row
+                    AnimatedVisibility(visible = !isAlwaysBlockEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Lock,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Scheduled Protection Window",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "Filter keywords during specific active hours",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Switch(
+                                    checked = isScheduleEnabled,
+                                    onCheckedChange = {
+                                        isScheduleEnabled = it
+                                        if (it) {
+                                            isAlwaysBlockEnabled = false
+                                        }
+                                    }
+                                )
+                            }
+
+                            AnimatedVisibility(visible = isScheduleEnabled) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text("Start Time", style = MaterialTheme.typography.labelSmall)
+                                            OutlinedButton(
+                                                onClick = {
+                                                    activeTimePicker = "start"
+                                                    showTimePicker = true
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(scheduleStartTime, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text("End Time", style = MaterialTheme.typography.labelSmall)
+                                            OutlinedButton(
+                                                onClick = {
+                                                    activeTimePicker = "end"
+                                                    showTimePicker = true
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(scheduleEndTime, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+
+                                    // Active Days Selection
+                                    Text("Active Schedule Days", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                                        daysList.forEach { day ->
+                                            val isSelected = scheduleDays.contains(day)
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                    )
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.outlineVariant,
+                                                        shape = CircleShape
+                                                    )
+                                                    .clickable {
+                                                        if (isSelected) scheduleDays.remove(day) else scheduleDays.add(day)
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = day.take(1),
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Cheat Hours (Bypass Window) Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                            Column {
+                                Text(
+                                    text = "Cheat Hours (Bypass)",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Temporarily bypass keyword filtering during these hours",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isCheatEnabled,
+                            onCheckedChange = { isCheatEnabled = it },
+                            enabled = !isAlwaysBlockEnabled
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isCheatEnabled && !isAlwaysBlockEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("Bypass Start", style = MaterialTheme.typography.labelSmall)
+                                    OutlinedButton(
+                                        onClick = {
+                                            activeTimePicker = "cheat_start"
+                                            showTimePicker = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(cheatStartTime, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("Bypass End", style = MaterialTheme.typography.labelSmall)
+                                    OutlinedButton(
+                                        onClick = {
+                                            activeTimePicker = "cheat_end"
+                                            showTimePicker = true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(cheatEndTime, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // Cheat Days
+                            Text("Bypass Days", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                val daysList = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                                daysList.forEach { day ->
+                                    val isSelected = cheatDays.contains(day)
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.secondary
+                                                else MaterialTheme.colorScheme.outlineVariant,
+                                                shape = CircleShape
+                                            )
+                                            .clickable {
+                                                if (isSelected) cheatDays.remove(day) else cheatDays.add(day)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = day.take(1),
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Security Level & Protection Section
+            RuleSecurityLevelSection(
+                authType = authType,
+                onAuthTypeChange = { authType = it },
+                customPin = customPin,
+                onCustomPinChange = { customPin = it },
+                customPinConfirm = customPinConfirm,
+                onCustomPinConfirmChange = { customPinConfirm = it },
+                isPremiumUser = state.isPremiumUser,
+                onNavigateToPremium = onNavigateToPremium
+            )
+        }
+    }
+
+    // Auth challenge before saving an edited locked rule
+    if (showAuthPromptForSave && editingRule != null) {
+        PasswordPromptDialog(
+            rule = editingRule,
+            title = "Verify PIN to Update Keyword Rule",
+            subtitle = "Enter PIN to save changes to this protected rule",
+            onDismiss = { showAuthPromptForSave = false },
+            onSuccess = {
+                showAuthPromptForSave = false
+                val (hash, salt) = when (authType) {
+                    AuthType.RULE_PIN -> {
+                        if (customPin.isNotBlank()) authResolver.createRulePin(customPin)
+                        else Pair(editingRule.rulePasswordHash, editingRule.rulePasswordSalt)
+                    }
+                    else -> Pair(null, null)
+                }
+                val updatedRule = ScheduleRule(
+                    id = editingRule.id,
+                    name = ruleName,
+                    appOrCategory = "Keywords Blocker",
+                    restrictionType = "Keyword Blocker",
+                    startTime = scheduleStartTime,
+                    endTime = scheduleEndTime,
+                    days = scheduleDays.toList(),
+                    limitValue = 0,
+                    isActive = true,
+                    periods = emptyList(),
+                    targetBlockerType = "Keyword Blocker",
+                    selectedApps = emptyList(),
+                    selectedKeywords = blockedKeywords.toList(),
+                    selectedWebsites = emptyList(),
+                    selectedPlatforms = emptyList(),
+                    selectedBlockers = listOf("Keyword Blocker"),
+                    isAlwaysBlockEnabled = isAlwaysBlockEnabled,
+                    isScheduleEnabled = isScheduleEnabled,
+                    isCheatEnabled = isCheatEnabled,
+                    cheatStartTime = cheatStartTime,
+                    cheatEndTime = cheatEndTime,
+                    cheatDays = cheatDays.toList(),
+                    authType = authType,
+                    rulePasswordHash = hash,
+                    rulePasswordSalt = salt
+                )
+                loader.saveBlockedKeywords(blockedKeywords.toSet())
+                loader.setKeywordBlockerFeatureEnabled(true, updateManual = true)
+
+                val refreshIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+                refreshIntent.setPackage(context.packageName)
+                context.sendBroadcast(refreshIntent)
+
+                val refreshListIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
+                refreshListIntent.setPackage(context.packageName)
+                context.sendBroadcast(refreshListIntent)
+
+                onSaveRule(updatedRule)
+            }
+        )
+    }
+
+    // Auth challenge before deleting a locked rule
+    if (showAuthPromptForDelete && editingRule != null && onDeleteRule != null) {
+        PasswordPromptDialog(
+            rule = editingRule,
+            title = "Verify PIN to Delete Keyword Rule",
+            subtitle = "Enter PIN to delete \"${editingRule.name}\"",
+            onDismiss = { showAuthPromptForDelete = false },
+            onSuccess = {
+                showAuthPromptForDelete = false
+                onDeleteRule(editingRule.id)
+            }
+        )
+    }
+
+    // Time picker dialog logic
+    if (showTimePicker) {
+        val initialTime = when (activeTimePicker) {
+            "start" -> scheduleStartTime
+            "end" -> scheduleEndTime
+            "cheat_start" -> cheatStartTime
+            else -> cheatEndTime
+        }
+        val parts = initialTime.split(":")
+        val h = parts.getOrNull(0)?.toIntOrNull() ?: 9
+        val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+
+        CreateRuleTimePickerDialog(
+            title = when (activeTimePicker) {
+                "start" -> "Select Start Time"
+                "end" -> "Select End Time"
+                "cheat_start" -> "Select Cheat Start Time"
+                else -> "Select Cheat End Time"
+            },
+            initialHour = h,
+            initialMinute = m,
+            onDismiss = { showTimePicker = false },
+            onConfirm = { hour, minute ->
+                val formatted = String.format("%02d:%02d", hour, minute)
+                when (activeTimePicker) {
+                    "start" -> scheduleStartTime = formatted
+                    "end" -> scheduleEndTime = formatted
+                    "cheat_start" -> cheatStartTime = formatted
+                    "cheat_end" -> cheatEndTime = formatted
+                }
+                showTimePicker = false
+            }
+        )
+    }
+
+    if (showGuideDialog) {
+        RuleGuideDialog(
+            title = "Keyword Blocker Rules Guide",
+            description = "Keyword Blocker inspects on-screen text and search inputs across web browsers, YouTube, and search engines in real-time.",
+            tips = listOf(
+                "Always Block: Matches and intercepts keywords continuously.",
+                "Block Schedule: Enforces keyword filtering only during configured schedule windows.",
+                "Cheat Hours: Pauses keyword blocking temporarily during allowed breaks.",
+                "Adult & Gambling Packs: You can enable pre-curated keyword packs in addition to custom keywords."
+            ),
+            onDismiss = { showGuideDialog = false }
+        )
+    }
+
+    if (showDeleteConfirmDialog && editingRule != null && onDeleteRule != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete Rule?") },
+            text = { Text("Are you sure you want to delete \"${editingRule.name}\"? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeleteRule(editingRule.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}

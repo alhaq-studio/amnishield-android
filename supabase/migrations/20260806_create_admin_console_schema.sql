@@ -1,4 +1,4 @@
--- AmnShield Web Admin Console Database Schema
+-- AmniShield Web Admin Console Database Schema
 -- Migration: create_admin_console_schema
 
 -- Profiles table (linked to Supabase Auth users)

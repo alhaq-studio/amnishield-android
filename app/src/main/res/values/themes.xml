@@ -1,6 +1,6 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Base.Theme.AmnShield" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.AmniShield" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_theme_primary</item>
         <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
@@ -47,22 +47,22 @@
         <item name="colorSurfaceContainer">@color/md_theme_surfaceContainer</item>
         <item name="colorSurfaceContainerHigh">@color/md_theme_surfaceContainerHigh</item>
         <item name="colorSurfaceContainerHighest">@color/md_theme_surfaceContainerHighest</item>
-        
+
         <!-- Typography -->
         <item name="android:fontFamily">@font/inter</item>
         <item name="fontFamily">@font/inter</item>
 
         <!-- Set default dialog and button styles -->
-        <item name="alertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="materialAlertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="materialButtonStyle">@style/Widget.AmnShield.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.AmnShield.Button.Outlined</item>
-        <item name="borderlessButtonStyle">@style/Widget.AmnShield.Button.Text</item>
+        <item name="alertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="materialButtonStyle">@style/Widget.AmniShield.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.AmniShield.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.AmniShield.Button.Text</item>
     </style>
 
-    <style name="Theme.AmnShield" parent="Base.Theme.AmnShield" />
+    <style name="Theme.AmniShield" parent="Base.Theme.AmniShield" />
 
-    <style name="Theme.AmnShield.TransparentOverlay" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.AmniShield.TransparentOverlay" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
@@ -75,7 +75,7 @@
          deep indigo/purple gradient instead of falling back to default light
          tones. Surfaces are translucent dark layers (not fully transparent) so
          text always has a contrast cushion above the gradient. -->
-    <style name="Theme.AmnShield.Gradient" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.AmniShield.Gradient" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@drawable/gradient_background</item>
 
         <!-- Primary / Secondary / Tertiary -->
@@ -137,12 +137,12 @@
         -->
 
         <!-- Button Styles -->
-        <item name="materialButtonStyle">@style/Widget.AmnShield.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.AmnShield.Button.Outlined</item>
-        <item name="borderlessButtonStyle">@style/Widget.AmnShield.Button.Text</item>
+        <item name="materialButtonStyle">@style/Widget.AmniShield.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.AmniShield.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.AmniShield.Button.Text</item>
     </style>
 
-    <style name="Theme.AmnShield.TransparentDialog" parent="Theme.Material3.DayNight">
+    <style name="Theme.AmniShield.TransparentDialog" parent="Theme.Material3.DayNight">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -150,7 +150,7 @@
     </style>
 
     <!-- Enhanced Button Styles -->
-    <style name="Widget.AmnShield.Button" parent="Widget.Material3.Button">
+    <style name="Widget.AmniShield.Button" parent="Widget.Material3.Button">
         <item name="android:minHeight">48dp</item>
         <item name="android:paddingTop">12dp</item>
         <item name="android:paddingBottom">12dp</item>
@@ -165,7 +165,7 @@
         <item name="android:stateListAnimator">@null</item>
     </style>
 
-    <style name="Widget.AmnShield.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+    <style name="Widget.AmniShield.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:minHeight">48dp</item>
         <item name="android:paddingTop">12dp</item>
         <item name="android:paddingBottom">12dp</item>
@@ -179,7 +179,7 @@
         <item name="android:letterSpacing">0.01</item>
     </style>
 
-    <style name="Widget.AmnShield.Button.Text" parent="Widget.Material3.Button.TextButton">
+    <style name="Widget.AmniShield.Button.Text" parent="Widget.Material3.Button.TextButton">
         <item name="android:minHeight">44dp</item>
         <item name="android:paddingTop">10dp</item>
         <item name="android:paddingBottom">10dp</item>
@@ -190,7 +190,7 @@
         <item name="android:letterSpacing">0.01</item>
     </style>
 
-    <style name="Widget.AmnShield.NavigationDrawer" parent="Widget.Material3.NavigationView">
+    <style name="Widget.AmniShield.NavigationDrawer" parent="Widget.Material3.NavigationView">
         <item name="android:background">?attr/colorSurface</item>
         <item name="itemIconTint">@color/nav_item_tint</item>
         <item name="itemTextColor">@color/nav_item_tint</item>
@@ -202,7 +202,7 @@
         <item name="drawerLayoutCornerSize">16dp</item>
     </style>
 
-    <style name="Widget.AmnShield.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
+    <style name="Widget.AmniShield.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
         <item name="android:background">?attr/colorSurface</item>
         <item name="itemIconTint">@color/bottom_nav_item_tint</item>
         <item name="itemTextColor">@color/bottom_nav_item_tint</item>
@@ -216,7 +216,7 @@
     <style name="Widget.Material3.Button.FilledTonalButton" parent="Widget.Material3.Button" />
 
     <!-- Enhanced Card Styles for High Readability -->
-    <style name="Widget.AmnShield.CardView" parent="Widget.Material3.CardView.Elevated">
+    <style name="Widget.AmniShield.CardView" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">2dp</item>
         <item name="cardBackgroundColor">?attr/colorSurface</item>
@@ -224,7 +224,7 @@
         <item name="strokeWidth">0dp</item>
     </style>
 
-    <style name="Widget.AmnShield.CardView.Outlined" parent="Widget.Material3.CardView.Outlined">
+    <style name="Widget.AmniShield.CardView.Outlined" parent="Widget.Material3.CardView.Outlined">
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">0dp</item>
         <item name="cardBackgroundColor">?attr/colorSurface</item>
@@ -234,21 +234,21 @@
     </style>
 
     <!-- Dialog & Chip Styles for High Readability -->
-    <style name="Widget.AmnShield.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="materialAlertDialogTitleTextStyle">@style/TextAppearance.AmnShield.DialogTitle</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/TextAppearance.AmnShield.DialogBody</item>
+    <style name="Widget.AmniShield.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="materialAlertDialogTitleTextStyle">@style/TextAppearance.AmniShield.DialogTitle</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/TextAppearance.AmniShield.DialogBody</item>
     </style>
 
-    <style name="TextAppearance.AmnShield.DialogTitle" parent="MaterialAlertDialog.Material3.Title.Text">
+    <style name="TextAppearance.AmniShield.DialogTitle" parent="MaterialAlertDialog.Material3.Title.Text">
         <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="TextAppearance.AmnShield.DialogBody" parent="MaterialAlertDialog.Material3.Body.Text">
+    <style name="TextAppearance.AmniShield.DialogBody" parent="MaterialAlertDialog.Material3.Body.Text">
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
-    <style name="Widget.AmnShield.Chip" parent="Widget.Material3.Chip.Filter">
+    <style name="Widget.AmniShield.Chip" parent="Widget.Material3.Chip.Filter">
         <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="chipIconTint">?attr/colorOnSurfaceVariant</item>
         <item name="strokeColor">?attr/colorOutline</item>
@@ -256,7 +256,7 @@
     </style>
 
     <!-- Legacy & Material Text Field Styles for High Readability -->
-    <style name="Widget.AmnShield.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+    <style name="Widget.AmniShield.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">?attr/colorOutline</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxBackgroundColor">?attr/colorSurfaceContainerHigh</item>
@@ -270,7 +270,7 @@
         <item name="boxCornerRadiusBottomEnd">12dp</item>
     </style>
 
-    <style name="Widget.AmnShield.EditText" parent="Widget.AppCompat.EditText">
+    <style name="Widget.AmniShield.EditText" parent="Widget.AppCompat.EditText">
         <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:textColorHint">?attr/colorOnSurfaceVariant</item>
         <item name="android:backgroundTint">?attr/colorOutline</item>
@@ -281,7 +281,7 @@
     </style>
 
     <!-- Emerald Theme (flat light, high readability) -->
-    <style name="Theme.AmnShield.Emerald" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.AmniShield.Emerald" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/emerald_primary</item>
         <item name="colorOnPrimary">@color/emerald_onPrimary</item>
         <item name="colorPrimaryContainer">@color/emerald_primaryContainer</item>
@@ -324,24 +324,24 @@
         <item name="subtitleTextColor">@color/emerald_onSurfaceVariant</item>
 
         <!-- Dialogs & Chips -->
-        <item name="alertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="materialAlertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="chipStyle">@style/Widget.AmnShield.Chip</item>
+        <item name="alertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="chipStyle">@style/Widget.AmniShield.Chip</item>
 
         <!-- Widget Styles -->
-        <item name="cardViewStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewElevatedStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewOutlinedStyle">@style/Widget.AmnShield.CardView.Outlined</item>
-        <item name="textInputStyle">@style/Widget.AmnShield.TextInputLayout</item>
-        <item name="editTextStyle">@style/Widget.AmnShield.EditText</item>
-        <item name="materialButtonStyle">@style/Widget.AmnShield.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.AmnShield.Button.Outlined</item>
-        <item name="borderlessButtonStyle">@style/Widget.AmnShield.Button.Text</item>
+        <item name="cardViewStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewElevatedStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewOutlinedStyle">@style/Widget.AmniShield.CardView.Outlined</item>
+        <item name="textInputStyle">@style/Widget.AmniShield.TextInputLayout</item>
+        <item name="editTextStyle">@style/Widget.AmniShield.EditText</item>
+        <item name="materialButtonStyle">@style/Widget.AmniShield.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.AmniShield.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.AmniShield.Button.Text</item>
     </style>
 
     <!-- Sunset Glow Theme -->
-    <style name="Theme.AmnShield.Sunset" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.AmniShield.Sunset" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/sunset_primary</item>
         <item name="colorOnPrimary">@color/sunset_onPrimary</item>
         <item name="colorPrimaryContainer">@color/sunset_primaryContainer</item>
@@ -384,24 +384,24 @@
         <item name="subtitleTextColor">@color/sunset_onSurfaceVariant</item>
 
         <!-- Dialogs & Chips -->
-        <item name="alertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="materialAlertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="chipStyle">@style/Widget.AmnShield.Chip</item>
+        <item name="alertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="chipStyle">@style/Widget.AmniShield.Chip</item>
 
         <!-- Widget Styles -->
-        <item name="cardViewStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewElevatedStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewOutlinedStyle">@style/Widget.AmnShield.CardView.Outlined</item>
-        <item name="textInputStyle">@style/Widget.AmnShield.TextInputLayout</item>
-        <item name="editTextStyle">@style/Widget.AmnShield.EditText</item>
-        <item name="materialButtonStyle">@style/Widget.AmnShield.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.AmnShield.Button.Outlined</item>
-        <item name="borderlessButtonStyle">@style/Widget.AmnShield.Button.Text</item>
+        <item name="cardViewStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewElevatedStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewOutlinedStyle">@style/Widget.AmniShield.CardView.Outlined</item>
+        <item name="textInputStyle">@style/Widget.AmniShield.TextInputLayout</item>
+        <item name="editTextStyle">@style/Widget.AmniShield.EditText</item>
+        <item name="materialButtonStyle">@style/Widget.AmniShield.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.AmniShield.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.AmniShield.Button.Text</item>
     </style>
 
     <!-- Purple Gradient Theme -->
-    <style name="Theme.AmnShield.Purple" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.AmniShield.Purple" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@drawable/gradient_background_purple</item>
         <item name="colorPrimary">@color/purple_primary</item>
         <item name="colorOnPrimary">@color/purple_onPrimary</item>
@@ -445,20 +445,20 @@
         <item name="subtitleTextColor">@color/purple_onSurfaceVariant</item>
 
         <!-- Dialogs & Chips -->
-        <item name="alertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="materialAlertDialogTheme">@style/Widget.AmnShield.MaterialAlertDialog</item>
-        <item name="chipStyle">@style/Widget.AmnShield.Chip</item>
+        <item name="alertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/Widget.AmniShield.MaterialAlertDialog</item>
+        <item name="chipStyle">@style/Widget.AmniShield.Chip</item>
 
         <!-- Widget Styles -->
-        <item name="cardViewStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewElevatedStyle">@style/Widget.AmnShield.CardView</item>
-        <item name="materialCardViewOutlinedStyle">@style/Widget.AmnShield.CardView.Outlined</item>
-        <item name="textInputStyle">@style/Widget.AmnShield.TextInputLayout</item>
-        <item name="editTextStyle">@style/Widget.AmnShield.EditText</item>
-        <item name="materialButtonStyle">@style/Widget.AmnShield.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.AmnShield.Button.Outlined</item>
-        <item name="borderlessButtonStyle">@style/Widget.AmnShield.Button.Text</item>
+        <item name="cardViewStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewElevatedStyle">@style/Widget.AmniShield.CardView</item>
+        <item name="materialCardViewOutlinedStyle">@style/Widget.AmniShield.CardView.Outlined</item>
+        <item name="textInputStyle">@style/Widget.AmniShield.TextInputLayout</item>
+        <item name="editTextStyle">@style/Widget.AmniShield.EditText</item>
+        <item name="materialButtonStyle">@style/Widget.AmniShield.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.AmniShield.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.AmniShield.Button.Text</item>
     </style>
 
 </resources>

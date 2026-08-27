@@ -1,4 +1,4 @@
--- AmnShield Ecosystem Central Sync Database Schema
+-- AmniShield Ecosystem Central Sync Database Schema
 -- Version: 1.0.0
 -- Platform: Supabase PostgreSQL + RLS
 

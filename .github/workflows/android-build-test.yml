@@ -62,17 +62,17 @@ jobs:
       - name: Upload Playstore Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: AmnShield-Playstore-Debug
+          name: AmniShield-Playstore-Debug
           path: app/build/outputs/apk/playstore/debug/app-playstore-debug.apk
 
       - name: Upload F-Droid Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: AmnShield-Fdroid-Debug
+          name: AmniShield-Fdroid-Debug
           path: app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
 
       - name: Upload Universal Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: AmnShield-Universal-Debug
+          name: AmniShield-Universal-Debug
           path: app/build/outputs/apk/universal/debug/app-universal-debug.apk

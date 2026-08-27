@@ -2,15 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission
-        android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission
-        android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -19,80 +15,29 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
-    <permission
-        android:name="${applicationId}.permission.BIND_API"
-        android:protectionLevel="signature" />
+    <permission android:name="${applicationId}.permission.BIND_API" android:protectionLevel="signature" />
 
-    <application
-        android:name=".AmnShield"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AmnShield"
-        android:resizeableActivity="true"
-        android:localeConfig="@xml/locales_config"
-        tools:targetApi="36">
-        <activity
-            android:name=".ui.activity.ShortcutActivity"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.AmnShield.TransparentDialog"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activity.WarningActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTask" />
-        
-        <activity
-            android:name=".ui.activity.AntiUninstallPasswordActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTask" />
-        <activity
-            android:name=".ui.activity.FragmentActivity"
-            android:exported="false" />
+    <application android:name=".AmniShield" android:allowBackup="true" android:dataExtractionRules="@xml/data_extraction_rules" android:fullBackupContent="@xml/backup_rules" android:hardwareAccelerated="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/Theme.AmniShield" android:resizeableActivity="true" android:localeConfig="@xml/locales_config" tools:targetApi="36">
+        <activity android:name=".ui.activity.ShortcutActivity" android:excludeFromRecents="true" android:launchMode="singleTop" android:theme="@style/Theme.AmniShield.TransparentDialog" android:exported="false" />
+        <activity android:name=".ui.activity.WarningActivity" android:excludeFromRecents="true" android:exported="false" android:launchMode="singleTask" />
+
+        <activity android:name=".ui.activity.AntiUninstallPasswordActivity" android:excludeFromRecents="true" android:exported="false" android:launchMode="singleTask" />
+        <activity android:name=".ui.activity.FragmentActivity" android:exported="false" />
 
 
-        <activity
-            android:name=".ui.activity.HandGestureActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AmnShield.TransparentOverlay"
-            android:excludeFromRecents="true"
-            android:launchMode="singleInstance" />
-        <activity
-            android:name=".ui.activity.ManageKeywordsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activity.SelectAppsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activity.RemindersActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activity.NotificationsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activity.CrashRecoveryActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.activity.SplashActivity"
-            android:exported="true"
-            android:theme="@style/Theme.AmnShield">
+        <activity android:name=".ui.activity.HandGestureActivity" android:exported="false" android:theme="@style/Theme.AmniShield.TransparentOverlay" android:excludeFromRecents="true" android:launchMode="singleInstance" />
+        <activity android:name=".ui.activity.ManageKeywordsActivity" android:exported="false" />
+        <activity android:name=".ui.activity.SelectAppsActivity" android:exported="false" />
+        <activity android:name=".ui.activity.RemindersActivity" android:exported="false" />
+        <activity android:name=".ui.activity.NotificationsActivity" android:exported="false" />
+        <activity android:name=".ui.activity.CrashRecoveryActivity" android:exported="false" />
+        <activity android:name=".ui.activity.SplashActivity" android:exported="true" android:theme="@style/Theme.AmniShield">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".ui.activity.MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
+        <activity android:name=".ui.activity.MainActivity" android:exported="true" android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -103,11 +48,11 @@
                 <data android:scheme="amnishield" android:host="verify" />
                 <data android:scheme="amnishield" android:host="login" />
                 <data android:scheme="amnishield" android:host="pair" />
-                <data android:scheme="amnshield" android:host="activate" />
-                <data android:scheme="amnshield" android:host="license" />
-                <data android:scheme="amnshield" android:host="auth" />
-                <data android:scheme="amnshield" android:host="verify" />
-                <data android:scheme="amnshield" android:host="pair" />
+                <data android:scheme="amnishield" android:host="activate" />
+                <data android:scheme="amnishield" android:host="license" />
+                <data android:scheme="amnishield" android:host="auth" />
+                <data android:scheme="amnishield" android:host="verify" />
+                <data android:scheme="amnishield" android:host="pair" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -128,55 +73,32 @@
                 <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/pair" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".ui.activity.LauncherActivity"
-            android:exported="true"
-            android:launchMode="singleTask" />
+        <activity android:name=".ui.activity.LauncherActivity" android:exported="true" android:launchMode="singleTask" />
 
-        <service
-            android:name=".services.AmnShieldAccessibilityService"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+        <service android:name=".services.AmniShieldAccessibilityService" android:exported="true" android:label="@string/app_name" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
 
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/amnshield_service_config" />
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/amnishield_service_config" />
         </service>
 
-        <receiver
-            android:name=".receivers.AdminReceiver"
-            android:description="@string/admin_permission_desc"
-            android:exported="true"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
+        <receiver android:name=".receivers.AdminReceiver" android:description="@string/admin_permission_desc" android:exported="true" android:permission="android.permission.BIND_DEVICE_ADMIN">
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
                 <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED" />
                 <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
             </intent-filter>
 
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin_receiver_info" />
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin_receiver_info" />
         </receiver>
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.provider" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
         <!-- Supabase & FCM Sync Messaging Service -->
-        <service
-            android:name="com.alhaq.amnshield.data.sync.AmnMessagingService"
-            android:exported="false">
+        <service android:name="com.alhaq.amnishield.data.sync.AmnMessagingService" android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
@@ -190,16 +112,10 @@
 
 
         <!-- BroadcastReceiver for daily report notifications -->
-        <receiver
-            android:name=".notifications.DailyReportReceiver"
-            android:exported="false"
-            android:enabled="true" />
+        <receiver android:name=".notifications.DailyReportReceiver" android:exported="false" android:enabled="true" />
 
         <!-- BroadcastReceiver for auto-blocking newly installed apps -->
-        <receiver
-            android:name=".receivers.AppInstallReceiver"
-            android:exported="true"
-            android:enabled="true">
+        <receiver android:name=".receivers.AppInstallReceiver" android:exported="true" android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_ADDED" />
                 <data android:scheme="package" />
@@ -207,20 +123,14 @@
         </receiver>
 
         <!-- API Bound Service for Guardian & paired client apps -->
-        <service
-            android:name=".api.AmnShieldApiService"
-            android:exported="true"
-            android:permission="${applicationId}.permission.BIND_API">
+        <service android:name=".api.AmniShieldApiService" android:exported="true" android:permission="${applicationId}.permission.BIND_API">
             <intent-filter>
                 <action android:name="${applicationId}.api.BIND" />
             </intent-filter>
         </service>
 
         <!-- API Permission Dialog Activity -->
-        <activity
-            android:name=".api.ApiPermissionActivity"
-            android:exported="true"
-            android:theme="@style/Theme.AmnShield.TransparentDialog">
+        <activity android:name=".api.ApiPermissionActivity" android:exported="true" android:theme="@style/Theme.AmniShield.TransparentDialog">
             <intent-filter>
                 <action android:name="${applicationId}.api.REQUEST_PERMISSION" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -228,63 +138,41 @@
         </activity>
 
         <!-- Home Screen Widgets -->
-        <receiver
-            android:name=".ui.widgets.ScreentimeWidgetProvider"
-            android:exported="true"
-            android:label="Screen Time &amp; App Usage">
+        <receiver android:name=".ui.widgets.ScreentimeWidgetProvider" android:exported="true" android:label="Screen Time &amp; App Usage">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="${applicationId}.screentime.WIDGET_REFRESH" />
             </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_screentime_metadata" />
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_screentime_metadata" />
         </receiver>
 
-        <receiver
-            android:name=".ui.widgets.ReelsMetricsWidgetProvider"
-            android:exported="true"
-            android:label="Reels &amp; Shorts Metrics">
+        <receiver android:name=".ui.widgets.ReelsMetricsWidgetProvider" android:exported="true" android:label="Reels &amp; Shorts Metrics">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="${applicationId}.reels.WIDGET_REFRESH" />
             </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_reels_metrics_metadata" />
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_reels_metrics_metadata" />
         </receiver>
 
-        <receiver
-            android:name=".ui.widgets.QuickFocusWidgetProvider"
-            android:exported="true"
-            android:label="Quick Focus Space">
+        <receiver android:name=".ui.widgets.QuickFocusWidgetProvider" android:exported="true" android:label="Quick Focus Space">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="${applicationId}.focus.START_15" />
                 <action android:name="${applicationId}.focus.START_30" />
                 <action android:name="${applicationId}.focus.START_60" />
             </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_quick_focus_metadata" />
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_quick_focus_metadata" />
         </receiver>
 
-        <receiver
-            android:name=".ui.widgets.BreathingWidgetProvider"
-            android:exported="true"
-            android:label="Mindful Breathing Space">
+        <receiver android:name=".ui.widgets.BreathingWidgetProvider" android:exported="true" android:label="Mindful Breathing Space">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="${applicationId}.breathing.START" />
             </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_breathing_metadata" />
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_breathing_metadata" />
         </receiver>
 
-        <receiver
-            android:name=".notifications.BootAndAlarmReceiver"
-            android:exported="true">
+        <receiver android:name=".notifications.BootAndAlarmReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
@@ -293,9 +181,7 @@
             </intent-filter>
         </receiver>
 
-        <receiver
-            android:name=".notifications.NotificationActionReceiver"
-            android:exported="false">
+        <receiver android:name=".notifications.NotificationActionReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="${applicationId}.notifications.START_QUICK_FOCUS" />
                 <action android:name="${applicationId}.notifications.SNOOZE_BLOCK" />

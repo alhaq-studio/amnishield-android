@@ -187,7 +187,7 @@
     <string name="fix_your_life">Fix your life</string>
     <string name="perform_actions_like_a_back_press">Perform actions like a back press</string>
     <string name="read_content_on_screen">Read content on screen</string>
-    <string name="this_will_allow_amnshield_to">This will allow AmniShield to:</string>
+    <string name="this_will_allow_amnishield_to">This will allow AmniShield to:</string>
     <string name="enable_2">Enable %1$s</string>
     <string name="device_admin_perm">AmniShield uses Device Admin permission to enhance security and block uninstalling AmniShield until a specific period. All data remains securely stored on your device and is never shared externally.</string>
     <string name="prevent_uninstallation_attempts_until_a_set_condition_is_met">Prevent uninstallation attempts until a set condition is met</string>
@@ -197,7 +197,7 @@
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Display an on-screen timer showing time spent in distracting apps</string>
     <string name="plan_a_robbery">Plan a robbery</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Please provide display over other apps permission to access this feature</string>
-    <string name="find_amnshield_and_press_enable">Find AmniShield and press enable</string>
+    <string name="find_amnishield_and_press_enable">Find AmniShield and press enable</string>
     <string name="discard_changes">Discard Changes?</string>
     <string name="are_you_sure_you_want_to_discard_all_changes_and_exit">Are you sure you want to discard all changes and exit?</string>
     <string name="yes">Yes</string>
@@ -236,7 +236,7 @@
     <string name="stats">Stats</string>
     
     <!-- Home Screen -->
-    <string name="welcome_to_amnshield">Welcome to AmniShield</string>
+    <string name="welcome_to_amnishield">Welcome to AmniShield</string>
     <string name="protect_your_digital_wellbeing">Protect your digital wellbeing with powerful tools</string>
     <string name="quick_actions">Quick Actions</string>
     <string name="hide_welcome_card">Hide welcome card</string>
@@ -271,7 +271,7 @@
     <string name="share_crash_logs">Share Crash Logs</string>
     <string name="help_and_faq">Help &amp; FAQ</string>
     <string name="help_and_faq_description">Common questions and troubleshooting</string>
-    <string name="about_amnshield">About AmniShield</string>
+    <string name="about_amnishield">About AmniShield</string>
     <string name="app_version">Version 0.26.4.2026</string>
     <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>
@@ -284,7 +284,7 @@
     <string name="agree_to_terms">I have read and agree to the Terms and Privacy Policy</string>
     <string name="privacy_policy">Privacy Policy</string>
 
-    <!-- Navigation Drawer -->
+    <!-- Navigation Drawer & Menus -->
     <string name="profile">Profile</string>
     <string name="sign_in">Sign In</string>
     <string name="sign_out">Sign Out</string>
@@ -308,28 +308,79 @@
     <string name="notification_permission_required">Notifications are required to show the Focus Mode timer.</string>
     <string name="open_settings">Open settings</string>
     <string name="app_usage_others_label">Others</string>
-    <string name="premium_required_title">Premium Security</string>
-    <string name="premium_required_message">Anti-Uninstall Protection and Security PIN Lock are Premium Security features.</string>
-    <string name="premium_required_message_short">Premium is required for Anti-Uninstall &amp; Security PIN.</string>
-    <string name="premium_view_plans">View Premium Security</string>
-    <string name="premium_nav_upgrade">Security &amp; Premium</string>
-    <string name="premium_nav_manage">Security (Active)</string>
-    <string name="premium_locked">Security</string>
-    <string name="premium_unlock_chip">Security</string>
-    <string name="premium_reminder_title">Unlock Anti-Uninstall &amp; PIN Security</string>
-    <string name="premium_reminder_message">Upgrade to AmniShield Premium Security to lock your settings with a 4-digit PIN, enable App Lock, and protect AmniShield against unauthorized uninstallation.</string>
-    <string name="premium_features_title">AmniShield Premium Security</string>
-    <string name="premium_features_subtitle">Anti-Uninstall Protection, 4-Digit Security PIN, and App Lock.</string>
-    <string name="premium_features_includes">Premium Security includes:</string>
-    <string name="premium_benefit_app_blocker">- Anti-Uninstall Protection — Device Administrator protection against unauthorized app removal</string>
-    <string name="premium_benefit_anti_uninstall">- 4-Digit Security PIN — Protect AmniShield settings and rules with a master PIN</string>
-    <string name="premium_benefit_priority_support">- AmniShield App Lock — Require PIN authorization before opening AmniShield</string>
-    <string name="premium_benefit_app_guard">- Bypass PIN Lock — Require PIN confirmation to pause or edit active block rules</string>
-    <string name="premium_benefit_view_blocker">- Core Blockers — App Blocker, Reels/Shorts Blocker, Focus Mode, and Web Filters are 100% FREE for all users</string>
-    <string name="premium_benefit_focus_mode">- Smart Notifications — Daily reports, focus reminders, and doomscroll alerts</string>
-    <string name="premium_benefit_reports">- Enhanced Statistics — Comprehensive blocking reports, trends, and productivity insights</string>
-    <string name="premium_benefit_privacy">- Privacy First — Local processing, no tracking, and no external analytics</string>
-    <string name="premium_benefit_future">- Priority Updates — Early access to upcoming security and protection features</string>
+
+    <!-- Support Hub & Community Initiative -->
+    <string name="nav_support_hub">Support &amp; Donate</string>
+    <string name="nav_roadmap">Roadmap &amp; Vision</string>
+    <string name="nav_website">AmniShield Website</string>
+    <string name="nav_github">Source Code &amp; GitHub</string>
+    <string name="nav_star_github">⭐ Star on GitHub</string>
+    <string name="nav_other_projects">Other Tools &amp; Projects</string>
+    <string name="support_dialog_title">Support the Al-Haq Initiative</string>
+    <string name="support_dialog_message">AmniShield is built and maintained as a public good by Al-Haq Studio under the Al-Haq Initiative. 100% free core, zero tracking, no ads. Support ongoing independent development and infrastructure:</string>
+    <string name="support_option_initiative_hub">Al-Haq Central Funding Hub (alhaq-initiative.org)</string>
+    <string name="support_option_github_sponsors_personal">GitHub Sponsors &#8226; Afrasyaab Meranai</string>
+    <string name="support_option_github_sponsors_studio">GitHub Sponsors &#8226; Al-Haq Studio</string>
+    <string name="support_option_studio_site">Al-Haq Studio Projects (alhaq.uk)</string>
+    <string name="support_option_kofi">Donate via Ko-fi</string>
+    <string name="support_option_buymeacoffee">Donate via Buy Me a Coffee</string>
+    <string name="support_option_patreon">Support on Patreon</string>
+    <string name="support_option_website">Visit AmniShield Website</string>
+    <string name="support_option_pro_pass">Unlock AmniShield Pro Pass</string>
+
+    <!-- Roadmap & Vision Screen -->
+    <string name="roadmap_title">Roadmap &amp; Vision</string>
+    <string name="roadmap_subtitle">Transparent milestone tracking and future ecosystem architecture.</string>
+    <string name="roadmap_section_completed">Completed Milestones (V1.0 Baseline)</string>
+    <string name="roadmap_section_active">Active Development (V1.1 - V1.5)</string>
+    <string name="roadmap_section_future">Future Vision (V2.0 Ecosystem)</string>
+
+    <string name="roadmap_item_core_engine_title">Modular Accessibility Interceptor Pipeline</string>
+    <string name="roadmap_item_core_engine_desc">Chain of responsibility architecture separating App Blocker, Reels Filter, Web Blocker, and Focus Mode with optimized node traversal.</string>
+    <string name="roadmap_item_offline_licensing_title">Offline NIST P-256 ECDSA Licensing</string>
+    <string name="roadmap_item_offline_licensing_desc">100% offline cryptographic public key verification for Pro licenses on Google Play, F-Droid, and sideloaded builds.</string>
+    <string name="roadmap_item_anti_uninstall_title">Hardened Anti-Uninstall &amp; Tamper Defense</string>
+    <string name="roadmap_item_anti_uninstall_desc">Multi-vector interception protecting Device Admin, Google Play uninstallation, and OEM settings with Home exit routing.</string>
+    <string name="roadmap_item_triple_pin_title">Triple-Layer PIN Security Architecture</string>
+    <string name="roadmap_item_triple_pin_desc">Granular PIN barriers separating App Lock, Bypass Override, and Per-Rule modification protection with PBKDF2 hashing.</string>
+    <string name="roadmap_item_local_analytics_title">On-Device Screen Time &amp; Widget Suite</string>
+    <string name="roadmap_item_local_analytics_desc">Local usage analytics, doomscroll trackers, and glanceable Material 3 home screen widgets with zero telemetry.</string>
+
+    <string name="roadmap_item_windows_bg_title">Windows Elevated Background Service</string>
+    <string name="roadmap_item_windows_bg_desc">System-level Windows service managing UAC-free network hosts resolution and desktop process monitoring.</string>
+    <string name="roadmap_item_dns_sinkhole_title">Local VPN DNS Sinkhole Filter</string>
+    <string name="roadmap_item_dns_sinkhole_desc">On-device VPN packet filtering engine for network-wide tracking and ad/adult domain suppression across all apps.</string>
+    <string name="roadmap_item_bulk_lists_title">Advanced Bulk List Import &amp; Export</string>
+    <string name="roadmap_item_bulk_lists_desc">Structured CSV/TXT import and export engine for custom Keyword and Website blocklists.</string>
+
+    <string name="roadmap_item_vision_blur_title">Real-Time Mobile NPU Vision Blur Engine</string>
+    <string name="roadmap_item_vision_blur_desc">On-device screen frame scanning and AI content blurring powered by LiteRT / Mobile NPU (AmnGaze integration).</string>
+    <string name="roadmap_item_cloud_sync_title">Multi-Platform Cloud Policy Sync</string>
+    <string name="roadmap_item_cloud_sync_desc">Optional end-to-end encrypted rule synchronization across Android, Windows Desktop, and Web Console.</string>
+
+    <!-- Strict Premium Scope & Boundaries -->
+    <string name="premium_required_title">AmniShield Pro Security</string>
+    <string name="premium_required_message">Anti-Uninstall Protection, Triple-Layer PIN Security, Rule Backup &amp; Restore, and Bulk List Import/Export are Pro features.</string>
+    <string name="premium_required_message_short">Pro Supporter Pass required for advanced security and data tools.</string>
+    <string name="premium_view_plans">View Pro Security Plans</string>
+    <string name="premium_nav_upgrade">Upgrade to Pro</string>
+    <string name="premium_nav_manage">Pro Security (Active)</string>
+    <string name="premium_locked">Pro Security</string>
+    <string name="premium_unlock_chip">Pro</string>
+    <string name="premium_reminder_title">Unlock Tamper-Proof Defense &amp; Triple-Layer PIN</string>
+    <string name="premium_reminder_message">Upgrade to AmniShield Pro to enable Password-Based or Time-Based Anti-Uninstall, App Lock PIN, Bypass PIN, Per-Rule PINs, and full JSON Backup &amp; Restore.</string>
+    <string name="premium_features_title">AmniShield Pro</string>
+    <string name="premium_features_subtitle">Tamper-Proof Anti-Uninstall, Triple-Layer PIN Security, Rule Backup &amp; Bulk Tools.</string>
+    <string name="premium_features_includes">AmniShield Pro includes:</string>
+    <string name="premium_benefit_anti_uninstall">1. Tamper-Proof Anti-Uninstall — Password-Based &amp; Time-Based Device Admin lockdown</string>
+    <string name="premium_benefit_app_guard">2. Triple-Layer PIN Security — App Lock PIN, Bypass PIN, and Per-Rule PIN barriers</string>
+    <string name="premium_benefit_app_blocker">3. Rule Backup &amp; Restore — Full local JSON export and import for all rules and settings</string>
+    <string name="premium_benefit_priority_support">4. Advanced Bulk List Import/Export — Bulk CSV/TXT file loading for Keyword &amp; Website lists</string>
+    <string name="premium_benefit_view_blocker">100% Free Core Forever — App Blocker, Reels/Shorts Blocker, Web Filter, and Focus Mode are completely free for everyone</string>
+    <string name="premium_benefit_privacy">Zero Telemetry — 100% on-device local processing with offline cryptographic ECDSA licensing</string>
+    <string name="premium_benefit_focus_mode">Community Funded — Built as a public good by Al-Haq Studio under the Al-Haq Initiative</string>
+    <string name="premium_benefit_reports">Single License — Monthly, Annual, or Lifetime options with instant offline activation</string>
+    <string name="premium_benefit_future">Priority Roadmap — Direct influence on upcoming Windows service and DNS sinkhole milestones</string>
     <string name="premium_price_lifetime">Lifetime access</string>
     <string name="premium_price_lifetime_value">GBP 13.5 one-time</string>
     <string name="premium_cta_lifetime">Buy lifetime access</string>

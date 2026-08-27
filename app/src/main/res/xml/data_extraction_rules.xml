@@ -15,8 +15,8 @@
         <exclude domain="sharedpref" path="view_blocker.xml" />
         <exclude domain="sharedpref" path="reel_blocker.xml" />
         <exclude domain="sharedpref" path="focus_mode.xml" />
-        <exclude domain="sharedpref" path="amnshield_sync_secrets.xml" />
-        <exclude domain="sharedpref" path="amnshield_sync_secrets_fallback.xml" />
+        <exclude domain="sharedpref" path="amnishield_sync_secrets.xml" />
+        <exclude domain="sharedpref" path="amnishield_sync_secrets_fallback.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="anti_uninstall.xml" />
@@ -24,7 +24,7 @@
         <exclude domain="sharedpref" path="compassionate_access.xml" />
         <exclude domain="sharedpref" path="app_guard.xml" />
         <exclude domain="sharedpref" path="smart_features.xml" />
-        <exclude domain="sharedpref" path="amnshield_sync_secrets.xml" />
-        <exclude domain="sharedpref" path="amnshield_sync_secrets_fallback.xml" />
+        <exclude domain="sharedpref" path="amnishield_sync_secrets.xml" />
+        <exclude domain="sharedpref" path="amnishield_sync_secrets_fallback.xml" />
     </device-transfer>
 </data-extraction-rules>

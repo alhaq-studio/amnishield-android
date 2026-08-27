@@ -350,7 +350,7 @@
 
     <string name="read_content_on_screen">Ekrandaki içeriği okuma</string>
 
-    <string name="this_will_allow_amnshield_to">Bu, AmniShield\'in şunları yapmasına izin verecektir:</string>
+    <string name="this_will_allow_amnishield_to">Bu, AmniShield\'in şunları yapmasına izin verecektir:</string>
 
     <string name="enable_2">%1$s Etkinleştir</string>
 
@@ -368,7 +368,7 @@
 
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Bu özelliğe erişmek için lütfen diğer uygulamaların üzerinde gösterim izni verin</string>
 
-    <string name="find_amnshield_and_press_enable">AmniShield\'i bulun ve etkinleştir\'e basın</string>
+    <string name="find_amnishield_and_press_enable">AmniShield\'i bulun ve etkinleştir\'e basın</string>
 
     <string name="discard_changes">Değişiklikleri İptal Et?</string>
 
@@ -438,7 +438,7 @@
 
     <string name="stats">İstatistikler</string>
 
-    <string name="welcome_to_amnshield">AmniShield\'e Hoş Geldiniz</string>
+    <string name="welcome_to_amnishield">AmniShield\'e Hoş Geldiniz</string>
 
     <string name="protect_your_digital_wellbeing">Güçlü araçlarla dijital sağlığınızı koruyun</string>
 
@@ -500,7 +500,7 @@
 
     <string name="help_and_faq_description">Sık sorulan sorular ve sorun giderme</string>
 
-    <string name="about_amnshield">AmniShield Hakkında</string>
+    <string name="about_amnishield">AmniShield Hakkında</string>
 
     <string name="app_version">Sürüm 0.26.4.2026</string>
 

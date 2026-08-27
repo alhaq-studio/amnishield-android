@@ -16,11 +16,11 @@ AmniShield is an open-source, privacy-first digital wellness and content-blockin
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │          ViewModel & Reactive State Management         │
-│          (AmnShieldViewModel, AmnShieldState)           │
+│          (AmniShieldViewModel, AmniShieldState)           │
 └──────────────────────────┬─────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────┐
-│            AmnShieldAccessibilityService               │
+│            AmniShieldAccessibilityService               │
 │  (Central Node Stream Orchestrator & Pipeline Host)     │
 └──────┬───────────────────┬───────────────────┬─────────┘
        │                   │                   │
@@ -35,7 +35,7 @@ AmniShield is an open-source, privacy-first digital wellness and content-blockin
 
 ## 🛡️ Blocker Pipeline & Chain of Responsibility
 
-The `AmnShieldAccessibilityService` orchestrates accessibility window inspection through explicit priority-ordered interceptors:
+The `AmniShieldAccessibilityService` orchestrates accessibility window inspection through explicit priority-ordered interceptors:
 
 | Priority | Component | Target Surface / Vectors | Action Dispatched |
 | :--- | :--- | :--- | :--- |
@@ -69,13 +69,14 @@ AmniShield maintains a strict **zero-external-telemetry** logging policy.
 ## 🔒 Invariants & Guardrails for AI & Human Maintainers
 
 > [!IMPORTANT]
-> **Node Lifecycle Invariant:** `AmnShieldAccessibilityService` exclusively owns the lifecycle of `rootNode` (recycled once in the `finally` block of `onAccessibilityEvent`). Interceptors and sub-detectors must **never** call `rootNode.recycle()`. Interceptors must only recycle child nodes they generate during internal stack traversals.
+> **Node Lifecycle Invariant:** `AmniShieldAccessibilityService` exclusively owns the lifecycle of `rootNode` (recycled once in the `finally` block of `onAccessibilityEvent`). Interceptors and sub-detectors must **never** call `rootNode.recycle()`. Interceptors must only recycle child nodes they generate during internal stack traversals.
 
 > [!TIP]
 > **Strict Short-Circuiting:** When a higher-priority interceptor (such as Anti-Uninstall) triggers an action, return immediately to stop processing downstream content blockers.
 
 > [!NOTE]
 > **Multi-Flavor Build Configuration:** Always build with flavor-qualified Gradle tasks:
+>
 > - `playstoreDebug`: Google Play Store distribution
 > - `fdroidDebug`: Pure open-source build with offline ECDSA license validation
 > - `universalDebug`: Universal sideload build

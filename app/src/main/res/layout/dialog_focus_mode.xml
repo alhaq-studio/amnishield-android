@@ -51,7 +51,7 @@
                     android:text="How long do you want the session to last?"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
-                <com.alhaq.amnshield.views.HorizontalNumberPicker
+                <com.alhaq.amnishield.views.HorizontalNumberPicker
                     android:id="@+id/focus_mode_mins_picker"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

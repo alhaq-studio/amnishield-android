@@ -30,7 +30,7 @@
         android:textStyle="bold"
         tools:text="TextView" />
 
-    <com.alhaq.amnshield.views.HorizontalNumberPicker
+    <com.alhaq.amnishield.views.HorizontalNumberPicker
         android:id="@+id/mins_picker"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

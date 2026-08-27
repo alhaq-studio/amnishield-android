@@ -78,5 +78,5 @@ Under **Authentication > URL Configuration**:
   - `https://amnishield.com/activate`
   - `amnishield://activate`
   - `amnishield://auth`
-  - `amnshield://activate`
+  - `amnishield://activate`
   - `http://localhost:*`

@@ -40,7 +40,7 @@ Last updated: August 2026
 
 ## 📜 Architectural Standards & Development Invariants
 
-1. **Accessibility Node Lifecycle Invariant:** `AmnShieldAccessibilityService` exclusively owns the lifecycle of `rootNode`. Sub-interceptors and detectors must **never** call `rootNode.recycle()`.
+1. **Accessibility Node Lifecycle Invariant:** `AmniShieldAccessibilityService` exclusively owns the lifecycle of `rootNode`. Sub-interceptors and detectors must **never** call `rootNode.recycle()`.
 2. **Deterministic Priority (Fail-Safe First):** Security and Anti-Uninstall evaluation runs first at Priority 0.
 3. **Zero External Telemetry:** All diagnostic logs, crash reports, and usage metrics remain 100% on-device in app-private storage.
 4. **PII Sanitization Rule:** Sensitive tokens, passwords, PINs, auth headers, and emails are stripped by regex filters before being written to disk.

@@ -1,5 +1,5 @@
 -- Migration: Harden Billing, RLS, Indexes, and Schema Unification
--- Project: AmnShield (alhaq-initiative / jrgpmcomvibgklmvnxud)
+-- Project: AmniShield (alhaq-initiative / jrgpmcomvibgklmvnxud)
 
 -- 1. Create missing indexes on foreign keys for high query performance
 CREATE INDEX IF NOT EXISTS idx_devices_owner_id ON public.devices(owner_id);

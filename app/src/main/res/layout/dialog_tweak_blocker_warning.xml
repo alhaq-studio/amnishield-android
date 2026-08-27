@@ -45,7 +45,7 @@
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
 
-                <com.alhaq.amnshield.views.HorizontalNumberPicker
+                <com.alhaq.amnishield.views.HorizontalNumberPicker
                     android:id="@+id/select_mins"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

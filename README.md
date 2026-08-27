@@ -21,7 +21,7 @@ into a single accessibility-service–based guardian.
 ## Requirements
 
 | Tool | Version |
-|---|---|
+| --- | --- |
 | Android Studio | Meerkat or newer |
 | Gradle | 9.5+ (managed by wrapper) |
 | Android SDK compile target | API 36 |
@@ -32,7 +32,7 @@ into a single accessibility-service–based guardian.
 
 ## Building the App
 
-> **⚠️ Important — Product Flavors**: AmnShield uses three **product flavors**
+> **⚠️ Important — Product Flavors**: AmniShield uses three **product flavors**
 > (`playstore`, `fdroid`, `universal`). The plain `assembleDebug` Gradle task is
 > **no longer valid**. Always use a flavor-qualified task. Running bare `assembleDebug`
 > will silently serve a stale cached APK with old UI and themes.
@@ -52,7 +52,7 @@ into a single accessibility-service–based guardian.
 APK output paths:
 
 | Flavor | APK Location |
-|---|---|
+| --- | --- |
 | playstore | `app/build/outputs/apk/playstore/debug/app-playstore-debug.apk` |
 | fdroid | `app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk` |
 | universal | `app/build/outputs/apk/universal/debug/app-universal-debug.apk` |
@@ -62,7 +62,7 @@ APK output paths:
 ## Product Flavors
 
 | Flavor | Description | Google Services | Billing |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `playstore` | Google Play Store distribution | ✅ Firebase, Play Billing | Play Billing |
 | `universal` | Sideload / alternative stores | ✅ Firebase | Play Billing |
 | `fdroid` | F-Droid / fully open source | ❌ No Google dependencies | Offline ECDSA license |
@@ -111,7 +111,7 @@ pinned to a previous Gradle version that has incorrect cached fingerprints.
 ### Which APK Goes Where?
 
 | Flavor | Published to | Audience |
-|---|---|---|
+| --- | --- | --- |
 | `universal` | ✅ **GitHub Releases** | Standard Android — sideloading with Google Play Services |
 | `fdroid` | ✅ **GitHub Releases** | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) |
 | `playstore` | ✅ **Play Console only** | Google Play Store users — never published to GitHub |
@@ -130,7 +130,9 @@ push a version tag. It builds, signs, and publishes both APKs to GitHub Releases
 git tag v1.2.3
 git push origin v1.2.3
 ```
+
 For Self Build:
+
 ```powershell
 # GitHub Releases (the two public APKs)
 .\gradlew assembleUniversalRelease
@@ -148,7 +150,7 @@ For Self Build:
 ## Project Documentation
 
 | File | Description |
-|---|---|
+| --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, blocker pipeline & logging invariants |
 | [ROADMAP.md](ROADMAP.md) | Feature roadmap and recent changelog |
 | [TESTING_GUIDE.md](TESTING_GUIDE.md) | Full manual test scenarios for all features |
@@ -160,11 +162,12 @@ For Self Build:
 
 ## Technical Note: Package Name & Application ID
 
-For historical reasons (AmnShield was rebranded from DeenShield), there is a mismatch in the project identifiers:
-- **`applicationId`**: `com.alhaq.deenshield`
-- **`namespace`**: `com.alhaq.amnshield`
+For historical reasons (AmniShield was rebranded from DeenShield), there is a mismatch in the project identifiers:
 
-Because the Google Play Store registry binds permanently to the `applicationId`, changing it would require publishing a completely new listing. Consequently, we **maintain the legacy applicationId (`com.alhaq.deenshield`)** to avoid disrupting existing users, while codebase packages and code structures use the modern namespace `com.alhaq.amnshield`. Do not change the `applicationId` when making code updates.
+- **`applicationId`**: `com.alhaq.deenshield`
+- **`namespace`**: `com.alhaq.amnishield`
+
+Because the Google Play Store registry binds permanently to the `applicationId`, changing it would require publishing a completely new listing. Consequently, we **maintain the legacy applicationId (`com.alhaq.deenshield`)** to avoid disrupting existing users, while codebase packages and code structures use the modern namespace `com.alhaq.amnishield`. Do not change the `applicationId` when making code updates.
 
 ---
 

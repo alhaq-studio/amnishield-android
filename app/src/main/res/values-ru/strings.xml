@@ -350,7 +350,7 @@
 
     <string name="read_content_on_screen">Читать содержимое на экране</string>
 
-    <string name="this_will_allow_amnshield_to">Это позволит AmniShield:</string>
+    <string name="this_will_allow_amnishield_to">Это позволит AmniShield:</string>
 
     <string name="enable_2">Включить %1$s</string>
 
@@ -368,7 +368,7 @@
 
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Предоставьте разрешение «Поверх других приложений» для этой функции</string>
 
-    <string name="find_amnshield_and_press_enable">Найдите AmniShield и включите разрешение</string>
+    <string name="find_amnishield_and_press_enable">Найдите AmniShield и включите разрешение</string>
 
     <string name="discard_changes">Отменить изменения?</string>
 
@@ -438,7 +438,7 @@
 
     <string name="stats">Статистика</string>
 
-    <string name="welcome_to_amnshield">Добро пожаловать в AmniShield</string>
+    <string name="welcome_to_amnishield">Добро пожаловать в AmniShield</string>
 
     <string name="protect_your_digital_wellbeing">Защитите свое цифровое благополучие мощными инструментами</string>
 
@@ -500,7 +500,7 @@
 
     <string name="help_and_faq_description">Частые вопросы и решение проблем</string>
 
-    <string name="about_amnshield">Об AmniShield</string>
+    <string name="about_amnishield">Об AmniShield</string>
 
     <string name="app_version">Версия 0.26.4.2026</string>
 

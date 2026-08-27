@@ -169,7 +169,7 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="fix_your_life">Arregla tu vida</string>
     <string name="perform_actions_like_a_back_press">Realizar acciones como pulsar atrás</string>
     <string name="read_content_on_screen">Leer contenido en pantalla</string>
-    <string name="this_will_allow_amnshield_to">Esto permitirá a AmniShield:</string>
+    <string name="this_will_allow_amnishield_to">Esto permitirá a AmniShield:</string>
     <string name="enable_2">Activar %1$s</string>
     <string name="device_admin_perm">AmniShield usa el permiso de Administrador de Dispositivo para evitar la desinstalación durante el periodo fijado. Todos los datos quedan seguros en tu móvil.</string>
     <string name="prevent_uninstallation_attempts_until_a_set_condition_is_met">Evitar intentos de desinstalación hasta cumplir la condición establecida</string>
@@ -179,7 +179,7 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="calculate_how_many_reels_tiktok_short_videos_you_scroll_per_day">Calculate how many reels/ tiktok/ short videos you scroll per day</string>
     <string name="plan_a_robbery">Planear un robo</string>
     <string name="please_provide_display_over_other_apps_permission_to_access_this_feature">Concede el permiso de mostrar sobre otras aplicaciones para esta función</string>
-    <string name="find_amnshield_and_press_enable">Busca AmniShield y pulsa Activar</string>
+    <string name="find_amnishield_and_press_enable">Busca AmniShield y pulsa Activar</string>
     <string name="discard_changes">¿Descartar cambios?</string>
     <string name="are_you_sure_you_want_to_discard_all_changes_and_exit">¿Estás seguro de que deseas descartar todos los cambios y salir?</string>
     <string name="yes">Sí</string>
@@ -218,7 +218,7 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="stats">Estadísticas</string>
     
     <!-- Home Screen -->
-    <string name="welcome_to_amnshield">Bienvenido a AmniShield</string>
+    <string name="welcome_to_amnishield">Bienvenido a AmniShield</string>
     <string name="protect_your_digital_wellbeing">Protege tu bienestar digital con herramientas potentes</string>
     <string name="quick_actions">Acciones rápidas</string>
     <string name="hide_welcome_card">Ocultar tarjeta de bienvenida</string>
@@ -252,7 +252,7 @@ No puedes acceder a los Ajustes hasta que expire.</string>
     <string name="share_crash_logs">Compartir registros de fallos</string>
     <string name="help_and_faq">Ayuda y preguntas frecuentes</string>
     <string name="help_and_faq_description">Preguntas comunes y solución de problemas</string>
-    <string name="about_amnshield">Acerca de AmniShield</string>
+    <string name="about_amnishield">Acerca de AmniShield</string>
     <string name="app_version">Versión 0.26.4.2026</string>
     <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>
