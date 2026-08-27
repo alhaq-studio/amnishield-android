@@ -108,16 +108,24 @@ class PermissionsFragment : Fragment() {
                 .commit()
         }
 
-        // Accessibility click
+        // Accessibility click (Google Play Prominent Disclosure Enforcement)
         binding.accessPermRoot.setOnClickListener {
             if (isAccessibilityPermissionGiven()) return@setOnClickListener
-            try {
-                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                accessibilityLauncher.launch(intent)
-            } catch (e: Exception) {
-                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                startActivity(intent)
-            }
+            com.alhaq.amnishield.utils.AccessibilityDisclosureDialog.show(
+                context = requireContext(),
+                onAgree = {
+                    try {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        accessibilityLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        startActivity(intent)
+                    }
+                },
+                onDecline = {
+                    // Explicit denial by user - do not navigate to settings
+                }
+            )
         }
 
         // Overlay click

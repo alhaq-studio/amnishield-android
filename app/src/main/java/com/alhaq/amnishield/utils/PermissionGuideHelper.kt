@@ -127,23 +127,31 @@ class PermissionGuideHelper(private val activity: Activity) {
     }
     
     /**
-     * Open accessibility settings with guidance for restricted settings
+     * Open accessibility settings with Google Play compliant prominent disclosure
      */
     fun openAccessibilitySettings() {
-        Toast.makeText(
-            context,
-            "Find 'AmniShield' in the list and enable it. If you don't see it, tap the 3-dot menu (⋮) at the top-right corner and enable 'Show restricted settings'",
-            Toast.LENGTH_LONG
-        ).show()
-        
-        try {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        AccessibilityDisclosureDialog.show(
+            context = activity,
+            onAgree = {
+                Toast.makeText(
+                    context,
+                    "Find 'AmniShield' in the list and enable it. If you don't see it, tap the 3-dot menu (⋮) at the top-right corner and enable 'Show restricted settings'",
+                    Toast.LENGTH_LONG
+                ).show()
+                
+                try {
+                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    openAppSettings()
+                }
+            },
+            onDecline = {
+                // User declined consent
             }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            openAppSettings()
-        }
+        )
     }
     
     /**

@@ -28,9 +28,17 @@ class ShortcutActivity : AppCompatActivity() {
 
         val isGeneralSettingsOn = isAccessibilityServiceEnabled(AmniShieldAccessibilityService::class.java)
         if(!isGeneralSettingsOn){
-            Toast.makeText(this,"Enable AmniShield Accessibility Service first",Toast.LENGTH_LONG).show()
-            openAccessibilityServiceScreen(cls = AmniShieldAccessibilityService::class.java)
-            finish()
+            com.alhaq.amnishield.utils.AccessibilityDisclosureDialog.show(
+                context = this,
+                onAgree = {
+                    openAccessibilityServiceScreen(cls = AmniShieldAccessibilityService::class.java)
+                    finish()
+                },
+                onDecline = {
+                    finish()
+                }
+            )
+            return
         }
         StartFocusMode(savedPreferencesLoader, onPositiveButtonPressed = {
             finish()

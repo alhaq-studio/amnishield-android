@@ -34,12 +34,20 @@ class AccessibilityGuide : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnOpenSettings.setOnClickListener {
-            try {
-                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                startActivity(intent)
-            } catch (e: Exception) {
-                // Fallback
-            }
+            com.alhaq.amnishield.utils.AccessibilityDisclosureDialog.show(
+                context = requireContext(),
+                onAgree = {
+                    try {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        // Fallback
+                    }
+                },
+                onDecline = {
+                    // User declined permission consent
+                }
+            )
         }
 
         binding.btnNext.setOnClickListener {

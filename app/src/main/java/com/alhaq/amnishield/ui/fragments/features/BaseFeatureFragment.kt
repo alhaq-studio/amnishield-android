@@ -85,38 +85,20 @@ abstract class BaseFeatureFragment : Fragment() {
     }
 
     protected fun showAccessibilityInfoDialog(title: String, serviceClass: Class<*>) {
-        val dialogBinding = DialogPermissionInfoBinding.inflate(layoutInflater)
-    dialogBinding.title.text = getString(R.string.enable_2, title)
-    dialogBinding.desc.text = getString(R.string.accessibility_perm_desc)
-    dialogBinding.point1.text = getString(R.string.perform_actions_like_a_back_press)
-    dialogBinding.point2.text = getString(R.string.read_content_on_screen)
-    dialogBinding.point3.visibility = View.GONE
-    dialogBinding.point4.visibility = View.GONE
-        dialogBinding.btnGuide.visibility = View.VISIBLE
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogBinding.root)
-            .create()
-
-        dialogBinding.btnReject.setOnClickListener { dialog.dismiss() }
-        dialogBinding.btnAccept.setOnClickListener {
-            Toast.makeText(
-                requireContext(),
-                getString(R.string.find_amnishield_and_press_enable),
-                Toast.LENGTH_LONG
-            ).show()
-            openAccessibilityServiceScreen(serviceClass)
-            dialog.dismiss()
-        }
-        dialogBinding.btnGuide.setOnClickListener {
-            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment", AccessibilityGuide.FRAGMENT_ID)
+        com.alhaq.amnishield.utils.AccessibilityDisclosureDialog.show(
+            context = requireContext(),
+            onAgree = {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.find_amnishield_and_press_enable),
+                    Toast.LENGTH_LONG
+                ).show()
+                openAccessibilityServiceScreen(serviceClass)
+            },
+            onDecline = {
+                // User declined consent
             }
-            startActivity(intent, activityOptions.toBundle())
-            dialog.dismiss()
-        }
-
-        dialog.show()
+        )
     }
 
     protected fun showDrawOverOtherAppsDialog(onAccepted: () -> Unit = {}) {

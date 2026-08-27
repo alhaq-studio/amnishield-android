@@ -37,7 +37,16 @@ class PermissionsBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.accessibilityPermission.setOnClickListener {
-            safeStartActivity(viewModel.permissionsManager.getAccessibilityServiceIntent())
+            if (binding.accessibilityPermission.isGranted) return@setOnClickListener
+            com.alhaq.amnishield.utils.AccessibilityDisclosureDialog.show(
+                context = requireContext(),
+                onAgree = {
+                    safeStartActivity(viewModel.permissionsManager.getAccessibilityServiceIntent())
+                },
+                onDecline = {
+                    // User declined consent
+                }
+            )
         }
         binding.deviceAdminPermission.setOnClickListener {
             safeStartActivity(viewModel.permissionsManager.getDeviceAdminIntent())

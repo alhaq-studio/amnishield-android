@@ -47,4 +47,23 @@ object AccessibilityUtils {
             null
         }
     }
+    /**
+     * Check if a specific AccessibilityService is enabled in Android settings.
+     */
+    fun isAccessibilityServiceEnabled(
+        context: Context,
+        serviceClass: Class<out android.accessibilityservice.AccessibilityService>
+    ): Boolean {
+        val serviceName = android.content.ComponentName(context, serviceClass).flattenToString()
+        val enabledServices = android.provider.Settings.Secure.getString(
+            context.contentResolver,
+            android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val isAccessibilityEnabled = android.provider.Settings.Secure.getInt(
+            context.contentResolver,
+            android.provider.Settings.Secure.ACCESSIBILITY_ENABLED,
+            0
+        )
+        return isAccessibilityEnabled == 1 && enabledServices.contains(serviceName)
+    }
 }
