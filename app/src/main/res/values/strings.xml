@@ -319,8 +319,8 @@
     <string name="support_dialog_title">Support the Al-Haq Initiative</string>
     <string name="support_dialog_message">AmniShield is built and maintained as a public good by Al-Haq Studio under the Al-Haq Initiative. 100% free core, zero tracking, no ads. Support ongoing independent development and infrastructure:</string>
     <string name="support_option_initiative_hub">Al-Haq Central Funding Hub (alhaq-initiative.org)</string>
-    <string name="support_option_github_sponsors_personal">GitHub Sponsors &#8226; Afrasyaab Meranai</string>
-    <string name="support_option_github_sponsors_studio">GitHub Sponsors &#8226; Al-Haq Studio</string>
+    <string name="support_option_github_sponsors_personal">GitHub Sponsors &#8226; Developer (Afrasyaab)</string>
+    <string name="support_option_github_sponsors_initiative">GitHub Sponsors &#8226; Al-Haq Initiative</string>
     <string name="support_option_studio_site">Al-Haq Studio Projects (alhaq.uk)</string>
     <string name="support_option_kofi">Donate via Ko-fi</string>
     <string name="support_option_buymeacoffee">Donate via Buy Me a Coffee</string>

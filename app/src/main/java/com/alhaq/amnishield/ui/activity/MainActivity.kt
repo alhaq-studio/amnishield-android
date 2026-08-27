@@ -1059,8 +1059,8 @@ class MainActivity : AppCompatActivity() {
     fun showSupportOptionsDialog() {
         val options = arrayOf(
             getString(R.string.support_option_initiative_hub),
+            getString(R.string.support_option_github_sponsors_initiative),
             getString(R.string.support_option_github_sponsors_personal),
-            getString(R.string.support_option_github_sponsors_studio),
             getString(R.string.support_option_kofi),
             getString(R.string.support_option_buymeacoffee),
             getString(R.string.support_option_patreon),
@@ -1074,8 +1074,8 @@ class MainActivity : AppCompatActivity() {
             .setItems(options) { dialog, which ->
                 when (which) {
                     0 -> openUrl(Constants.ALHAQ_INITIATIVE_URL)
-                    1 -> openUrl(Constants.GITHUB_SPONSORS_PERSONAL_URL)
-                    2 -> openUrl(Constants.GITHUB_SPONSORS_STUDIO_URL)
+                    1 -> openUrl(Constants.GITHUB_SPONSORS_INITIATIVE_URL)
+                    2 -> openUrl(Constants.GITHUB_SPONSORS_PERSONAL_URL)
                     3 -> openUrl(Constants.KOFI_URL)
                     4 -> openUrl(Constants.BUY_ME_A_COFFEE_URL)
                     5 -> openUrl(Constants.PATREON_URL)
@@ -1464,8 +1464,10 @@ class MainActivity : AppCompatActivity() {
             • Discord: discord.gg/zXz7pGVJY
             
             💖 Support Development:
+            • Al-Haq Initiative: alhaq-initiative.org
+            • GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative
+            • GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH
             • Ko-fi, Buy Me a Coffee, Patreon
-            • GitHub Sponsors
             
             Built under: Al-Haq Studio (Al-Haq Digital Services & Solutions)
             Free Access Program: Provided by Al-Haq Initiative
@@ -1799,7 +1801,7 @@ class MainActivity : AppCompatActivity() {
             "Is AmniShield really privacy-focused?" to "Yes! All text analysis, keyword detection, and content blocking happens locally on your device. We never send your data to servers.",
             "Is AmniShield open source?" to "Yes! AmniShield is 100% open-source. You can view the full source code, report issues, and contribute on our GitHub repository:\n\ngithub.com/alhaq-studio/amnishield-android\n\n⭐ Please consider starring the repository to support us!",
             "Where can I find the source code?" to "AmniShield's source code is publicly available on GitHub:\n\ngithub.com/alhaq-studio/amnishield-android\n\nYou can also explore our other open-source projects at alhaq.uk",
-            "How can I support AmniShield?" to "There are many ways to support AmniShield development:\n\n• Ko-fi: ko-fi.com/alhaq\n• Buy Me a Coffee: buymeacoffee.com/alhaq\n• Patreon: patreon.com/alhaq\n• GitHub Sponsors: github.com/sponsors/Afrasyaab-GH\n• GitHub Sponsors (Studio): github.com/sponsors/alhaq-studio\n• Al-Haq Initiative: alhaq-initiative.org\n\n⭐ You can also star us on GitHub and share AmniShield with others!"
+            "How can I support AmniShield?" to "There are many ways to support AmniShield development:\n\n• Al-Haq Initiative: alhaq-initiative.org\n• GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative\n• GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH\n• Ko-fi: ko-fi.com/alhaq\n• Buy Me a Coffee: buymeacoffee.com/alhaq\n• Patreon: patreon.com/alhaq\n\n⭐ You can also star us on GitHub and share AmniShield with others!"
         )
         
         val questions = faqItems.map { it.first }.toTypedArray()

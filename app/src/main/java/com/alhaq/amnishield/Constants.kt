@@ -34,13 +34,14 @@ class Constants {
         // GitHub & Source Code
         const val GITHUB_REPO_URL = "https://github.com/alhaq-studio/amnishield-android"
         const val GITHUB_SPONSORS_PERSONAL_URL = "https://github.com/sponsors/Afrasyaab-GH"
-        const val GITHUB_SPONSORS_STUDIO_URL = "https://github.com/sponsors/alhaq-studio"
+        const val GITHUB_SPONSORS_INITIATIVE_URL = "https://github.com/sponsors/alhaq-initiative"
 
         // Donation & Tip Platforms (from FUNDING.yml)
         const val KOFI_URL = "https://ko-fi.com/alhaq"
         const val PATREON_URL = "https://www.patreon.com/alhaq"
         const val BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/alhaq"
         const val ALHAQ_INITIATIVE_URL = "https://alhaq-initiative.org"
+        const val ALHAQ_INITIATIVE_DONATE_URL = "https://alhaq-initiative.org/donate"
 
         // Community & Social
         const val TELEGRAM_URL = "https://t.me/amnishield"

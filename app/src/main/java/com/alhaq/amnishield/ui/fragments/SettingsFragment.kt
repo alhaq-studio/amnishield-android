@@ -349,11 +349,12 @@ class SettingsFragment : Fragment() {
                 
                 Q: How can I support or donate to AmniShield?
                 A: You can support ongoing development through:
+                • Al-Haq Initiative: alhaq-initiative.org
+                • GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative
+                • GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH
                 • Ko-fi: ko-fi.com/alhaq
                 • Buy Me a Coffee: buymeacoffee.com/alhaq
                 • Patreon: patreon.com/alhaq
-                • GitHub Sponsors: github.com/sponsors/alhaq-studio
-                • Central Hub: alhaq-initiative.org
                 
                 ═══════════════════════════
                 TROUBLESHOOTING
@@ -437,11 +438,12 @@ class SettingsFragment : Fragment() {
                 • Discord: discord.gg/zXz7pGVJY
                 
                 💖 Support Development:
+                • Al-Haq Initiative: alhaq-initiative.org
+                • GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative
+                • GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH
                 • Ko-fi: ko-fi.com/alhaq
                 • Buy Me a Coffee: buymeacoffee.com/alhaq
                 • Patreon: patreon.com/alhaq
-                • GitHub Sponsors: github.com/sponsors/alhaq-studio
-                • Central Hub: alhaq-initiative.org
                 
                 Developer: Al-Haq Studio (Al-Haq Digital Services & Solutions)
                 Free Access Program: Provided by Al-Haq Initiative
