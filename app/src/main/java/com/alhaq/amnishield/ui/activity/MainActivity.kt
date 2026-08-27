@@ -1026,24 +1026,40 @@ class MainActivity : AppCompatActivity() {
 
             if (daysPassed > 5L) {
                 sharedPreferences.edit().putBoolean("is_donation_alerted", true).apply()
+                val donationHtml = """
+                    Thank you for using AmniShield!<br/><br/>
+                    My name is Habibur Rahman, founder of <a href="${Constants.ALHAQ_STUDIO_URL}"><b>Al-Haq Studio</b></a>. I'm a student dedicated to building open-source digital wellbeing tools to help maintain a healthy, balanced digital lifestyle.<br/><br/>
+                    AmniShield is <b>100% open-source, free, and ad-free</b>. If you find it beneficial, please consider supporting ongoing development:<br/>
+                    • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}"><b>Al-Haq Central Funding Hub</b></a><br/>
+                    • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
+                    • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}"><b>GitHub Sponsors (Developer)</b></a><br/>
+                    • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a> • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/>
+                    • ⭐ <a href="${Constants.GITHUB_REPO_URL}"><b>Star us on GitHub</b></a><br/><br/>
+                    🌐 Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
+                    📂 GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
+                    Your support helps keep AmniShield free and accessible for everyone worldwide. JazakAllahu Khairan!
+                """.trimIndent()
+
+                val donationMsgView = android.widget.TextView(this).apply {
+                    text = androidx.core.text.HtmlCompat.fromHtml(donationHtml, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+                    movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                    setPadding(64, 32, 64, 24)
+                    textSize = 14f
+                    setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.WHITE))
+                    setLinkTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, android.graphics.Color.parseColor("#7C4DFF")))
+                }
+
+                val donationContainer = androidx.core.widget.NestedScrollView(this).apply {
+                    addView(donationMsgView)
+                }
+
                 MaterialAlertDialogBuilder(this)
                     .setTitle("Support AmniShield Development")
-                    .setMessage(
-                        "Thank you for using AmniShield! " +
-                                "\n\nMy name is Habibur Rahman, and I am the founder of Al-Haq Studio (Al-Haq Digital Services & Solutions). I'm a student with a passion for building Islamic wellbeing tools. " +
-                                "I created AmniShield to help Muslims maintain a halal digital lifestyle. " +
-                                "\n\nAmniShield is 100% open-source, free, and ad-free. If you find it beneficial, please consider supporting the project by:\n" +
-                                "\u2022 Subscribing to Premium (unlocks security features)\n" +
-                                "\u2022 Donating via Ko-fi, Buy Me a Coffee, or Patreon\n" +
-                                "\u2022 Sponsoring on GitHub\n" +
-                                "\u2022 ⭐ Starring us on GitHub\n" +
-                                "\n\nVisit our website: amnishield.com\nGitHub: github.com/alhaq-studio/amnishield-android" +
-                                "\n\nYour support helps keep AmniShield free and ad-free for everyone. JazakAllahu Khairan!"
-                    )
-                    .setNegativeButton("Close") { dialog, _ ->
+                    .setView(donationContainer)
+                    .setNegativeButton(R.string.close) { dialog, _ ->
                         dialog.dismiss()
                     }
-                    .setPositiveButton("Support Now") { dialog, _ ->
+                    .setPositiveButton("Support Options") { dialog, _ ->
                         showSupportOptionsDialog()
                         dialog.dismiss()
                     }
@@ -1057,41 +1073,54 @@ class MainActivity : AppCompatActivity() {
     }
     
     fun showSupportOptionsDialog() {
-        val options = arrayOf(
-            getString(R.string.support_option_initiative_hub),
-            getString(R.string.support_option_github_sponsors_initiative),
-            getString(R.string.support_option_github_sponsors_personal),
-            getString(R.string.support_option_kofi),
-            getString(R.string.support_option_buymeacoffee),
-            getString(R.string.support_option_patreon),
-            getString(R.string.support_option_studio_site),
-            getString(R.string.support_option_website),
-            getString(R.string.support_option_pro_pass)
-        )
-        MaterialAlertDialogBuilder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_support_hub, null)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.support_dialog_title)
-            .setMessage(R.string.support_dialog_message)
-            .setItems(options) { dialog, which ->
-                when (which) {
-                    0 -> openUrl(Constants.ALHAQ_INITIATIVE_URL)
-                    1 -> openUrl(Constants.GITHUB_SPONSORS_INITIATIVE_URL)
-                    2 -> openUrl(Constants.GITHUB_SPONSORS_PERSONAL_URL)
-                    3 -> openUrl(Constants.KOFI_URL)
-                    4 -> openUrl(Constants.BUY_ME_A_COFFEE_URL)
-                    5 -> openUrl(Constants.PATREON_URL)
-                    6 -> openUrl(Constants.ALHAQ_STUDIO_URL)
-                    7 -> openUrl(Constants.AMNISHIELD_WEBSITE_URL)
-                    8 -> {
-                        val intent = Intent(this, FragmentActivity::class.java).apply {
-                            putExtra("feature_type", "premium_features")
-                        }
-                        startActivity(intent)
-                    }
-                }
-                dialog.dismiss()
+            .setView(dialogView)
+            .setNegativeButton(R.string.close, null)
+            .create()
+
+        dialogView.findViewById<View>(R.id.card_initiative_hub)?.setOnClickListener {
+            openUrl(Constants.ALHAQ_INITIATIVE_DONATE_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_sponsors_initiative)?.setOnClickListener {
+            openUrl(Constants.GITHUB_SPONSORS_INITIATIVE_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_sponsors_developer)?.setOnClickListener {
+            openUrl(Constants.GITHUB_SPONSORS_PERSONAL_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_kofi)?.setOnClickListener {
+            openUrl(Constants.KOFI_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_buymeacoffee)?.setOnClickListener {
+            openUrl(Constants.BUY_ME_A_COFFEE_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_patreon)?.setOnClickListener {
+            openUrl(Constants.PATREON_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_studio_site)?.setOnClickListener {
+            openUrl(Constants.ALHAQ_STUDIO_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_amnishield_website)?.setOnClickListener {
+            openUrl(Constants.AMNISHIELD_WEBSITE_URL)
+            dialog.dismiss()
+        }
+        dialogView.findViewById<View>(R.id.card_pro_pass)?.setOnClickListener {
+            val intent = Intent(this, FragmentActivity::class.java).apply {
+                putExtra("feature_type", "premium_features")
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            startActivity(intent)
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
     
     private fun isFirstLaunchComplete(): Boolean {
@@ -1434,56 +1463,60 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             "Unknown"
         }
-        
-        val aboutMessage = """
-            AmniShield v$versionName
-            
-            A comprehensive digital wellbeing app designed to help you maintain focus, develop healthy digital habits, and protect yourself from distracting content.
-            
-            Free Core Features:
-            • App Blocker - Block apps with schedules & custom controls
-            • Reel Blocker - Limit endless scrolling on Reels, Shorts, and TikTok
-            • Keyword & Website Blocker - Block inappropriate content & sites
-            • Focus Mode - Time-boxed app restrictions with timer
-            • Launch Limits - Restrict daily app launch frequencies
-            • Notifications & Statistics - Activity reports & productivity trends
-            
-            ⭐ Premium Security:
-            • Anti-Uninstall Protection - Device Admin protection
-            • 4-Digit Security PIN & App Lock - Master PIN lock for settings
-            • Bypass PIN Lock - Require PIN to edit active blocks
-            
-            Privacy First - 100% local processing, zero tracking
-            
-            🌐 Website: amnishield.com
-            📂 Source Code: github.com/alhaq-studio/amnishield-android
-            ⭐ Star us on GitHub to show your support!
-            
-            💬 Community:
-            • Telegram: t.me/amnishield
-            • Discord: discord.gg/zXz7pGVJY
-            
-            💖 Support Development:
-            • Al-Haq Initiative: alhaq-initiative.org
-            • GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative
-            • GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH
-            • Ko-fi, Buy Me a Coffee, Patreon
-            
-            Built under: Al-Haq Studio (Al-Haq Digital Services & Solutions)
-            Free Access Program: Provided by Al-Haq Initiative
-            100% Open Source • No Ads • No Tracking • Privacy First
+        val aboutHtml = """
+            <b>AmniShield v$versionName</b><br/><br/>
+            A comprehensive digital wellbeing app designed to help you maintain focus, develop healthy digital habits, and protect yourself from distracting content.<br/><br/>
+            <b>Free Core Features:</b><br/>
+            • App Blocker - Block apps with schedules &amp; custom controls<br/>
+            • Reel Blocker - Limit endless scrolling on Reels, Shorts, and TikTok<br/>
+            • Keyword &amp; Website Blocker - Block inappropriate content &amp; sites<br/>
+            • Focus Mode - Time-boxed app restrictions with timer<br/>
+            • Launch Limits - Restrict daily app launch frequencies<br/>
+            • Notifications &amp; Statistics - Activity reports &amp; productivity trends<br/><br/>
+            <b>⭐ Premium Security:</b><br/>
+            • Anti-Uninstall Protection - Device Admin protection<br/>
+            • 4-Digit Security PIN &amp; App Lock - Master PIN lock for settings<br/>
+            • Bypass PIN Lock - Require PIN to edit active blocks<br/><br/>
+            <b>Privacy First:</b> 100% local processing, zero tracking<br/><br/>
+            🌐 <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
+            📂 <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
+            ⭐ <a href="${Constants.GITHUB_REPO_URL}">Star us on GitHub to show your support!</a><br/><br/>
+            💬 <b>Community:</b><br/>
+            • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
+            • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
+            💖 <b>Support Development:</b><br/>
+            • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
+            • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
+            • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>
+            • <a href="${Constants.KOFI_URL}">Ko-fi</a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}">Buy Me a Coffee</a> • <a href="${Constants.PATREON_URL}">Patreon</a><br/><br/>
+            Built under: <a href="${Constants.ALHAQ_STUDIO_URL}">Al-Haq Studio</a><br/>
+            Free Access Program: <a href="${Constants.ALHAQ_INITIATIVE_URL}">Al-Haq Initiative</a><br/>
+            <b>100% Open Source • No Ads • No Tracking • Privacy First</b>
         """.trimIndent()
-        
+
+        val messageView = android.widget.TextView(this).apply {
+            text = androidx.core.text.HtmlCompat.fromHtml(aboutHtml, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+            movementMethod = android.text.method.LinkMovementMethod.getInstance()
+            setPadding(64, 32, 64, 24)
+            textSize = 14f
+            setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.WHITE))
+            setLinkTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, android.graphics.Color.parseColor("#7C4DFF")))
+        }
+
+        val scrollContainer = androidx.core.widget.NestedScrollView(this).apply {
+            addView(messageView)
+        }
+
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.about))
-            .setMessage(aboutMessage)
-            .setPositiveButton("Website") { _, _ ->
-                openUrl(Constants.AMNISHIELD_WEBSITE_URL)
+            .setView(scrollContainer)
+            .setPositiveButton("Support Hub") { _, _ ->
+                showSupportOptionsDialog()
             }
             .setNeutralButton("GitHub") { _, _ ->
                 openUrl(Constants.GITHUB_REPO_URL)
             }
-            .setNegativeButton("Close", null)
+            .setNegativeButton(getString(R.string.close), null)
             .show()
     }
 
@@ -1795,13 +1828,13 @@ class MainActivity : AppCompatActivity() {
             "What is the Notifications bell icon?" to "The bell icon shows your notification inbox with blocking alerts, daily reports, reminders, and achievements. Tap it to view your notification history.",
             "How does Reel Blocker work?" to "Reel Blocker detects and blocks endless scrolling on Instagram Reels, YouTube Shorts, and TikTok videos, helping you maintain focus.",
             "Why do my blocked apps/keywords disappear?" to "Make sure accessibility services stay enabled. Some system optimizations may disable them. You can check status in Settings.",
-            "Can I export my settings?" to "Yes! Go to Settings → Backup & Restore to export/import your configuration.",
+            "Can I export my settings?" to "Yes! Go to Settings → Backup &amp; Restore to export/import your configuration.",
             "What is Focus Mode?" to "Focus Mode lets you time-box app restrictions (e.g., block gaming apps for 2 hours). It tracks your focus sessions and shows productivity insights.",
             "How do I disable Anti-Uninstall protection?" to "Go to Settings → Anti-Uninstall, enter your password, and tap Disable. You can then uninstall AmniShield normally.",
             "Is AmniShield really privacy-focused?" to "Yes! All text analysis, keyword detection, and content blocking happens locally on your device. We never send your data to servers.",
-            "Is AmniShield open source?" to "Yes! AmniShield is 100% open-source. You can view the full source code, report issues, and contribute on our GitHub repository:\n\ngithub.com/alhaq-studio/amnishield-android\n\n⭐ Please consider starring the repository to support us!",
-            "Where can I find the source code?" to "AmniShield's source code is publicly available on GitHub:\n\ngithub.com/alhaq-studio/amnishield-android\n\nYou can also explore our other open-source projects at alhaq.uk",
-            "How can I support AmniShield?" to "There are many ways to support AmniShield development:\n\n• Al-Haq Initiative: alhaq-initiative.org\n• GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative\n• GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH\n• Ko-fi: ko-fi.com/alhaq\n• Buy Me a Coffee: buymeacoffee.com/alhaq\n• Patreon: patreon.com/alhaq\n\n⭐ You can also star us on GitHub and share AmniShield with others!"
+            "Is AmniShield open source?" to "Yes! AmniShield is 100% open-source. You can view the full source code, report issues, and contribute on our GitHub repository:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>⭐ Please consider starring the repository to support us!",
+            "Where can I find the source code?" to "AmniShield's source code is publicly available on GitHub:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>You can also explore our other open-source projects at <a href=\"${Constants.ALHAQ_STUDIO_URL}\"><b>alhaq.uk</b></a>",
+            "How can I support AmniShield?" to "There are many ways to support AmniShield development:<br/><br/>• <a href=\"${Constants.ALHAQ_INITIATIVE_DONATE_URL}\"><b>Al-Haq Central Funding Hub</b></a><br/>• <a href=\"${Constants.GITHUB_SPONSORS_INITIATIVE_URL}\"><b>GitHub Sponsors (Initiative)</b></a><br/>• <a href=\"${Constants.GITHUB_SPONSORS_PERSONAL_URL}\"><b>GitHub Sponsors (Developer)</b></a><br/>• <a href=\"${Constants.KOFI_URL}\"><b>Ko-fi</b></a><br/>• <a href=\"${Constants.BUY_ME_A_COFFEE_URL}\"><b>Buy Me a Coffee</b></a><br/>• <a href=\"${Constants.PATREON_URL}\"><b>Patreon</b></a><br/><br/>⭐ You can also <a href=\"${Constants.GITHUB_REPO_URL}\"><b>star us on GitHub</b></a> and share AmniShield with others!"
         )
         
         val questions = faqItems.map { it.first }.toTypedArray()
@@ -1809,11 +1842,34 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.faq))
             .setItems(questions) { _, which ->
-                MaterialAlertDialogBuilder(this)
-                    .setTitle(faqItems[which].first)
-                    .setMessage(faqItems[which].second)
-                    .setPositiveButton(getString(R.string.ok), null)
-                    .show()
+                val question = faqItems[which].first
+                val answer = faqItems[which].second
+                
+                val messageView = android.widget.TextView(this).apply {
+                    text = androidx.core.text.HtmlCompat.fromHtml(answer, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+                    movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                    setPadding(64, 32, 64, 24)
+                    textSize = 15f
+                    setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.WHITE))
+                    setLinkTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, android.graphics.Color.parseColor("#7C4DFF")))
+                }
+                
+                val builder = MaterialAlertDialogBuilder(this)
+                    .setTitle(question)
+                    .setView(messageView)
+                    .setNegativeButton(getString(R.string.ok), null)
+                
+                if (question.contains("support", ignoreCase = true)) {
+                    builder.setPositiveButton("Support Options") { _, _ ->
+                        showSupportOptionsDialog()
+                    }
+                } else if (question.contains("source code", ignoreCase = true) || question.contains("open source", ignoreCase = true)) {
+                    builder.setPositiveButton("Open GitHub") { _, _ ->
+                        openUrl(Constants.GITHUB_REPO_URL)
+                    }
+                }
+                
+                builder.show()
             }
             .setNeutralButton("GitHub") { _, _ ->
                 openUrl(Constants.GITHUB_REPO_URL)

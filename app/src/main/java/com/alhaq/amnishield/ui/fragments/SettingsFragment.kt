@@ -327,68 +327,79 @@ class SettingsFragment : Fragment() {
                 
                 Q: What is 4-Digit Security PIN?
                 A: Lock AmniShield settings and block configurations behind a master PIN with enforceable reset cooldowns.
+                <br/>
+                <b>═══════════════════════════</b><br/>
+                <b>OPEN SOURCE &amp; SOURCE CODE</b><br/>
+                <b>═══════════════════════════</b><br/><br/>
                 
-                ═══════════════════════════
-                OPEN SOURCE & SOURCE CODE
-                ═══════════════════════════
+                <b>Q: Is AmniShield open source?</b><br/>
+                A: Yes! AmniShield is 100% open-source under the Al-Haq Initiative. You can inspect the source code, contribute, and report issues.<br/><br/>
                 
-                Q: Is AmniShield open source?
-                A: Yes! AmniShield is 100% open-source under the Al-Haq Initiative. You can inspect the source code, contribute, and report issues.
+                <b>Q: Where can I find the source code?</b><br/>
+                A: Our repository is on GitHub:<br/>
+                <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/>
+                ⭐ Please consider <a href="${Constants.GITHUB_REPO_URL}"><b>starring the repository</b></a> to support our work!<br/><br/>
                 
-                Q: Where can I find the source code?
-                A: Our repository is on GitHub:
-                github.com/alhaq-studio/amnishield-android
-                ⭐ Please consider starring the repository to support our work!
+                <b>Q: Where can I see other Al-Haq projects?</b><br/>
+                A: Visit <a href="${Constants.ALHAQ_STUDIO_URL}"><b>alhaq.uk</b></a> and <a href="${Constants.ALHAQ_INITIATIVE_URL}"><b>alhaq-initiative.org</b></a> for our full suite of privacy and wellbeing tools.<br/><br/>
                 
-                Q: Where can I see other Al-Haq projects?
-                A: Visit alhaq.uk and alhaq-initiative.org for our full suite of privacy and wellbeing tools.
+                <b>═══════════════════════════</b><br/>
+                <b>SUPPORT &amp; DONATIONS</b><br/>
+                <b>═══════════════════════════</b><br/><br/>
                 
-                ═══════════════════════════
-                SUPPORT & DONATIONS
-                ═══════════════════════════
+                <b>Q: How can I support or donate to AmniShield?</b><br/>
+                A: You can support ongoing development through:<br/>
+                • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}"><b>Al-Haq Central Funding Hub</b></a><br/>
+                • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
+                • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}"><b>GitHub Sponsors (Developer)</b></a><br/>
+                • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a><br/>
+                • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a><br/>
+                • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/><br/>
                 
-                Q: How can I support or donate to AmniShield?
-                A: You can support ongoing development through:
-                • Al-Haq Initiative: alhaq-initiative.org
-                • GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative
-                • GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH
-                • Ko-fi: ko-fi.com/alhaq
-                • Buy Me a Coffee: buymeacoffee.com/alhaq
-                • Patreon: patreon.com/alhaq
+                <b>═══════════════════════════</b><br/>
+                <b>TROUBLESHOOTING</b><br/>
+                <b>═══════════════════════════</b><br/><br/>
                 
-                ═══════════════════════════
-                TROUBLESHOOTING
-                ═══════════════════════════
+                <b>Q: Features not working?</b><br/>
+                A: 1) Enable Accessibility Service in Settings → Accessibility → AmniShield<br/>
+                   2) Enable Device Admin in Settings → Security → Device Admin Apps<br/>
+                   3) Restart the app<br/><br/>
                 
-                Q: Features not working?
-                A: 1) Enable Accessibility Service in Settings → Accessibility → AmniShield
-                   2) Enable Device Admin in Settings → Security → Device Admin Apps
-                   3) Restart the app
+                <b>Q: Settings screen keeps closing?</b><br/>
+                A: This is App Protection working. Enter your PIN/password to access Settings.<br/><br/>
                 
-                Q: Settings screen keeps closing?
-                A: This is App Protection working. Enter your PIN/password to access Settings.
+                <b>Q: Battery drain?</b><br/>
+                A: AmniShield uses minimal battery. Check Settings → Battery → Background restriction is OFF for AmniShield.<br/><br/>
                 
-                Q: Battery drain?
-                A: AmniShield uses minimal battery. Check Settings → Battery → Background restriction is OFF for AmniShield.
+                <b>Q: How to backup my settings?</b><br/>
+                A: Settings → General → Backup &amp; Restore to save all your configurations.<br/><br/>
                 
-                Q: How to backup my settings?
-                A: Settings → General → Backup & Restore to save all your configurations.
+                <b>═══════════════════════════</b><br/>
+                <b>CONTACT &amp; COMMUNITY</b><br/>
+                <b>═══════════════════════════</b><br/><br/>
                 
-                ═══════════════════════════
-                CONTACT & COMMUNITY
-                ═══════════════════════════
-                
-                Q: How do I contact support or join the community?
-                A: Email support@alhaq.uk, or join our community on Telegram (t.me/amnishield) and Discord (discord.gg/zXz7pGVJY).
-                
-                ═══════════════════════════
+                <b>Q: How do I contact support or join the community?</b><br/>
+                A: Email <a href="mailto:support@alhaq.uk"><b>support@alhaq.uk</b></a>, or join our community on <a href="${Constants.TELEGRAM_URL}"><b>Telegram</b></a> and <a href="${Constants.DISCORD_URL}"><b>Discord</b></a>.<br/>
             """.trimIndent()
+
+            val messageView = android.widget.TextView(ctx).apply {
+                text = androidx.core.text.HtmlCompat.fromHtml(faqs, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+                movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                setPadding(64, 32, 64, 24)
+                textSize = 14f
+                setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.WHITE))
+                setLinkTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, android.graphics.Color.parseColor("#7C4DFF")))
+            }
+
+            val scrollContainer = androidx.core.widget.NestedScrollView(ctx).apply {
+                addView(messageView)
+            }
 
             MaterialAlertDialogBuilder(ctx)
                 .setTitle("Help & FAQ")
-                .setMessage(faqs)
-                .setPositiveButton("Email Support") { _, _ ->
-                    openUrl("mailto:support@alhaq.uk")
+                .setView(scrollContainer)
+                .setPositiveButton("Support Hub") { _, _ ->
+                    (activity as? MainActivity)?.showSupportOptionsDialog()
                 }
                 .setNeutralButton("GitHub") { _, _ ->
                     openUrl(Constants.GITHUB_REPO_URL)
@@ -407,54 +418,65 @@ class SettingsFragment : Fragment() {
             }
 
             val message = """
-                Version: $versionName
+                <b>Version: $versionName</b><br/><br/>
                 
-                AmniShield is a privacy-first digital wellbeing app that helps users maintain a healthy, balanced digital lifestyle through practical protection, smart blocking, and focus habits.
+                AmniShield is a privacy-first digital wellbeing app that helps users maintain a healthy, balanced digital lifestyle through practical protection, smart blocking, and focus habits.<br/><br/>
                 
-                Free Features (100% Free for Everyone):
-                • App Blocker with schedules & category rules
-                • Focus Mode with timer & session tracking
-                • Reels & Shorts Blocker (YouTube Shorts, Instagram Reels, TikTok)
-                • Website & Keyword Blocker with custom packs
-                • App Launch Limits & Usage Statistics
-                • Smart Notifications, Reminders & Daily Reports
+                <b>Free Features (100% Free for Everyone):</b><br/>
+                • App Blocker with schedules &amp; category rules<br/>
+                • Focus Mode with timer &amp; session tracking<br/>
+                • Reels &amp; Shorts Blocker (YouTube Shorts, Instagram Reels, TikTok)<br/>
+                • Website &amp; Keyword Blocker with custom packs<br/>
+                • App Launch Limits &amp; Usage Statistics<br/>
+                • Smart Notifications, Reminders &amp; Daily Reports<br/><br/>
                 
-                ⭐ Premium Security Features:
-                • Anti-Uninstall Protection (Device Admin protection)
-                • 4-Digit Security PIN & App Lock (Master PIN lock for settings)
-                • Bypass PIN Lock (Require PIN confirmation to edit active blocks)
+                <b>⭐ Premium Security Features:</b><br/>
+                • Anti-Uninstall Protection (Device Admin protection)<br/>
+                • 4-Digit Security PIN &amp; App Lock (Master PIN lock for settings)<br/>
+                • Bypass PIN Lock (Require PIN confirmation to edit active blocks)<br/><br/>
                 
-                Privacy First:
-                • 100% On-Device Processing
-                • Zero Data Collection & Zero Telemetry
-                • No Internet required for core features
+                <b>Privacy First:</b><br/>
+                • 100% On-Device Processing<br/>
+                • Zero Data Collection &amp; Zero Telemetry<br/>
+                • No Internet required for core features<br/><br/>
                 
-                🌐 Website: amnishield.com
-                📂 Source Code: github.com/alhaq-studio/amnishield-android
-                ⭐ Star us on GitHub to support our work!
+                🌐 <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
+                📂 <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
+                ⭐ <a href="${Constants.GITHUB_REPO_URL}">Star us on GitHub to support our work!</a><br/><br/>
                 
-                💬 Community:
-                • Telegram: t.me/amnishield
-                • Discord: discord.gg/zXz7pGVJY
+                💬 <b>Community:</b><br/>
+                • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
+                • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
                 
-                💖 Support Development:
-                • Al-Haq Initiative: alhaq-initiative.org
-                • GitHub Sponsors (Initiative): github.com/sponsors/alhaq-initiative
-                • GitHub Sponsors (Developer): github.com/sponsors/Afrasyaab-GH
-                • Ko-fi: ko-fi.com/alhaq
-                • Buy Me a Coffee: buymeacoffee.com/alhaq
-                • Patreon: patreon.com/alhaq
+                💖 <b>Support Development:</b><br/>
+                • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
+                • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
+                • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>
+                • <a href="${Constants.KOFI_URL}">Ko-fi</a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}">Buy Me a Coffee</a> • <a href="${Constants.PATREON_URL}">Patreon</a><br/><br/>
                 
-                Developer: Al-Haq Studio (Al-Haq Digital Services & Solutions)
-                Free Access Program: Provided by Al-Haq Initiative
-                100% Open Source • No Ads • No Tracking • Privacy First
+                Developer: <a href="${Constants.ALHAQ_STUDIO_URL}">Al-Haq Studio</a><br/>
+                Free Access Program: <a href="${Constants.ALHAQ_INITIATIVE_URL}">Al-Haq Initiative</a><br/>
+                <b>100% Open Source • No Ads • No Tracking • Privacy First</b>
             """.trimIndent()
+
+            val messageView = android.widget.TextView(ctx).apply {
+                text = androidx.core.text.HtmlCompat.fromHtml(message, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+                movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                setPadding(64, 32, 64, 24)
+                textSize = 14f
+                setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.WHITE))
+                setLinkTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, android.graphics.Color.parseColor("#7C4DFF")))
+            }
+
+            val scrollContainer = androidx.core.widget.NestedScrollView(ctx).apply {
+                addView(messageView)
+            }
 
             MaterialAlertDialogBuilder(ctx)
                 .setTitle(getString(R.string.about_amnishield))
-                .setMessage(message)
-                .setPositiveButton("Website") { _, _ ->
-                    openUrl(Constants.AMNISHIELD_WEBSITE_URL)
+                .setView(scrollContainer)
+                .setPositiveButton("Support Hub") { _, _ ->
+                    (activity as? MainActivity)?.showSupportOptionsDialog()
                 }
                 .setNeutralButton("GitHub") { _, _ ->
                     openUrl(Constants.GITHUB_REPO_URL)
