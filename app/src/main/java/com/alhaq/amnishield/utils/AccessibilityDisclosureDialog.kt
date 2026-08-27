@@ -28,13 +28,18 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 object AccessibilityDisclosureDialog {
 
     /**
-     * Show the prominent disclosure dialog with explicit Agree and Decline options.
+     * Show the prominent disclosure dialog with explicit Agree & Enable and Deny options.
+     * Guaranteed single-screen display with zero scrolling required.
      */
     fun show(
         context: Context,
         onAgree: () -> Unit,
         onDecline: () -> Unit = {}
-    ): AlertDialog {
+    ): AlertDialog? {
+        if (context is Activity && (context.isFinishing || context.isDestroyed)) {
+            return null
+        }
+
         val inflater = LayoutInflater.from(context)
         val binding = DialogAccessibilityDisclosureBinding.inflate(inflater)
 
@@ -46,11 +51,13 @@ object AccessibilityDisclosureDialog {
             }
             .create()
 
+        // Positive Button: "Agree & Enable" (Only action that proceeds to Settings)
         binding.btnAgree.setOnClickListener {
             dialog.dismiss()
             onAgree()
         }
 
+        // Negative Button: "Deny" (Dismisses dialog and stays in-app)
         binding.btnDecline.setOnClickListener {
             dialog.dismiss()
             onDecline()

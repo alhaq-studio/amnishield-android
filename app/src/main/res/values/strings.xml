@@ -1,4 +1,4 @@
-﻿<resources xmlns:tools="http://schemas.android.com/tools">
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">AmniShield</string>
     <string name="api_permission_title">AmniShield API Permission</string>
     <string name="api_permission_message">The application <b>%s</b> is requesting permission to access the AmniShield Blocker API. This will allow the app to view and modify blocklists, focus mode, and other wellbeing settings.</string>
@@ -508,17 +508,16 @@
     <string name="permissions_required">Permissions Required</string>
     <string name="permissions_disclosure">To provide you with the best experience, we need you to grant the following permissions. Your privacy is our top priority, and we will never use your data for any other purpose.</string>
     <string name="accessibility_service">Accessibility Service</string>
-    <!-- Accessibility Prominent Disclosure (Google Play Compliance) -->
-    <string name="accessibility_disclosure_title">Accessibility Service &amp; Data Disclosure</string>
-    <string name="accessibility_disclosure_intro">AmniShield requires Android’s AccessibilityService API to deliver digital wellness and distraction blocking features on your device.</string>
+    <!-- Accessibility Prominent Disclosure (Google Play Compliance - Single Screen Non-Scrolling) -->
+    <string name="accessibility_disclosure_title">Accessibility Service Disclosure</string>
+    <string name="accessibility_disclosure_intro">AmniShield uses the AccessibilityService API for digital wellness and distraction blocking:</string>
     <string name="accessibility_disclosure_usage_title">Why is Accessibility used?</string>
-    <string name="accessibility_disclosure_point_apps">• Foreground Apps &amp; URLs: Detects active browser URLs and app packages to enforce your website blocks, category limits, and focus schedules.</string>
-    <string name="accessibility_disclosure_point_keywords">• On-Screen Keywords: Inspects search inputs and on-screen text to instantly block explicit websites and adult keywords.</string>
-    <string name="accessibility_disclosure_point_gestures">• Navigation Gestures: Performs automated \"Back\" or \"Home\" actions to navigate away from blocked apps and infinite short video reels (YouTube Shorts, Reels, TikTok).</string>
-    <string name="accessibility_disclosure_privacy_title">🔒 100% On-Device &amp; Private</string>
-    <string name="accessibility_disclosure_privacy_desc">All content analysis and filtering runs strictly locally on your device. AmniShield NEVER logs, stores, transmits, or shares personal data, keystrokes, messages, or browsing history with remote servers or third parties.</string>
+    <string name="accessibility_disclosure_point_apps">• App &amp; URL Blocker: Detects active app packages and browser URLs to enforce your blocking schedules and limits.</string>
+    <string name="accessibility_disclosure_point_keywords">• Keyword &amp; Reels Filter: Detects blocked keywords and short video feeds to safely redirect you away.</string>
+    <string name="accessibility_disclosure_privacy_title">🔒 Data Privacy Guarantee</string>
+    <string name="accessibility_disclosure_privacy_desc">Data Privacy: Zero personal or sensitive user data is collected, stored, or transmitted using this service.</string>
     <string name="accessibility_disclosure_agree">Agree &amp; Enable</string>
-    <string name="accessibility_disclosure_decline">No Thanks / Decline</string>
+    <string name="accessibility_disclosure_decline">Deny</string>
     <string name="display_over_other_apps">Display Over Other Apps</string>
     <string name="device_admin">Device Admin</string>
     <string name="permission_status">Permission status</string>
