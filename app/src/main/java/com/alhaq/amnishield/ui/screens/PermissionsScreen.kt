@@ -112,7 +112,7 @@ fun PermissionsScreen(
                 tonalElevation = 8.dp,
                 shadowElevation = 8.dp
             ) {
-                val canProceed = isAccessibilityGranted || (isBatteryGranted && (isOverlayGranted || isUsageGranted))
+                val canProceed = true
                 var grantedCount = 0
                 if (isAccessibilityGranted) grantedCount++
                 if (isOverlayGranted) grantedCount++
@@ -127,7 +127,7 @@ fun PermissionsScreen(
                 ) {
                     Button(
                         onClick = onContinue,
-                        enabled = canProceed,
+                        enabled = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),

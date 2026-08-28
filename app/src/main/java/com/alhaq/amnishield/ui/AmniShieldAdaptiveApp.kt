@@ -39,38 +39,42 @@ fun AmniShieldAdaptiveApp(
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
+    val isOnboarding = currentRoute == AppRoutes.ONBOARDING_PERMISSIONS || currentRoute == AppRoutes.ACCESSIBILITY_GUIDE
+
     // Top-level adaptive scaffold
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            TopLevelDestination.entries.forEach { destination ->
-                val isSelected = currentRoute == destination.route
-                item(
-                    selected = isSelected,
-                    onClick = {
-                        if (!isSelected) {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (!isOnboarding) {
+                TopLevelDestination.entries.forEach { destination ->
+                    val isSelected = currentRoute == destination.route
+                    item(
+                        selected = isSelected,
+                        onClick = {
+                            if (!isSelected) {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
-                            contentDescription = destination.label
-                        )
-                    },
-                    label = { Text(destination.label) }
-                )
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                                contentDescription = destination.label
+                            )
+                        },
+                        label = { Text(destination.label) }
+                    )
+                }
             }
         }
     ) {
         NavHost(
             navController = navController,
-            startDestination = TopLevelDestination.BLOCKS.route,
+            startDestination = if (!state.isSetupComplete) AppRoutes.ONBOARDING_PERMISSIONS else TopLevelDestination.BLOCKS.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = { fadeIn() + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start) },
             exitTransition = { fadeOut() + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start) },
@@ -239,7 +243,14 @@ fun AmniShieldAdaptiveApp(
             composable(AppRoutes.ACCESSIBILITY_GUIDE) {
                 AccessibilityGuideScreen(
                     onBack = { navController.popBackStack() },
-                    onFinish = { navController.popBackStack(TopLevelDestination.BLOCKS.route, inclusive = false) }
+                    onFinish = {
+                        val prefs = context.getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
+                        prefs.edit().putBoolean("isFirstLaunchComplete", true).apply()
+                        viewModel.completeSetup()
+                        navController.navigate(TopLevelDestination.BLOCKS.route) {
+                            popUpTo(AppRoutes.ONBOARDING_PERMISSIONS) { inclusive = true }
+                        }
+                    }
                 )
             }
 
