@@ -21,7 +21,11 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.ViewModelProvider
+import com.alhaq.amnishield.ui.AmniShieldAdaptiveApp
+import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -215,27 +219,7 @@ class MainActivity : AppCompatActivity() {
         
         enableEdgeToEdge()
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        setSupportActionBar(binding.toolbar)
-
-        // Proper edge-to-edge inset handling for Android 15+
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, windowInsets ->
-            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            
-            // Apply padding to prevent content from being hidden by system bars
-            v.setPadding(
-                systemBars.left,
-                systemBars.top, // Add top padding to account for status bar
-                systemBars.right,
-                maxOf(systemBars.bottom, imeInsets.bottom) // Handle keyboard
-            )
-            
-            // Consume insets to prevent further propagation
-            WindowInsetsCompat.CONSUMED
-        }
+        val viewModel = ViewModelProvider(this)[AmniShieldViewModel::class.java]
 
         // Initialize helpers
         try {
@@ -243,23 +227,6 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Throwable) {
             android.util.Log.w("MainActivity", "Failed to initialize GoogleSignInHelper", e)
         }
-        drawerLayout = binding.drawerLayout
-
-        // Modern back-press handling: prefer OnBackPressedDispatcher over the
-        // deprecated Activity.onBackPressed override. Closes the navigation
-        // drawer when open, pops fragment backstack, otherwise falls back to system default.
-        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                    drawerLayout.closeDrawer(GravityCompat.START)
-                } else if (supportFragmentManager.backStackEntryCount > 0) {
-                    supportFragmentManager.popBackStack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
 
         // Initialize notification channels
         try {
@@ -288,22 +255,132 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.w("MainActivity", "Failed to initialize SyncWorker", e)
         }
 
-        // Setup navigation drawer
-        setupNavigationDrawer()
-
-        options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.fade_in, R.anim.fade_out)
-        setupActivityLaunchers()
-        setupFragmentNavigation(savedInstanceState)
+        setContent {
+            val state by viewModel.state.collectAsState()
+            val activeTheme = ThemeUtils.resolveAppTheme(this)
+            AmniShieldTheme(appTheme = activeTheme) {
+                AmniShieldAdaptiveApp(
+                    viewModel = viewModel,
+                    state = state,
+                    isGoogleSignedIn = googleSignInHelper.getLastSignedInAccount() != null,
+                    onGoogleSignIn = {
+                        try {
+                            startActivity(googleSignInHelper.getSignInIntent())
+                        } catch (e: Exception) {
+                            Toast.makeText(this, "Sign-in error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onGoogleSignOut = {
+                        googleSignInHelper.signOut {
+                            Toast.makeText(this, "Signed out", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onOpenAccessibilitySettings = {
+                        try {
+                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                    },
+                    onStartFocusMode = { mode, minutes, apps ->
+                        startFocusSessionFromAdaptive(minutes, mode, apps)
+                    },
+                    onStopFocusMode = {
+                        stopFocusSessionFromAdaptive()
+                    },
+                    onBackupRestore = {
+                        try {
+                            val intent = Intent(this, FragmentActivity::class.java).apply {
+                                putExtra("fragment", "settings")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                    },
+                    onShareCrashLogs = {
+                        try {
+                            val reportFile = ErrorReportManager.getInstance(this).createBundledReportFile()
+                            if (reportFile != null) {
+                                val uri = FileProvider.getUriForFile(this, "$packageName.provider", reportFile)
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(Intent.createChooser(shareIntent, "Share Diagnostics"))
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(this, "Failed to share diagnostics", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onHelpFAQ = {
+                        showFAQDialog()
+                    },
+                    onAbout = {
+                        openUrl(Constants.GITHUB_REPO_URL)
+                    },
+                    onLanguage = {}
+                )
+            }
+        }
 
         if (!isFirstLaunchComplete()) {
             val intent = Intent(this, FragmentActivity::class.java)
             intent.putExtra("fragment", WelcomeFragment.FRAGMENT_ID)
-            startActivity(intent, options.toBundle())
+            startActivity(intent)
             finish()
             return
         }
         showDonationDialog()
         handleDeepLink(intent)
+    }
+
+    private fun startFocusSessionFromAdaptive(durationMinutes: Int, mode: Int, selectedApps: Set<String>) {
+        val durationMillis = durationMinutes * 60_000L
+        val startTime = System.currentTimeMillis()
+        val endTime = startTime + durationMillis
+        
+        savedPreferencesLoader.saveFocusModeSelectedApps(selectedApps.toList())
+        savedPreferencesLoader.saveFocusModeData(
+            com.alhaq.amnishield.blockers.FocusModeBlocker.FocusModeData(
+                isTurnedOn = true,
+                endTime = endTime,
+                modeType = mode,
+                selectedApps = HashSet(selectedApps)
+            )
+        )
+        savedPreferencesLoader.saveFocusSessionStartTime(startTime, endTime)
+        
+        val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
+            setPackage(packageName)
+        }
+        sendBroadcast(intent)
+        
+        val timer = com.alhaq.amnishield.utils.NotificationTimerManager(this)
+        timer.startTimer(
+            totalMillis = durationMillis,
+            onFinishCallback = {
+                stopFocusSessionFromAdaptive()
+            }
+        )
+    }
+
+    private fun stopFocusSessionFromAdaptive() {
+        savedPreferencesLoader.saveFocusModeData(
+            com.alhaq.amnishield.blockers.FocusModeBlocker.FocusModeData(
+                isTurnedOn = false,
+                endTime = 0,
+                modeType = 0,
+                selectedApps = HashSet()
+            )
+        )
+        val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
+            setPackage(packageName)
+        }
+        sendBroadcast(intent)
+        val timer = com.alhaq.amnishield.utils.NotificationTimerManager(this)
+        timer.stopTimer()
     }
 
     private fun handleDeepLink(intent: Intent?) {
