@@ -54,7 +54,7 @@ class SplashActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            delay(1800L)
+            delay(1100L)
             navigateToNextScreen()
         }
     }
@@ -104,30 +104,30 @@ fun SplashScreenContent() {
     val logoScale by animateFloatAsState(
         targetValue = if (startAnimation) 1.0f else 0.4f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "logoScale"
     )
 
     val logoAlpha by animateFloatAsState(
         targetValue = if (startAnimation) 1.0f else 0.0f,
-        animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing),
+        animationSpec = tween(durationMillis = 450, easing = LinearOutSlowInEasing),
         label = "logoAlpha"
     )
 
     val textAlpha by animateFloatAsState(
         targetValue = if (startAnimation) 1.0f else 0.0f,
-        animationSpec = tween(durationMillis = 1000, delayMillis = 300, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 550, delayMillis = 200, easing = FastOutSlowInEasing),
         label = "textAlpha"
     )
 
     val pulseInfinite = rememberInfiniteTransition(label = "pulse")
     val pulseScale by pulseInfinite.animateFloat(
         initialValue = 1.0f,
-        targetValue = 1.12f,
+        targetValue = 1.10f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(900, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseScale"

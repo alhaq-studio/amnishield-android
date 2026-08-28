@@ -22,6 +22,18 @@ class WelcomeFragment : Fragment() {
     private var _binding: FragmentWelcomeBinding? = null
     private val binding get() = _binding!!  // Safe getter for binding
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        exitTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ true
+        )
+        reenterTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ false
+        )
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -36,6 +48,31 @@ class WelcomeFragment : Fragment() {
 
         binding.cbTos.setOnCheckedChangeListener { _, isChecked ->
             binding.btnNext.isEnabled = isChecked
+            if (isChecked) {
+                binding.cardTermsAgreement.strokeColor =
+                    com.google.android.material.color.MaterialColors.getColor(
+                        binding.cardTermsAgreement,
+                        androidx.appcompat.R.attr.colorPrimary,
+                        android.graphics.Color.BLUE
+                    )
+                binding.cardTermsAgreement.strokeWidth = 2
+            } else {
+                binding.cardTermsAgreement.strokeColor =
+                    com.google.android.material.color.MaterialColors.getColor(
+                        binding.cardTermsAgreement,
+                        com.google.android.material.R.attr.colorOutlineVariant,
+                        android.graphics.Color.GRAY
+                    )
+                binding.cardTermsAgreement.strokeWidth = 1
+            }
+        }
+
+        // Underline link texts for visual affordance
+        binding.openTos.paintFlags = binding.openTos.paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
+        binding.openPrivacyPolicy.paintFlags = binding.openPrivacyPolicy.paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
+
+        binding.rowAgreementToggle.setOnClickListener {
+            binding.cbTos.isChecked = !binding.cbTos.isChecked
         }
 
         binding.openTos.setOnClickListener {

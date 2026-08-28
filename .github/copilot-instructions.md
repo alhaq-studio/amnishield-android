@@ -23,6 +23,18 @@ You are an expert Android/Kotlin developer working on **AmniShield** - an Islami
 - **Code Quality**: Write production-ready, well-documented code following existing patterns and conventions
 
 ---
+## STRICT UNIVERSAL UI & CODE QUALITY RULE: NO EMOJIS IN CODE OR UI
+1.* ZERO EMOJI POLICY: Do NOT use UTF-8 emojis or emoji-based unicode characters anywhere in code, UI layouts, components, strings, comments, logs, or commit messages across ANY project type (Android, Web/React, Desktop, VS Code extensions, or CLI).
+
+2.* USE PRODUCTION ICON LIBRARIES ONLY:
+- Web & React (TSX/JSX/HTML): Use Lucide React (lucide-react), Material UI Icons (@mui/icons-material), FontAwesome, or inline SVGs.
+- Android (Kotlin/Compose/XML): Use Vector Drawables (ic_*.xml), Material Symbols, or Compose ImageVector.
+- VS Code Extensions & Webviews: Use official Codicons (@vscode/codicons) or inline SVGs.
+- Desktop & CLI (Python/C++/Electron): Use standard UI icon fonts, native framework drawables, or clean plain-text tags ([INFO], [SUCCESS], [ERROR]).
+3.* ACCESSIBILITY & STYLING COMPLIANCE:
+- Icons must support theme-based color tinting (CSS variables, dynamic color, or vector tinting).
+- Icons must use explicit aria-label attributes or screen-reader descriptions instead of unicode strings.
+
 
 ## 🏗️ Architecture Overview
 

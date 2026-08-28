@@ -8,6 +8,38 @@
     android:background="?attr/colorSurface"
     tools:context=".ui.fragments.installation.AccessibilityGuide">
 
+    <!-- Step Progress Header -->
+    <LinearLayout
+        android:id="@+id/stepHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/onboardingProgress"
+            android:layout_width="0dp"
+            android:layout_height="6dp"
+            android:layout_weight="1"
+            android:progress="100"
+            app:indicatorColor="?attr/colorPrimary"
+            app:trackColor="?attr/colorSurfaceVariant"
+            app:trackCornerRadius="3dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="Step 4 of 4"
+            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+            android:textColor="?attr/colorPrimary" />
+    </LinearLayout>
+
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
@@ -15,11 +47,11 @@
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:paddingHorizontal="20dp"
-        android:paddingTop="24dp"
+        android:paddingTop="16dp"
         android:paddingBottom="24dp"
         android:scrollbars="none"
         app:layout_constraintBottom_toTopOf="@+id/bottomContainer"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@+id/stepHeader">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,30 +59,12 @@
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:cardCornerRadius="28dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp">
-
-                <ImageView
-                    android:id="@+id/imageView2"
-                    android:layout_width="90dp"
-                    android:layout_height="90dp"
-                    android:scaleType="centerCrop"
-                    android:src="@mipmap/ic_launcher_round" />
-
-            </com.google.android.material.card.MaterialCardView>
-
             <TextView
                 android:id="@+id/textView23"
                 style="@style/TextAppearance.Material3.HeadlineMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Quick Accessibility Setup"
+                android:text="Accessibility Activation"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -61,18 +75,18 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:lineSpacingExtra="2dp"
-                android:text="AmniShield needs Accessibility permissions to manage your screen time and block distracting content."
+                android:lineSpacingExtra="3dp"
+                android:text="Follow these 3 simple steps to enable AmniShield's on-device protection."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
-            <!-- Step 1 Card -->
+            <!-- Step-by-Step Walkthrough Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/c1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -81,61 +95,121 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
+                    <!-- Step 1 Row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_logo_mini"
-                            app:tint="?attr/colorPrimary" />
-
                         <TextView
-                            android:id="@+id/bg_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:text="Enable Accessibility Service"
-                            android:textColor="?attr/colorOnSurface"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:background="@drawable/badge_bg"
+                            android:gravity="center"
+                            android:text="1"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
 
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodyMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:text="Tap the button below to open Accessibility Settings"
+                            android:textColor="?attr/colorOnSurface" />
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/textView26"
-                        style="@style/TextAppearance.Material3.BodyMedium"
+                    <com.google.android.material.divider.MaterialDivider
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="12dp"
+                        app:dividerColor="?attr/colorOutlineVariant" />
+
+                    <!-- Step 2 Row -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:lineSpacingExtra="4dp"
-                        android:text="1. Open Accessibility Settings\n2. Select 'AmniShield' under Installed Apps\n3. Toggle switch to ON and confirm 'Allow'\n\nThis allows AmniShield to detect app usage and block distracting content."
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:background="@drawable/badge_bg"
+                            android:gravity="center"
+                            android:text="2"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorPrimary"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodyMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:text="Find and select 'AmniShield' under Downloaded / Installed apps"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
+
+                    <com.google.android.material.divider.MaterialDivider
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="12dp"
+                        app:dividerColor="?attr/colorOutlineVariant" />
+
+                    <!-- Step 3 Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:background="@drawable/badge_bg"
+                            android:gravity="center"
+                            android:text="3"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorPrimary"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodyMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:text="Toggle the switch to ON and confirm 'Allow'"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_open_settings"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="16dp"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="20dp"
                         android:text="Open Accessibility Settings"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_logo_mini" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Troubleshooting Card -->
+            <!-- High-Contrast Restricted Settings (Android 13+) Callout -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -159,25 +233,23 @@
                             app:tint="?attr/colorPrimary" />
 
                         <TextView
-                            android:id="@+id/notif_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
+                            style="@style/TextAppearance.Material3.TitleSmall"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:text="Restricted Settings? (Android 13+)"
+                            android:layout_marginStart="10dp"
+                            android:text="Greyed out or 'Restricted Setting'?"
                             android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold" />
 
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/textView27"
                         style="@style/TextAppearance.Material3.BodySmall"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="10dp"
                         android:lineSpacingExtra="3dp"
-                        android:text="If Android blocks Accessibility as a 'Restricted Setting':\n\n1️⃣ Open Settings → Apps → AmniShield\n2️⃣ Tap the 3 dots (top right) → Allow Restricted Settings\n3️⃣ Return to Accessibility Settings &amp; enable AmniShield."
+                        android:text="On Android 13+, if the switch is greyed out:\n1. Go to System Settings -> Apps -> AmniShield\n2. Tap the 3 dots (top-right) -> 'Allow restricted settings'\n3. Return to Accessibility and turn ON AmniShield."
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
@@ -185,27 +257,24 @@
         </LinearLayout>
     </ScrollView>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- Fixed Bottom Action Container -->
+    <LinearLayout
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:elevation="8dp"
+        android:orientation="vertical"
         android:padding="20dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="54dp"
             android:text="Complete Setup"
-            app:cornerRadius="16dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:cornerRadius="16dp" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
+

@@ -20,6 +20,26 @@ class AccessibilityGuide : Fragment() {
     private var _binding: FragmentAccessibilityGuideBinding? = null
     private val binding get() = _binding!!
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enterTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ true
+        )
+        returnTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ false
+        )
+        exitTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ true
+        )
+        reenterTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ false
+        )
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

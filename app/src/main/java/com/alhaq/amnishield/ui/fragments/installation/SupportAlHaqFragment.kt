@@ -11,6 +11,14 @@ class SupportAlHaqFragment : PremiumFeaturesFragment() {
  
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enterTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ true
+        )
+        returnTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ false
+        )
         val args = arguments ?: Bundle()
         args.putBoolean(ARG_IS_ONBOARDING, true)
         arguments = args

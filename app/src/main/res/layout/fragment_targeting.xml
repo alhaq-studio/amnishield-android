@@ -6,6 +6,38 @@
     android:layout_height="match_parent"
     android:background="?attr/colorSurface">
 
+    <!-- Step Progress Header -->
+    <LinearLayout
+        android:id="@+id/stepHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/onboardingProgress"
+            android:layout_width="0dp"
+            android:layout_height="6dp"
+            android:layout_weight="1"
+            android:progress="50"
+            app:indicatorColor="?attr/colorPrimary"
+            app:trackColor="?attr/colorSurfaceVariant"
+            app:trackCornerRadius="3dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="Step 2 of 4"
+            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+            android:textColor="?attr/colorPrimary" />
+    </LinearLayout>
+
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
@@ -13,10 +45,10 @@
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:paddingHorizontal="24dp"
-        android:paddingTop="32dp"
+        android:paddingTop="16dp"
         android:paddingBottom="24dp"
         app:layout_constraintBottom_toTopOf="@+id/bottomContainer"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@+id/stepHeader">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -28,7 +60,7 @@
                 style="@style/TextAppearance.Material3.HeadlineMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Choose Your Protection Goals"
+                android:text="Protection Goals"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -38,69 +70,30 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:text="Select what you want AmniShield to help guard against. You can change these anytime in Settings."
+                android:lineSpacingExtra="3dp"
+                android:text="Select what you would like AmniShield to guard. You can customize or change these rules anytime in Settings."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
-            <!-- Option 1: Gaze & Eye Guarding (Under Development) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_gaze"
+            <!-- Quick Preset Action Row -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:alpha="0.5"
-                android:clickable="false"
-                android:focusable="false"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutlineVariant"
-                app:strokeWidth="1dp">
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:orientation="horizontal">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipSelectAll"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:text="Recommended All-In-One"
+                    app:chipIcon="@drawable/baseline_done_24"
+                    app:chipIconTint="?attr/colorPrimary" />
 
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        app:srcCompat="@drawable/ic_focus_mode"
-                        app:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            style="@style/TextAppearance.Material3.TitleMedium"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Gaze &amp; Eye Guarding (Coming Soon)"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            style="@style/TextAppearance.Material3.BodySmall"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="[Under Development] Real-time image &amp; video blurring"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-
-                    <com.google.android.material.checkbox.MaterialCheckBox
-                        android:id="@+id/cb_gaze"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:enabled="false"
-                        android:checked="false" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Option 2: Web & Adult Content -->
+            <!-- Option 1: Web & Adult Content -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_web"
                 android:layout_width="match_parent"
@@ -108,7 +101,8 @@
                 android:layout_marginTop="12dp"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -116,9 +110,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:padding="16dp">
 
                     <ImageView
                         android:layout_width="32dp"
@@ -145,7 +139,8 @@
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Block explicit websites, keywords, and harmful domain searches"
+                            android:layout_marginTop="2dp"
+                            android:text="Block explicit websites, keywords, and adult domain searches"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
@@ -153,11 +148,12 @@
                         android:id="@+id/cb_web"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:buttonTint="?attr/colorPrimary"
+                        android:checked="true" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Option 3: Reels & Short Video Blocker -->
+            <!-- Option 2: Reels & Short Video Blocker -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_reels"
                 android:layout_width="match_parent"
@@ -165,7 +161,8 @@
                 android:layout_marginTop="12dp"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -173,9 +170,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:padding="16dp">
 
                     <ImageView
                         android:layout_width="32dp"
@@ -202,7 +199,8 @@
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Block addictive short feeds (IG Reels, YouTube Shorts, TikTok)"
+                            android:layout_marginTop="2dp"
+                            android:text="Block short feeds (IG Reels, YouTube Shorts, TikTok) automatically"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
@@ -210,11 +208,12 @@
                         android:id="@+id/cb_reels"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:buttonTint="?attr/colorPrimary"
+                        android:checked="true" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Option 4: Focus & App Blocker -->
+            <!-- Option 3: Focus & App Blocker -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_focus"
                 android:layout_width="match_parent"
@@ -222,7 +221,8 @@
                 android:layout_marginTop="12dp"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -230,9 +230,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:padding="16dp">
 
                     <ImageView
                         android:layout_width="32dp"
@@ -251,7 +251,7 @@
                             style="@style/TextAppearance.Material3.TitleMedium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Focus &amp; App Blocker"
+                            android:text="Focus Mode &amp; App Blocker"
                             android:textColor="?attr/colorOnSurface"
                             android:textStyle="bold" />
 
@@ -259,7 +259,8 @@
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Enforce strict app launch limits &amp; focus schedules"
+                            android:layout_marginTop="2dp"
+                            android:text="Enforce strict app launch limits, schedules, and focus sessions"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
@@ -267,17 +268,81 @@
                         android:id="@+id/cb_focus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        android:buttonTint="?attr/colorPrimary"
+                        android:checked="true" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Option 4: Gaze & Eye Guarding (Under Development Preview) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_gaze"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:alpha="0.65"
+                android:clickable="false"
+                android:focusable="false"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        app:srcCompat="@drawable/ic_focus_mode"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.TitleMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="AmnGaze AI Vision (Coming Soon)"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/TextAppearance.Material3.BodySmall"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="On-device NPU screen blurring and visual moderation"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_gaze"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false"
+                        android:enabled="false" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>
 
+    <!-- Fixed Bottom Action Container -->
     <LinearLayout
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:elevation="8dp"
         android:orientation="vertical"
         android:padding="20dp"
         app:layout_constraintBottom_toBottomOf="parent">
@@ -286,7 +351,7 @@
             android:id="@+id/btn_continue"
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="54dp"
             android:text="Continue to Permissions"
             app:cornerRadius="16dp" />
 
@@ -296,7 +361,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Skip for Default Settings" />
+            android:text="Skip &amp; Keep Default Setup" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+

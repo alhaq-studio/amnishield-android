@@ -19,6 +19,26 @@ class TargetingFragment : Fragment() {
     private var _binding: FragmentTargetingBinding? = null
     private val binding get() = _binding!!
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enterTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ true
+        )
+        returnTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ false
+        )
+        exitTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ true
+        )
+        reenterTransition = com.google.android.material.transition.MaterialSharedAxis(
+            com.google.android.material.transition.MaterialSharedAxis.X,
+            /* forward = */ false
+        )
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -31,24 +51,69 @@ class TargetingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Restore any saved preference states or default to true
+        val prefs = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        binding.cbWeb.isChecked = prefs.getBoolean("target_web_enabled", true)
+        binding.cbReels.isChecked = prefs.getBoolean("target_reels_enabled", true)
+        binding.cbFocus.isChecked = prefs.getBoolean("target_focus_enabled", true)
+
+        updateCardState(binding.cardWeb, binding.cbWeb.isChecked)
+        updateCardState(binding.cardReels, binding.cbReels.isChecked)
+        updateCardState(binding.cardFocus, binding.cbFocus.isChecked)
+
         // Make card clicking toggle checkboxes
         binding.cardWeb.setOnClickListener { binding.cbWeb.isChecked = !binding.cbWeb.isChecked }
         binding.cardReels.setOnClickListener { binding.cbReels.isChecked = !binding.cbReels.isChecked }
         binding.cardFocus.setOnClickListener { binding.cbFocus.isChecked = !binding.cbFocus.isChecked }
 
+        binding.cbWeb.setOnCheckedChangeListener { _, isChecked ->
+            updateCardState(binding.cardWeb, isChecked)
+            persistCurrentState()
+        }
+        binding.cbReels.setOnCheckedChangeListener { _, isChecked ->
+            updateCardState(binding.cardReels, isChecked)
+            persistCurrentState()
+        }
+        binding.cbFocus.setOnCheckedChangeListener { _, isChecked ->
+            updateCardState(binding.cardFocus, isChecked)
+            persistCurrentState()
+        }
+
+        binding.chipSelectAll.setOnClickListener {
+            val allChecked = binding.cbWeb.isChecked && binding.cbReels.isChecked && binding.cbFocus.isChecked
+            val target = !allChecked
+            binding.cbWeb.isChecked = target
+            binding.cbReels.isChecked = target
+            binding.cbFocus.isChecked = target
+        }
+
         binding.btnContinue.setOnClickListener { saveTargetingAndProceed() }
         binding.btnSkip.setOnClickListener { skipTargetingAndProceed() }
     }
 
-    private fun saveTargetingAndProceed() {
-        val context = requireContext()
-        val isWeb = binding.cbWeb.isChecked
-        val isReels = binding.cbReels.isChecked
-        val isFocus = binding.cbFocus.isChecked
+    private fun updateCardState(card: com.google.android.material.card.MaterialCardView, isChecked: Boolean) {
+        val primary = com.google.android.material.color.MaterialColors.getColor(
+            card,
+            androidx.appcompat.R.attr.colorPrimary,
+            android.graphics.Color.BLUE
+        )
+        val outline = com.google.android.material.color.MaterialColors.getColor(
+            card,
+            com.google.android.material.R.attr.colorOutlineVariant,
+            android.graphics.Color.GRAY
+        )
+        card.strokeColor = if (isChecked) primary else outline
+        card.strokeWidth = if (isChecked) 2 else 1
+    }
+
+    private fun persistCurrentState() {
+        val context = context ?: return
+        val isWeb = _binding?.cbWeb?.isChecked ?: true
+        val isReels = _binding?.cbReels?.isChecked ?: true
+        val isFocus = _binding?.cbFocus?.isChecked ?: true
 
         val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         prefs.edit().apply {
-            putBoolean("target_gaze_enabled", binding.cbGaze.isChecked)
             putBoolean("target_web_enabled", isWeb)
             putBoolean("target_reels_enabled", isReels)
             putBoolean("target_focus_enabled", isFocus)
@@ -60,12 +125,13 @@ class TargetingFragment : Fragment() {
         loader.setReelBlockerTiktokEnabled(isReels)
         loader.setReelBlockerYoutubeEnabled(isReels)
         loader.setReelBlockerInstagramEnabled(isReels)
-
         loader.setWebsiteBlockerEnabled(isWeb)
         loader.setKeywordBlockerFeatureEnabled(isWeb)
-
         loader.setAppBlockerFeatureEnabled(isFocus)
+    }
 
+    private fun saveTargetingAndProceed() {
+        persistCurrentState()
         proceedToPermissions()
     }
 
