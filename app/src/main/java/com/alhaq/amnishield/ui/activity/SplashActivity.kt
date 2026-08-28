@@ -60,7 +60,17 @@ class SplashActivity : ComponentActivity() {
     }
 
     private fun navigateToNextScreen() {
-        val nextIntent = Intent(this, MainActivity::class.java)
+        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
+
+        val nextIntent = if (!isFirstLaunchComplete) {
+            Intent(this, FragmentActivity::class.java).apply {
+                putExtra("fragment", WelcomeFragment.FRAGMENT_ID)
+            }
+        } else {
+            Intent(this, MainActivity::class.java)
+        }
+
         startActivity(nextIntent)
         @Suppress("DEPRECATION")
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out)

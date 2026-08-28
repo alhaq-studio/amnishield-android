@@ -1,8 +1,5 @@
 package com.alhaq.amnishield.ui.activity
 
-import android.annotation.SuppressLint
-import android.app.PendingIntent
-import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -10,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,12 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.FileProvider
-import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
@@ -31,44 +24,23 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.alhaq.amnishield.AmniShield
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.R
-import com.alhaq.amnishield.utils.BillingClientWrapper
 import com.alhaq.amnishield.data.AmniShieldAccount
-import com.alhaq.amnishield.premium.LicenseValidator
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.AmniShieldAdaptiveApp
-import com.alhaq.amnishield.ui.components.PinPromptContent
 import com.alhaq.amnishield.ui.theme.AmniShieldTheme
 import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
+import com.alhaq.amnishield.utils.BillingClientWrapper
 import com.alhaq.amnishield.utils.ErrorReportManager
 import com.alhaq.amnishield.utils.GoogleSignInHelper
-import com.alhaq.amnishield.utils.NotificationTimerManager
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import com.alhaq.amnishield.utils.ThemeUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
-import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
-
-    data class WarningData(
-        val message: String = "You can setup a custom message to appear here!",
-        val timeInterval: Int = 120000, // default cooldown period
-        val isDynamicIntervalSettingAllowed: Boolean = false,
-        val isProceedDisabled: Boolean = false,
-        val isWarningDialogHidden: Boolean = false, // perform back/home action directly without showing warning screen
-        val proceedDelayInSecs: Int = 15
-    )
-
-    // Legacy compatibility methods for XML fragments (no-op in Compose)
-    fun setBottomNavVisible(visible: Boolean) {}
-    fun setToolbarVisible(visible: Boolean) {}
-    fun selectTab(tabId: Int) {}
-    fun getSelectedTabId(): Int = 0
 
     private var googleSignInHelper: GoogleSignInHelper? = null
     private val savedPreferencesLoader by lazy { SavedPreferencesLoader(this) }
@@ -88,53 +60,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun syncAccountWithBackend(account: AmniShieldAccount) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                var profile: com.alhaq.amnishield.data.sync.SupabaseRest.UserProfile? = null
-
-                if (!account.idToken.isNullOrBlank()) {
-                    try {
-                        val session = rest.signInWithGoogleIdToken(account.idToken)
-                        if (session != null) {
-                            profile = rest.fetchProfile(session)
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.w("MainActivity", "Supabase id_token exchange failed, falling back to email query", e)
-                    }
-                }
-
-                if (profile == null && !account.email.isNullOrBlank()) {
-                    try {
-                        profile = rest.fetchProfileByEmail(account.email)
-                    } catch (e: Exception) {
-                        android.util.Log.w("MainActivity", "Fetch profile by email failed", e)
-                    }
-                }
-
-                if (profile != null) {
-                    val key = profile.licenseKey
-                    if (!key.isNullOrBlank()) {
-                        val activated = premiumManager.redeemLicenseKey(key)
-                        if (activated) {
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(this@MainActivity, "Pro License Synced and Activated from Account!", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    } else if (profile.isPremium) {
-                        premiumManager.updatePremiumStatus(true)
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "AmniShield Pro Status Synced!", Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Background account sync error", e)
-            }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             ThemeUtils.applyTheme(this)
@@ -142,31 +67,34 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.e("MainActivity", "ThemeUtils.applyTheme failed", e)
         }
         super.onCreate(savedInstanceState)
-        
         enableEdgeToEdge()
 
         val viewModel = ViewModelProvider(this)[AmniShieldViewModel::class.java]
 
-        // Initialize Google Sign In helper safely
+        // Initialize Google Sign-in helper safely
         try {
             googleSignInHelper = GoogleSignInHelper(this)
         } catch (e: Throwable) {
             android.util.Log.w("MainActivity", "Failed to initialize GoogleSignInHelper", e)
+            googleSignInHelper = null
         }
 
         // Initialize notification channels
         try {
-            com.alhaq.amnishield.utils.NotificationHelper.getInstance(this)
+            initializeNotificationChannels()
         } catch (e: Throwable) {
             android.util.Log.w("MainActivity", "Failed to initialize notification channels", e)
         }
-        
+
         // Restore premium purchases automatically on app start
         try {
             restorePremiumPurchases()
         } catch (e: Throwable) {
             android.util.Log.w("MainActivity", "Failed to restore premium purchases", e)
         }
+
+        // Schedule daily reports for premium users
+        scheduleDailyReportsIfPremium()
 
         // Schedule background policy & rules sync engine
         try {
@@ -176,10 +104,6 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Throwable) {
             android.util.Log.w("MainActivity", "Failed to initialize SyncWorker", e)
-        }
-
-        if (isFirstLaunchComplete()) {
-            viewModel.completeSetup()
         }
 
         setContent {
@@ -192,7 +116,12 @@ class MainActivity : AppCompatActivity() {
                     isGoogleSignedIn = googleSignInHelper?.getLastSignedInAccount() != null,
                     onGoogleSignIn = {
                         try {
-                            googleSignInHelper?.getSignInIntent()?.let { googleSignInLauncher.launch(it) }
+                            val intent = googleSignInHelper?.getSignInIntent()
+                            if (intent != null) {
+                                googleSignInLauncher.launch(intent)
+                            } else {
+                                Toast.makeText(this, "Google Sign-In is unavailable on this device", Toast.LENGTH_SHORT).show()
+                            }
                         } catch (e: Exception) {
                             Toast.makeText(this, "Sign-in error: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
@@ -252,7 +181,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        showDonationDialog()
         handleDeepLink(intent)
     }
 
@@ -266,6 +194,53 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDeepLink(intent)
+    }
+
+    private fun syncAccountWithBackend(account: AmniShieldAccount) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
+                var profile: com.alhaq.amnishield.data.sync.SupabaseRest.UserProfile? = null
+
+                if (!account.idToken.isNullOrBlank()) {
+                    try {
+                        val session = rest.signInWithGoogleIdToken(account.idToken)
+                        if (session != null) {
+                            profile = rest.fetchProfile(session)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("MainActivity", "Supabase id_token exchange failed, falling back to email query", e)
+                    }
+                }
+
+                if (profile == null && !account.email.isNullOrBlank()) {
+                    try {
+                        profile = rest.fetchProfileByEmail(account.email)
+                    } catch (e: Exception) {
+                        android.util.Log.w("MainActivity", "Fetch profile by email failed", e)
+                    }
+                }
+
+                if (profile != null) {
+                    val key = profile.licenseKey
+                    if (!key.isNullOrBlank()) {
+                        val activated = premiumManager.redeemLicenseKey(key)
+                        if (activated) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@MainActivity, "Pro License Synced and Activated from Account!", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else if (profile.isPremium) {
+                        premiumManager.updatePremiumStatus(true)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "AmniShield Pro Status Synced!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Background account sync error", e)
+            }
+        }
     }
 
     private fun startFocusSessionFromAdaptive(durationMinutes: Int, mode: Int, selectedApps: Set<String>) {
@@ -289,7 +264,7 @@ class MainActivity : AppCompatActivity() {
         }
         sendBroadcast(intent)
         
-        val timer = NotificationTimerManager(this)
+        val timer = com.alhaq.amnishield.utils.NotificationTimerManager(this)
         timer.startTimer(
             totalMillis = durationMillis,
             onFinishCallback = {
@@ -311,7 +286,7 @@ class MainActivity : AppCompatActivity() {
             setPackage(packageName)
         }
         sendBroadcast(intent)
-        val timer = NotificationTimerManager(this)
+        val timer = com.alhaq.amnishield.utils.NotificationTimerManager(this)
         timer.stopTimer()
     }
 
@@ -373,7 +348,7 @@ class MainActivity : AppCompatActivity() {
 
             // 1. Direct ECDSA Signed License Key Redemption
             if (!key.isNullOrBlank()) {
-                val payload = LicenseValidator.verifyLicense(key)
+                val payload = com.alhaq.amnishield.premium.LicenseValidator.verifyLicense(key)
                 if (payload != null) {
                     val activated = premiumManager.redeemLicenseKey(key)
                     if (activated) {
@@ -395,7 +370,7 @@ class MainActivity : AppCompatActivity() {
                         withContext(Dispatchers.Main) {
                             if (profile != null && !profile.licenseKey.isNullOrBlank()) {
                                 if (premiumManager.redeemLicenseKey(profile.licenseKey)) {
-                                    val verifiedPayload = LicenseValidator.verifyLicense(profile.licenseKey)
+                                    val verifiedPayload = com.alhaq.amnishield.premium.LicenseValidator.verifyLicense(profile.licenseKey)
                                     if (verifiedPayload != null) {
                                         showProActivationSuccessDialog(verifiedPayload)
                                     } else {
@@ -464,8 +439,18 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun initializeNotificationChannels() {
+        com.alhaq.amnishield.utils.NotificationHelper.getInstance(this)
+    }
+    
+    private fun scheduleDailyReportsIfPremium() {
+        // Daily report notifications managed in background workers
+    }
+
     private fun restorePremiumPurchases() {
-        if (premiumManager.isPremium()) return
+        if (premiumManager.isPremium()) {
+            return
+        }
         
         val billingWrapper = BillingClientWrapper(this)
         billingWrapper.startConnection {
@@ -495,15 +480,70 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkAppLock() {
+        val pinEnabled = savedPreferencesLoader.isPinSecurityEnabled()
+        val appLockEnabled = savedPreferencesLoader.isAppLockEnabled()
+        val pinCode = savedPreferencesLoader.getPinCode()
+
+        if (pinEnabled && appLockEnabled && pinCode.isNotEmpty() && !AmniShield.isAppUnlocked) {
+            showPinLockFullscreenDialog(pinCode)
+        }
+    }
+
+    private fun showPinLockFullscreenDialog(correctPinCode: String) {
+        val dialog = android.app.Dialog(this, android.R.style.Theme_Material_NoActionBar_Fullscreen)
+        
+        dialog.window?.let { window ->
+            window.decorView.setViewTreeLifecycleOwner(this)
+            window.decorView.setViewTreeViewModelStoreOwner(this)
+            window.decorView.setViewTreeSavedStateRegistryOwner(this)
+        }
+
+        val composeView = androidx.compose.ui.platform.ComposeView(this).apply {
+            setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                AmniShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this@MainActivity)) {
+                    com.alhaq.amnishield.ui.components.PinPromptContent(
+                        correctPin = correctPinCode,
+                        title = "AmniShield Locked",
+                        subtitle = "Enter your 4-digit PIN to access the app",
+                        allowForgotPin = true,
+                        onDismiss = {
+                            dialog.dismiss()
+                            finish()
+                        },
+                        onPinSuccess = {
+                            AmniShield.isAppUnlocked = true
+                            dialog.dismiss()
+                        },
+                        onPinResetCompleted = {
+                            AmniShield.isAppUnlocked = true
+                            dialog.dismiss()
+                        }
+                    )
+                }
+            }
+        }
+        
+        dialog.setContentView(composeView)
+        dialog.setCancelable(false)
+        dialog.show()
+    }
+
+    fun setBottomNavVisible(visible: Boolean) {}
+    fun setToolbarVisible(visible: Boolean) {}
+    fun selectTab(tabId: Int) {}
+    fun getSelectedTabId(): Int = 0
+
     private fun showFAQDialog() {
         val faqItems = arrayOf(
-            "How do I enable accessibility services?" to "Go to Settings -> Accessibility -> AmniShield, then enable the required services. This is needed for all blocking features to work.",
+            "How do I enable accessibility services?" to "Go to Settings → Accessibility → AmniShield, then enable the required services. This is needed for all blocking features to work.",
             "What is the Notifications bell icon?" to "The bell icon shows your notification inbox with blocking alerts, daily reports, reminders, and achievements. Tap it to view your notification history.",
             "How does Reel Blocker work?" to "Reel Blocker detects and blocks endless scrolling on Instagram Reels, YouTube Shorts, and TikTok videos, helping you maintain focus.",
             "Why do my blocked apps/keywords disappear?" to "Make sure accessibility services stay enabled. Some system optimizations may disable them. You can check status in Settings.",
-            "Can I export my settings?" to "Yes! Go to Settings -> Backup & Restore to export/import your configuration.",
+            "Can I export my settings?" to "Yes! Go to Settings → Backup &amp; Restore to export/import your configuration.",
             "What is Focus Mode?" to "Focus Mode lets you time-box app restrictions (e.g., block gaming apps for 2 hours). It tracks your focus sessions and shows productivity insights.",
-            "How do I disable Anti-Uninstall protection?" to "Go to Settings -> Anti-Uninstall, enter your password, and tap Disable. You can then uninstall AmniShield normally.",
+            "How do I disable Anti-Uninstall protection?" to "Go to Settings → Anti-Uninstall, enter your password, and tap Disable. You can then uninstall AmniShield normally.",
             "Is AmniShield really privacy-focused?" to "Yes! All text analysis, keyword detection, and content blocking happens locally on your device. We never send your data to servers.",
             "Is AmniShield open source?" to "Yes! AmniShield is 100% open-source. You can view the full source code, report issues, and contribute on our GitHub repository:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a>",
             "Where can I find the source code?" to "AmniShield's source code is publicly available on GitHub:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>You can also explore our other open-source projects at <a href=\"${Constants.ALHAQ_STUDIO_URL}\"><b>alhaq.uk</b></a>",
@@ -551,66 +591,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showDonationDialog() {
-        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-        val firstDate = sharedPreferences.getString("first_date", null)
-        if (firstDate == null) {
-            val currentDateString = LocalDate.now().toString()
-            sharedPreferences.edit().putString("first_date", currentDateString).apply()
-        }
-
-        if (!(sharedPreferences.getBoolean("is_donation_alerted", false))) {
-            val storedFirstDate = firstDate?.let { LocalDate.parse(it) } ?: LocalDate.now()
-            val daysPassed = ChronoUnit.DAYS.between(storedFirstDate, LocalDate.now())
-
-            if (daysPassed > 5L) {
-                sharedPreferences.edit().putBoolean("is_donation_alerted", true).apply()
-                val donationHtml = """
-                    Thank you for using AmniShield!<br/><br/>
-                    My name is Habibur Rahman, founder of <a href="${Constants.ALHAQ_STUDIO_URL}"><b>Al-Haq Studio</b></a>. I'm a student dedicated to building open-source digital wellbeing tools to help maintain a healthy, balanced digital lifestyle.<br/><br/>
-                    AmniShield is <b>100% open-source, free, and ad-free</b>. If you find it beneficial, please consider supporting ongoing development:<br/>
-                    • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}"><b>Al-Haq Central Funding Hub</b></a><br/>
-                    • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
-                    • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}"><b>GitHub Sponsors (Developer)</b></a><br/>
-                    • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a> • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/>
-                    • <a href="${Constants.GITHUB_REPO_URL}"><b>Star us on GitHub</b></a><br/><br/>
-                    Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
-                    GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
-                    Your support helps keep AmniShield free and accessible for everyone worldwide. JazakAllahu Khairan!
-                """.trimIndent()
-
-                val donationMsgView = android.widget.TextView(this).apply {
-                    text = androidx.core.text.HtmlCompat.fromHtml(donationHtml, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
-                    movementMethod = android.text.method.LinkMovementMethod.getInstance()
-                    setPadding(64, 32, 64, 24)
-                    textSize = 14f
-                    setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, android.graphics.Color.WHITE))
-                    setLinkTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, android.graphics.Color.parseColor("#7C4DFF")))
-                }
-
-                val donationContainer = androidx.core.widget.NestedScrollView(this).apply {
-                    addView(donationMsgView)
-                }
-
-                MaterialAlertDialogBuilder(this)
-                    .setTitle("Support AmniShield Development")
-                    .setView(donationContainer)
-                    .setNegativeButton(R.string.close) { dialog, _ ->
-                        dialog.dismiss()
-                    }
-                    .setPositiveButton("Support Options") { dialog, _ ->
-                        showSupportOptionsDialog()
-                        dialog.dismiss()
-                    }
-                    .setNeutralButton("Visit Website") { _, _ ->
-                        openUrl(Constants.AMNISHIELD_WEBSITE_URL)
-                    }
-                    .setCancelable(false)
-                    .show()
-            }
-        }
-    }
-    
     fun showSupportOptionsDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_support_hub, null)
         val dialog = MaterialAlertDialogBuilder(this)
@@ -619,39 +599,39 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton(R.string.close, null)
             .create()
 
-        dialogView.findViewById<android.view.View>(R.id.card_initiative_hub)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_initiative_hub)?.setOnClickListener {
             openUrl(Constants.ALHAQ_INITIATIVE_DONATE_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_sponsors_initiative)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_sponsors_initiative)?.setOnClickListener {
             openUrl(Constants.GITHUB_SPONSORS_INITIATIVE_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_sponsors_developer)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_sponsors_developer)?.setOnClickListener {
             openUrl(Constants.GITHUB_SPONSORS_PERSONAL_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_kofi)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_kofi)?.setOnClickListener {
             openUrl(Constants.KOFI_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_buymeacoffee)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_buymeacoffee)?.setOnClickListener {
             openUrl(Constants.BUY_ME_A_COFFEE_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_patreon)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_patreon)?.setOnClickListener {
             openUrl(Constants.PATREON_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_studio_site)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_studio_site)?.setOnClickListener {
             openUrl(Constants.ALHAQ_STUDIO_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_amnishield_website)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_amnishield_website)?.setOnClickListener {
             openUrl(Constants.AMNISHIELD_WEBSITE_URL)
             dialog.dismiss()
         }
-        dialogView.findViewById<android.view.View>(R.id.card_pro_pass)?.setOnClickListener {
+        dialogView.findViewById<View>(R.id.card_pro_pass)?.setOnClickListener {
             val intent = Intent(this, FragmentActivity::class.java).apply {
                 putExtra("feature_type", "premium_features")
             }
@@ -661,7 +641,7 @@ class MainActivity : AppCompatActivity() {
 
         dialog.show()
     }
-
+    
     private fun showAboutDialog() {
         val versionName = try {
             packageManager.getPackageInfo(packageName, 0).versionName
@@ -678,14 +658,23 @@ class MainActivity : AppCompatActivity() {
             • Focus Mode - Time-boxed app restrictions with timer<br/>
             • Launch Limits - Restrict daily app launch frequencies<br/>
             • Notifications &amp; Statistics - Activity reports &amp; productivity trends<br/><br/>
-            <b>Premium Security:</b><br/>
+            <b>Security &amp; PIN Lock:</b><br/>
             • Anti-Uninstall Protection - Device Admin protection<br/>
             • 4-Digit Security PIN &amp; App Lock - Master PIN lock for settings<br/>
             • Bypass PIN Lock - Require PIN to edit active blocks<br/><br/>
             <b>Privacy First:</b> 100% local processing, zero tracking<br/><br/>
             <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
-            <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
+            <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/><br/>
+            <b>Community:</b><br/>
+            • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
+            • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
+            <b>Support Development:</b><br/>
+            • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
+            • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
+            • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>
+            • <a href="${Constants.KOFI_URL}">Ko-fi</a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}">Buy Me a Coffee</a> • <a href="${Constants.PATREON_URL}">Patreon</a><br/><br/>
             Built under: <a href="${Constants.ALHAQ_STUDIO_URL}">Al-Haq Studio</a><br/>
+            Free Access Program: <a href="${Constants.ALHAQ_INITIATIVE_URL}">Al-Haq Initiative</a><br/>
             <b>100% Open Source • No Ads • No Tracking • Privacy First</b>
         """.trimIndent()
 
@@ -720,62 +709,23 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "No application found to open the link", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No browser found to open link", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun isFirstLaunchComplete(): Boolean {
-        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-        return sharedPreferences.getBoolean("isFirstLaunchComplete", false)
-    }
+    data class WarningData(
+        val message: String = "You can setup a custom message to appear here!",
+        val timeInterval: Int = 120000, // default cooldown period
+        val isDynamicIntervalSettingAllowed: Boolean = false,
+        val isProceedDisabled: Boolean = false,
+        val isWarningDialogHidden: Boolean = false, // perform back/home action directly without showing warning screen
+        val proceedDelayInSecs: Int = 15
+    )
 
-    private fun checkAppLock() {
-        val pinEnabled = savedPreferencesLoader.isPinSecurityEnabled()
-        val appLockEnabled = savedPreferencesLoader.isAppLockEnabled()
-        val pinCode = savedPreferencesLoader.getPinCode()
-
-        if (pinEnabled && appLockEnabled && pinCode.isNotEmpty() && !AmniShield.isAppUnlocked) {
-            showPinLockFullscreenDialog(pinCode)
-        }
-    }
-
-    private fun showPinLockFullscreenDialog(correctPinCode: String) {
-        val dialog = android.app.Dialog(this, android.R.style.Theme_Material_NoActionBar_Fullscreen)
-        
-        dialog.window?.let { window ->
-            window.decorView.setViewTreeLifecycleOwner(this)
-            window.decorView.setViewTreeViewModelStoreOwner(this)
-            window.decorView.setViewTreeSavedStateRegistryOwner(this)
-        }
-
-        val composeView = ComposeView(this).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                AmniShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this@MainActivity)) {
-                    PinPromptContent(
-                        correctPin = correctPinCode,
-                        title = "AmniShield Locked",
-                        subtitle = "Enter your 4-digit PIN to access the app",
-                        allowForgotPin = true,
-                        onDismiss = {
-                            dialog.dismiss()
-                            finish()
-                        },
-                        onPinSuccess = {
-                            AmniShield.isAppUnlocked = true
-                            dialog.dismiss()
-                        },
-                        onPinResetCompleted = {
-                            AmniShield.isAppUnlocked = true
-                            dialog.dismiss()
-                        }
-                    )
-                }
-            }
-        }
-        
-        dialog.setContentView(composeView)
-        dialog.setCancelable(false)
-        dialog.show()
+    companion object {
+        private val SUPPORT_CC_ADDRESSES = arrayOf(
+            "support@alhaq.uk",
+            "alhaq.dst@gmail.com"
+        )
     }
 }
