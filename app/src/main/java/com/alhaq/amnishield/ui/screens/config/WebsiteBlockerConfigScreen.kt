@@ -276,7 +276,7 @@ fun WebsiteBlockerConfigScreen(
                         )
                         val styleTitle = when (warningStyle) {
                             Constants.BLOCKER_WARNING_STYLE_DIALOG -> "Standard Warning Dialog"
-                            Constants.BLOCKER_WARNING_STYLE_SILENT -> "Instant Safe Return"
+                            Constants.BLOCKER_WARNING_STYLE_SILENT -> "Silent URL Clean & Intercept"
                             else -> "AmniSpace Mindful Focus Space"
                         }
                         Text(
@@ -361,14 +361,14 @@ fun WebsiteBlockerConfigScreen(
                 "Disrupts access with guided mindful breathing or transitions into the minimalist AmniSpace focus workspace."
             ),
             Triple(
+                Constants.BLOCKER_WARNING_STYLE_SILENT,
+                "Silent URL Clean & Intercept",
+                "Silently clears the restricted website URL from the browser address bar without interrupting your flow or leaving the app."
+            ),
+            Triple(
                 Constants.BLOCKER_WARNING_STYLE_DIALOG,
                 "Standard Warning Dialog",
                 "Displays the classic warning dialog with cooldown timer, customized message, and unlock button."
-            ),
-            Triple(
-                Constants.BLOCKER_WARNING_STYLE_SILENT,
-                "Instant Safe Return",
-                "Silently intercepts restricted websites by returning directly to the safe screen."
             )
         )
 

@@ -428,20 +428,39 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
             if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
                 try {
-                    if (websiteBlockerDetector.checkBlockedWebsites(rootNode, packageName)) {
-                        blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $packageName")
+                    val blockedSite = websiteBlockerDetector.findBlockedWebsite(rootNode, packageName)
+                    if (blockedSite != null) {
+                        blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $blockedSite")
                         val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
-                        if (webStyle == Constants.BLOCKER_WARNING_STYLE_AMNISPACE) {
-                            val intent = Intent(this, AmniSpaceActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain Detected")
-                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
-                                putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                        when (webStyle) {
+                            Constants.BLOCKER_WARNING_STYLE_SILENT -> {
+                                val cleared = websiteBlockerDetector.clearBlockedUrl(rootNode, packageName)
+                                if (!cleared) {
+                                    pressBack()
+                                }
                             }
-                            startActivity(intent)
-                        } else {
-                            pressHome()
+                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> {
+                                val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain: $blockedSite")
+                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                                }
+                                startActivity(intent)
+                            }
+                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> {
+                                val intent = Intent(this, WarningActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
+                                    putExtra("result_id", blockedSite)
+                                    putExtra("blocked_by_feature", "Website Blocker")
+                                }
+                                startActivity(intent)
+                            }
+                            else -> {
+                                pressHome()
+                            }
                         }
                         return
                     }

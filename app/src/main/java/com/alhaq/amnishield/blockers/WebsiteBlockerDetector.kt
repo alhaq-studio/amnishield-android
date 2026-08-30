@@ -9,6 +9,7 @@
  * Extracts active URLs from address bars across 15+ Android mobile browsers
  * (Chrome, Samsung Internet, Brave, Firefox, Edge, Opera, DuckDuckGo) and
  * verifies against custom blacklist and adult content category domains.
+ * Supports Silent Intercept Mode to clean up blocked URLs directly.
  * 
  * Execution Context:
  * Synchronous accessibility node evaluation within AmniShieldAccessibilityService.
@@ -20,6 +21,7 @@
  */
 package com.alhaq.amnishield.blockers
 
+import android.os.Bundle
 import android.view.accessibility.AccessibilityNodeInfo
 import com.alhaq.amnishield.utils.AccessibilityUtils
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
@@ -51,9 +53,14 @@ class WebsiteBlockerDetector(private val savedPreferencesLoader: SavedPreference
      * Note: Respects the Node Lifecycle Invariant - NEVER recycles [rootNode].
      */
     fun checkBlockedWebsites(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
-        val urlBarId = BROWSER_URL_BAR_IDS[packageName] ?: return false
-        val fullId = "$packageName:id/$urlBarId"
-        val urlNode = AccessibilityUtils.findElementById(rootNode, fullId) ?: return false
+        return findBlockedWebsite(rootNode, packageName) != null
+    }
+
+    /**
+     * Returns the matched blocked domain/keyword if present in the address bar.
+     */
+    fun findBlockedWebsite(rootNode: AccessibilityNodeInfo, packageName: String): String? {
+        val urlNode = getUrlBarNode(rootNode, packageName) ?: return null
         return try {
             val urlText = urlNode.text?.toString()?.lowercase(Locale.ROOT).orEmpty()
             if (urlText.isNotBlank()) {
@@ -61,10 +68,35 @@ class WebsiteBlockerDetector(private val savedPreferencesLoader: SavedPreference
                 for (site in manualWebsites) {
                     val siteLower = site.trim().lowercase(Locale.ROOT)
                     if (siteLower.isNotEmpty() && urlText.contains(siteLower)) {
-                        return true
+                        return site
                     }
                 }
             }
+            null
+        } finally {
+            try {
+                @Suppress("DEPRECATION")
+                urlNode.recycle()
+            } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Cleans up / clears the blocked domain from the address bar (Silent Intercept Mode).
+     */
+    fun clearBlockedUrl(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
+        val urlNode = getUrlBarNode(rootNode, packageName) ?: return false
+        return try {
+            urlNode.performAction(
+                AccessibilityNodeInfo.ACTION_SET_TEXT,
+                Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        ""
+                    )
+                }
+            )
+        } catch (_: Exception) {
             false
         } finally {
             try {
@@ -72,5 +104,22 @@ class WebsiteBlockerDetector(private val savedPreferencesLoader: SavedPreference
                 urlNode.recycle()
             } catch (_: Exception) {}
         }
+    }
+
+    private fun getUrlBarNode(rootNode: AccessibilityNodeInfo, packageName: String): AccessibilityNodeInfo? {
+        val urlBarId = BROWSER_URL_BAR_IDS[packageName]
+        if (urlBarId != null) {
+            val fullId = "$packageName:id/$urlBarId"
+            val node = AccessibilityUtils.findElementById(rootNode, fullId)
+            if (node != null) return node
+        }
+        // Fallback: Check active input focus if inside a known browser
+        if (BROWSER_URL_BAR_IDS.containsKey(packageName)) {
+            val focused = try { rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) } catch (_: Exception) { null }
+            if (focused != null && focused.isEditable) {
+                return focused
+            }
+        }
+        return null
     }
 }
