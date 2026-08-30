@@ -26,6 +26,7 @@ class Constants {
         const val AMNISPACE_EXTRA_MODE = "extra_amnispace_mode"
         const val AMNISPACE_EXTRA_TRIGGER_REASON = "extra_trigger_reason"
         const val AMNISPACE_EXTRA_TRIGGER_APP = "extra_trigger_app"
+        const val AMNISPACE_EXTRA_DURATION_SECONDS = "extra_duration_seconds"
         const val AMNISPACE_DEFAULT_BREATHING_SECS = 5
 
         const val AMNISHIELD_WEBSITE_URL = "https://amnishield.com/"

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import com.alhaq.amnishield.Constants
+import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -652,9 +653,48 @@ fun SettingsScreen(
                         WidgetPinRow(
                             icon = Icons.Outlined.SelfImprovement,
                             title = "Mindful Breathing Space Widget",
-                            description = "Take quick mindful breathing breaks to clear your mind and restore focus.",
+                            description = "Launches full-screen AmniSpace breathing directly from your home screen.",
                             onPin = { pinWidgetToHomeScreen(context, "com.alhaq.amnishield.ui.widgets.BreathingWidgetProvider") }
                         )
+
+                        // Widget Breathing Duration Selector
+                        val prefsLoader = remember { SavedPreferencesLoader(context) }
+                        var widgetDurationMins by remember { mutableIntStateOf(prefsLoader.getBreathingWidgetDurationMinutes()) }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp, bottom = 4.dp)
+                        ) {
+                            Text(
+                                text = "Widget Session Duration: ${widgetDurationMins} min",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(1, 2, 3, 5).forEach { mins ->
+                                    val isSelected = widgetDurationMins == mins
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            widgetDurationMins = mins
+                                            prefsLoader.setBreathingWidgetDurationMinutes(mins)
+                                        },
+                                        label = { Text("${mins}m", fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -1644,4 +1644,14 @@ class SavedPreferencesLoader(val context: Context) {
         context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
             .edit().putBoolean("is_usage_limit_friction_enabled", enabled).apply()
     }
+
+    fun getBreathingWidgetDurationMinutes(): Int {
+        return context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .getInt("widget_breathing_duration_minutes", 2)
+    }
+
+    fun setBreathingWidgetDurationMinutes(minutes: Int) {
+        context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .edit().putInt("widget_breathing_duration_minutes", minutes.coerceIn(1, 30)).apply()
+    }
 }

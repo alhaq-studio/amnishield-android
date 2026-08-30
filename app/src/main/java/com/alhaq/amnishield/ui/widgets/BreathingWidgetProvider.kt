@@ -8,8 +8,10 @@ import android.content.Intent
 import android.util.Log
 import android.widget.RemoteViews
 import com.alhaq.amnishield.BuildConfig
+import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.R
-import com.alhaq.amnishield.ui.activity.FragmentActivity
+import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
+import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class BreathingWidgetProvider : AppWidgetProvider() {
 
@@ -31,10 +33,13 @@ class BreathingWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_START_BREATHING) {
-            val openIntent = Intent(context, FragmentActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                putExtra("feature_type", "focus_mode")
-                putExtra("start_breathing", true)
+            val loader = SavedPreferencesLoader(context)
+            val durationMinutes = loader.getBreathingWidgetDurationMinutes()
+            val openIntent = Intent(context, AmniSpaceActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Mindful Breathing Space")
+                putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, durationMinutes * 60)
             }
             context.startActivity(openIntent)
         }
@@ -46,20 +51,25 @@ class BreathingWidgetProvider : AppWidgetProvider() {
         widgetId: Int
     ) {
         try {
+            val loader = SavedPreferencesLoader(context)
+            val durationMinutes = loader.getBreathingWidgetDurationMinutes()
+
             val views = RemoteViews(context.packageName, R.layout.widget_breathing).apply {
-                val openIntent = Intent(context, FragmentActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("feature_type", "focus_mode")
-                    putExtra("start_breathing", true)
+                val openIntent = Intent(context, AmniSpaceActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Mindful Breathing Space")
+                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, durationMinutes * 60)
                 }
                 val pendingOpen = PendingIntent.getActivity(
                     context,
-                    0,
+                    widgetId,
                     openIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
                 setOnClickPendingIntent(R.id.btn_start_breathing, pendingOpen)
+                setOnClickPendingIntent(R.id.widget_bg_breathing, pendingOpen)
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)

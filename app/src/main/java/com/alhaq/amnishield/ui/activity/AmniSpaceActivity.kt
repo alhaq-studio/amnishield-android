@@ -70,6 +70,7 @@ class AmniSpaceActivity : ComponentActivity() {
         val mode = intent.getIntExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_FOCUS_LAUNCHER)
         val triggerReason = intent.getStringExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON) ?: "Focus Session"
         val triggerApp = intent.getStringExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP) ?: ""
+        val customDurationSeconds = intent.getIntExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 0)
 
         setContent {
             AmniShieldTheme {
@@ -81,6 +82,7 @@ class AmniSpaceActivity : ComponentActivity() {
                         AmniSpaceBreathingScreen(
                             triggerReason = triggerReason,
                             triggerApp = triggerApp,
+                            customDurationSeconds = if (customDurationSeconds > 0) customDurationSeconds else null,
                             onClose = {
                                 navigateToAndroidHome()
                                 finish()
@@ -357,11 +359,14 @@ fun AmniSpaceLauncherScreen(
 fun AmniSpaceBreathingScreen(
     triggerReason: String,
     triggerApp: String,
+    customDurationSeconds: Int? = null,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
-    val durationSeconds = remember { loader.getAmniSpaceBreathingDurationSeconds() }
+    val durationSeconds = remember(customDurationSeconds) {
+        customDurationSeconds ?: loader.getAmniSpaceBreathingDurationSeconds()
+    }
 
     var isBreathingDone by remember { mutableStateOf(false) }
 
