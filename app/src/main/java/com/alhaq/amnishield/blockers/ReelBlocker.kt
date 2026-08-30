@@ -346,11 +346,13 @@ class ReelBlocker : BaseBlocker() {
      * - [ANDROID_HOME]      Fire GLOBAL_ACTION_HOME — exit to the Android launcher.
      * - [HOME_FEED_REDIRECT] Stay inside the app and navigate to the platform's home/news-feed tab.
      *                        Falls back to GLOBAL_ACTION_BACK when the home tab cannot be located.
+     * - [MINDFUL_PAUSE]     AmniSpace 5-second guided breathing pause & intentional reflection before exit.
      */
     enum class BlockResponseMode(val value: Int) {
         HARD_BLOCK(0),
         ANDROID_HOME(1),
-        HOME_FEED_REDIRECT(2);
+        HOME_FEED_REDIRECT(2),
+        MINDFUL_PAUSE(3);
 
         companion object {
             fun fromInt(value: Int): BlockResponseMode =

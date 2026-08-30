@@ -1588,4 +1588,60 @@ class SavedPreferencesLoader(val context: Context) {
         return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .getLong("last_policy_sync_timestamp", 0L)
     }
+
+    // ========================================================================
+    // AmniSpace (Mindful Focus Launcher Space) Preferences
+    // ========================================================================
+
+    fun isAmniSpaceFocusLauncherEnabled(): Boolean {
+        return context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .getBoolean("is_focus_launcher_enabled", false)
+    }
+
+    fun setAmniSpaceFocusLauncherEnabled(enabled: Boolean) {
+        context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("is_focus_launcher_enabled", enabled).apply()
+    }
+
+    fun getAmniSpaceEssentialApps(): Set<String> {
+        val prefs = context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+        val defaultApps = setOf(
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.android.dialer",
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.android.mms",
+            "com.google.android.calculator",
+            "com.sec.android.app.popupcalculator",
+            "com.google.android.deskclock",
+            "com.sec.android.app.clockpackage"
+        )
+        return prefs.getStringSet("essential_apps", defaultApps) ?: defaultApps
+    }
+
+    fun setAmniSpaceEssentialApps(apps: Set<String>) {
+        context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .edit().putStringSet("essential_apps", apps).apply()
+    }
+
+    fun getAmniSpaceBreathingDurationSeconds(): Int {
+        return context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .getInt("breathing_duration_seconds", 5)
+    }
+
+    fun setAmniSpaceBreathingDurationSeconds(seconds: Int) {
+        context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .edit().putInt("breathing_duration_seconds", seconds.coerceIn(3, 30)).apply()
+    }
+
+    fun isAmniSpaceUsageLimitFrictionEnabled(): Boolean {
+        return context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .getBoolean("is_usage_limit_friction_enabled", true)
+    }
+
+    fun setAmniSpaceUsageLimitFrictionEnabled(enabled: Boolean) {
+        context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("is_usage_limit_friction_enabled", enabled).apply()
+    }
 }

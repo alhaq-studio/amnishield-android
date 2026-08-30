@@ -45,6 +45,15 @@ class ReelActionHandler(
                 onPressHome()
                 return
             }
+            ReelBlocker.BlockResponseMode.MINDFUL_PAUSE -> {
+                val amnispaceIntent = Intent(context, com.alhaq.amnishield.ui.activity.AmniSpaceActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Reels Interception")
+                }
+                context.startActivity(amnispaceIntent)
+                return
+            }
             ReelBlocker.BlockResponseMode.HARD_BLOCK -> {
                 onPressBack()
             }

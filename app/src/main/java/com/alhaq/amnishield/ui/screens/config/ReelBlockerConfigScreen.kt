@@ -311,6 +311,23 @@ fun ReelBlockerConfigScreen(
                             broadcastReelsRefresh(context)
                         }
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                    )
+
+                    ResponseModeOptionRow(
+                        title = "AmniSpace Mindful Breathing Pause",
+                        description = "Shows a 5s guided breathing circle & reflection prompt before exit",
+                        icon = Icons.Outlined.SelfImprovement,
+                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.MINDFUL_PAUSE,
+                        onClick = {
+                            blockResponseMode = ReelBlocker.BlockResponseMode.MINDFUL_PAUSE
+                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.MINDFUL_PAUSE)
+                            broadcastReelsRefresh(context)
+                        }
+                    )
                 }
             }
 

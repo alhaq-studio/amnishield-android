@@ -56,6 +56,7 @@ fun UsageTrackerConfigScreen(
 
     var isAppUsageTrackingEnabled by remember { mutableStateOf(loader.isAppUsageTrackingEnabled()) }
     var isWebsiteUsageTrackingEnabled by remember { mutableStateOf(loader.isWebsiteUsageTrackingEnabled()) }
+    var isAmniSpaceFrictionEnabled by remember { mutableStateOf(loader.isAmniSpaceUsageLimitFrictionEnabled()) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -634,7 +635,47 @@ fun UsageTrackerConfigScreen(
             }
 
             // =========================================================================
-            // 4. TRACKER DISPLAY & BEHAVIORAL TWEAKS
+            // 4. AMNISPACE MINDFUL LIMITS FRICTION
+            // =========================================================================
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "AmniSpace Daily Limit Friction",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isAmniSpaceFrictionEnabled) "Presents 3 mindful breaths & screen time reflection when quota is reached" else "Immediate hard lockout upon reaching limit",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isAmniSpaceFrictionEnabled,
+                            onCheckedChange = { checked ->
+                                isAmniSpaceFrictionEnabled = checked
+                                loader.setAmniSpaceUsageLimitFrictionEnabled(checked)
+                            }
+                        )
+                    }
+                }
+            }
+
+            // =========================================================================
+            // 5. TRACKER DISPLAY & BEHAVIORAL TWEAKS
             // =========================================================================
             Card(
                 shape = RoundedCornerShape(16.dp),

@@ -74,6 +74,8 @@ fun FocusModeConfigScreen(
 
     var strictnessMode by remember { mutableStateOf(loader.getFocusModeStrictness()) }
     var allowEarlyStop by remember { mutableStateOf(loader.isFocusModeEarlyStopAllowed()) }
+    var isAmniSpaceEnabled by remember { mutableStateOf(loader.isAmniSpaceFocusLauncherEnabled()) }
+    var amnispaceAppsCount by remember { mutableStateOf(loader.getAmniSpaceEssentialApps().size) }
 
     val initialPresets = remember { loader.getQuickFocusDurationPresets() }
     var preset1 by remember { mutableIntStateOf(initialPresets.first) }
@@ -373,7 +375,83 @@ fun FocusModeConfigScreen(
                 }
             }
 
-            // 5. Quick-Focus Presets
+            // 5. AmniSpace (Mindful Focus Launcher Space)
+            ConfigSectionCard(
+                title = "AMNISPACE (MINDFUL FOCUS LAUNCHER)",
+                icon = Icons.Outlined.SelfImprovement
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Enable AmniSpace Workspace",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isAmniSpaceEnabled) "Replaces active screen with an ultra-minimal focus workspace" else "Disabled — standard app blocker overlay active",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = isAmniSpaceEnabled,
+                        onCheckedChange = { checked ->
+                            isAmniSpaceEnabled = checked
+                            loader.setAmniSpaceFocusLauncherEnabled(checked)
+                        }
+                    )
+                }
+
+                if (isAmniSpaceEnabled) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "AmniSpace Allowed Apps",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "$amnispaceAppsCount essential tools accessible during focus",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Button(
+                            onClick = onSelectAlwaysWhitelistedClick,
+                            modifier = Modifier.bounceClick(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Apps,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Manage", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+
+            // 6. Quick-Focus Presets
             ConfigSectionCard(
                 title = "QUICK-FOCUS DURATION PRESETS",
                 icon = Icons.Outlined.Timer

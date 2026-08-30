@@ -20,6 +20,14 @@ class Constants {
         const val FOCUS_MODE_BLOCK_ALL_EX_SELECTED = 1
         const val FOCUS_MODE_BLOCK_SELECTED = 2
 
+        // AmniSpace (Mindful Focus Launcher Space) modes & extras
+        const val AMNISPACE_MODE_FOCUS_LAUNCHER = 1
+        const val AMNISPACE_MODE_MINDFUL_BREATHING = 2
+        const val AMNISPACE_EXTRA_MODE = "extra_amnispace_mode"
+        const val AMNISPACE_EXTRA_TRIGGER_REASON = "extra_trigger_reason"
+        const val AMNISPACE_EXTRA_TRIGGER_APP = "extra_trigger_app"
+        const val AMNISPACE_DEFAULT_BREATHING_SECS = 5
+
         const val AMNISHIELD_WEBSITE_URL = "https://amnishield.com/"
         const val AMNISHIELD_DOCS_URL = "https://amnishield.com/docs/"
         const val AMNISHIELD_SUPPORT_URL = "https://alhaq.uk/support.html"
