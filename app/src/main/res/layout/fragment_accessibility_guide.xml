@@ -197,8 +197,7 @@
                         android:layout_height="50dp"
                         android:layout_marginTop="20dp"
                         android:text="Open Accessibility Settings"
-                        app:cornerRadius="14dp"
-                        app:icon="@drawable/ic_logo_mini" />
+                        app:cornerRadius="14dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

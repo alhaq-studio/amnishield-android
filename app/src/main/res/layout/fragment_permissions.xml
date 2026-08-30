@@ -23,21 +23,21 @@
         <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/onboardingProgress"
             android:layout_width="0dp"
-            android:layout_height="6dp"
+            android:layout_height="4dp"
             android:layout_weight="1"
             android:progress="75"
             app:indicatorColor="?attr/colorPrimary"
-            app:trackColor="?attr/colorSurfaceVariant"
-            app:trackCornerRadius="3dp" />
+            app:trackColor="?attr/colorSurfaceContainerHighest"
+            app:trackCornerRadius="2dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="Step 3 of 4"
-            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-            android:textColor="?attr/colorPrimary" />
+            android:text="3 of 4"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorPrimary"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <ScrollView
@@ -47,8 +47,8 @@
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:paddingHorizontal="20dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="24dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp"
         app:layout_constraintBottom_toTopOf="@+id/bottomContainer"
         app:layout_constraintTop_toBottomOf="@+id/stepHeader">
 
@@ -72,10 +72,10 @@
                 style="@style/TextAppearance.Material3.BodyMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:gravity="center"
-                android:lineSpacingExtra="3dp"
-                android:text="AmniShield needs these permissions to enforce your blocking rules and run reliably on-device."
+                android:lineSpacingExtra="2dp"
+                android:text="AmniShield operates entirely on-device. These permissions allow real-time blocking and focus enforcement."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- 1. Accessibility Service Card -->
@@ -83,7 +83,7 @@
                 android:id="@+id/card_accessibility"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="16dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
@@ -101,18 +101,11 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/badge_bg">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_gravity="center"
-                            app:srcCompat="@drawable/ic_logo_mini"
-                            app:tint="?attr/colorPrimary" />
-                    </FrameLayout>
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        app:srcCompat="@drawable/ic_shield"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -122,43 +115,49 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/access_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Accessibility Service"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/access_perm_title"
+                                style="@style/TextAppearance.Material3.TitleMedium"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Accessibility Service"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/access_perm_badge"
+                                style="@style/TextAppearance.Material3.LabelSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/badge_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="Required"
+                                android:textColor="?attr/colorError"
+                                android:textStyle="bold" />
+                        </LinearLayout>
 
                         <TextView
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:lineSpacingExtra="2dp"
-                            android:text="Detects active app packages, adult URLs, and keyword rules"
+                            android:text="Inspects active app packages, URLs, and keywords"
                             android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        <TextView
-                            android:id="@+id/access_perm_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/badge_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:text="Required"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                            android:textColor="?attr/colorError"
-                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <ImageView
                         android:id="@+id/access_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_chevron_right_24"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        app:srcCompat="@drawable/baseline_chevron_right_24"
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -168,7 +167,7 @@
                 android:id="@+id/card_overlay"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
@@ -186,18 +185,11 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/badge_bg">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            app:srcCompat="@drawable/baseline_lock_24"
-                            app:tint="?attr/colorPrimary" />
-                    </FrameLayout>
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        app:srcCompat="@drawable/ic_focus_mode"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -207,53 +199,58 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/overlay_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Display Over Other Apps"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                style="@style/TextAppearance.Material3.TitleMedium"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Display Over Other Apps"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/overlay_perm_badge"
+                                style="@style/TextAppearance.Material3.LabelSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/badge_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="Required"
+                                android:textColor="?attr/colorError"
+                                android:textStyle="bold" />
+                        </LinearLayout>
 
                         <TextView
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:lineSpacingExtra="2dp"
-                            android:text="Displays custom blocking splash screens and PIN locks over restricted apps"
+                            android:text="Displays warning screens and AmniSpace mindful overlays"
                             android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        <TextView
-                            android:id="@+id/overlay_perm_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/badge_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:text="Required"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                            android:textColor="?attr/colorError"
-                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <ImageView
                         android:id="@+id/overlay_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_chevron_right_24"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        app:srcCompat="@drawable/baseline_chevron_right_24"
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 3. Usage Access (Stats) Card -->
+            <!-- 3. App Usage Access Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_usage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
@@ -271,18 +268,11 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/badge_bg">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            app:srcCompat="@drawable/ic_app_protection"
-                            app:tint="?attr/colorPrimary" />
-                    </FrameLayout>
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        app:srcCompat="@drawable/baseline_timer_24"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -292,53 +282,58 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/usage_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="App Usage Access"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                style="@style/TextAppearance.Material3.TitleMedium"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="App Usage Access"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/usage_perm_badge"
+                                style="@style/TextAppearance.Material3.LabelSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/badge_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="Recommended"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textStyle="bold" />
+                        </LinearLayout>
 
                         <TextView
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:lineSpacingExtra="2dp"
-                            android:text="Accurate screen time tracking, launch count limits and stats"
+                            android:text="Enforces daily launch limits and screen time metrics"
                             android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        <TextView
-                            android:id="@+id/usage_perm_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/badge_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:text="Recommended"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                            android:textColor="?attr/colorPrimary"
-                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <ImageView
                         android:id="@+id/usage_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_chevron_right_24"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        app:srcCompat="@drawable/baseline_chevron_right_24"
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 4. Run in Background Card -->
+            <!-- 4. Background Battery Optimization Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_bg"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
@@ -356,18 +351,11 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/badge_bg">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            app:srcCompat="@drawable/ic_focus_mode"
-                            app:tint="?attr/colorPrimary" />
-                    </FrameLayout>
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        app:srcCompat="@drawable/baseline_auto_fix_high_24"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -377,53 +365,58 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/bg_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Unrestricted Background"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                style="@style/TextAppearance.Material3.TitleMedium"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Unrestricted Background"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/bg_perm_badge"
+                                style="@style/TextAppearance.Material3.LabelSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/badge_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="Recommended"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textStyle="bold" />
+                        </LinearLayout>
 
                         <TextView
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:lineSpacingExtra="2dp"
-                            android:text="Prevents Android battery saver from killing protection services"
+                            android:text="Keeps scheduled blocks and focus timers alive reliably"
                             android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        <TextView
-                            android:id="@+id/bg_perm_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/badge_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:text="Recommended"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                            android:textColor="?attr/colorPrimary"
-                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <ImageView
                         android:id="@+id/bg_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_chevron_right_24"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        app:srcCompat="@drawable/baseline_chevron_right_24"
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 5. Notifications Permission Card -->
+            <!-- 5. Notifications Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_notif"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
@@ -441,18 +434,11 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <FrameLayout
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/badge_bg">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            app:srcCompat="@drawable/ic_amnishield_notification"
-                            app:tint="?attr/colorPrimary" />
-                    </FrameLayout>
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        app:srcCompat="@drawable/ic_amnishield_notification"
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -462,98 +448,74 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/notif_perm_title"
-                            style="@style/TextAppearance.Material3.TitleMedium"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Send Notifications"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                style="@style/TextAppearance.Material3.TitleMedium"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Notifications"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/notif_perm_badge"
+                                style="@style/TextAppearance.Material3.LabelSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/badge_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="2dp"
+                                android:text="Optional"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textStyle="bold" />
+                        </LinearLayout>
 
                         <TextView
                             style="@style/TextAppearance.Material3.BodySmall"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:lineSpacingExtra="2dp"
-                            android:text="Posts blocking alerts, focus timers and daily summary updates"
+                            android:text="Sends daily focus summaries and active session alerts"
                             android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        <TextView
-                            android:id="@+id/notif_perm_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/badge_bg"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:text="Optional"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <ImageView
                         android:id="@+id/notif_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_chevron_right_24"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        app:srcCompat="@drawable/baseline_chevron_right_24"
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Restore Backup Card -->
-            <TextView
-                android:id="@+id/textView29"
-                style="@style/TextAppearance.Material3.BodyMedium"
-                android:layout_width="match_parent"
+            <!-- Restore Backup Option -->
+            <LinearLayout
+                android:id="@+id/restoreRoot"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center"
-                android:text="Have a previously saved AmniShield backup?"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_restore"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutlineVariant"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:id="@+id/restore_root"
-                    android:layout_width="match_parent"
+                <TextView
+                    style="@style/TextAppearance.Material3.LabelLarge"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:id="@+id/restore_title"
-                        style="@style/TextAppearance.Material3.TitleSmall"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Restore Backup Settings (.json)"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <ImageView
-                        android:id="@+id/restore_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="12dp"
-                        android:src="@drawable/baseline_refresh_24"
-                        app:tint="?attr/colorPrimary" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                    android:text="Restore from Backup"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
@@ -563,19 +525,19 @@
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
+            android:layout_height="52dp"
             android:enabled="false"
             android:text="Continue"
-            app:cornerRadius="16dp" />
+            app:cornerRadius="14dp" />
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

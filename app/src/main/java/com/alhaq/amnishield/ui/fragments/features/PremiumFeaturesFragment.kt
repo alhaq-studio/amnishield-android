@@ -110,6 +110,9 @@ open class PremiumFeaturesFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
+        binding.btnContinueToApp.setOnClickListener {
+            finishOnboarding()
+        }
         binding.btnBuyMonthly.setOnClickListener {
             handlePlanSelection("monthly", PremiumProducts.PRODUCT_MONTHLY)
         }
@@ -133,15 +136,24 @@ open class PremiumFeaturesFragment : Fragment() {
             val ctx = context ?: return@setOnClickListener
             if (key.isNotEmpty()) {
                 if (premiumManager.redeemLicenseKey(key)) {
-                    Toast.makeText(ctx, "Pro License Activated Successfully!", Toast.LENGTH_LONG).show()
                     binding.etKey.text?.clear()
-                    updatePremiumState()
+                    handleActivationSuccess("Pro License Activated Successfully!")
                 } else {
                     Toast.makeText(ctx, "Invalid or Expired License Key", Toast.LENGTH_LONG).show()
                 }
             } else {
                 showLicenseRedemptionDialog()
             }
+        }
+    }
+
+    private fun handleActivationSuccess(successMessage: String) {
+        val ctx = context ?: return
+        Toast.makeText(ctx, successMessage, Toast.LENGTH_LONG).show()
+        updatePremiumState()
+        val isOnboarding = arguments?.getBoolean(ARG_IS_ONBOARDING, false) ?: false
+        if (isOnboarding) {
+            finishOnboarding()
         }
     }
 
@@ -170,8 +182,7 @@ open class PremiumFeaturesFragment : Fragment() {
                 if (!isAdded || _binding == null) return@launchPurchaseFlow
                 if (isSuccess) {
                     premiumManager.updatePremiumStatus(true)
-                    updatePremiumState()
-                    Toast.makeText(activeCtx, R.string.premium_purchase_success, Toast.LENGTH_LONG).show()
+                    handleActivationSuccess(getString(R.string.premium_purchase_success))
                 } else {
                     Toast.makeText(activeCtx, "Purchase failed: $debugMessage", Toast.LENGTH_LONG).show()
                 }
@@ -188,8 +199,7 @@ open class PremiumFeaturesFragment : Fragment() {
             if (!isAdded || _binding == null) return@queryPurchases
             if (purchases.isNotEmpty()) {
                 premiumManager.updatePremiumStatus(true)
-                updatePremiumState()
-                Toast.makeText(activeCtx, R.string.premium_purchase_success, Toast.LENGTH_LONG).show()
+                handleActivationSuccess(getString(R.string.premium_purchase_success))
             } else {
                 Toast.makeText(activeCtx, R.string.premium_no_previous_purchases, Toast.LENGTH_LONG).show()
             }
@@ -208,6 +218,9 @@ open class PremiumFeaturesFragment : Fragment() {
         binding.btnBuyYearly.isEnabled = !isPremium
         binding.btnBuyLifetime.isEnabled = !isPremium
         binding.btnRestore.visibility = if (isPremium || !BuildConfig.IS_PLAYSTORE) View.GONE else View.VISIBLE
+
+        val isOnboarding = arguments?.getBoolean(ARG_IS_ONBOARDING, false) ?: false
+        binding.btnFinishOnboarding.visibility = if (isOnboarding && !isPremium) View.VISIBLE else View.GONE
 
         val activeMessage = when (userType) {
             PremiumManager.UserType.PREMIUM -> getString(R.string.premium_active_message)
@@ -322,6 +335,7 @@ open class PremiumFeaturesFragment : Fragment() {
             premiumManager.resetReminderWindow()
             updatePremiumState()
 
+            val isOnboarding = arguments?.getBoolean(ARG_IS_ONBOARDING, false) ?: false
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.compassionate_access_success_title)
                 .setMessage(
@@ -331,7 +345,12 @@ open class PremiumFeaturesFragment : Fragment() {
                         email ?: getString(R.string.compassionate_access_no_email_value)
                     )
                 )
-                .setPositiveButton(android.R.string.ok, null)
+                .setPositiveButton(if (isOnboarding) "Continue to AmniShield" else "OK") { _, _ ->
+                    if (isOnboarding) {
+                        finishOnboarding()
+                    }
+                }
+                .setCancelable(!isOnboarding)
                 .show()
         } catch (_: Exception) {
             Toast.makeText(
@@ -356,12 +375,7 @@ open class PremiumFeaturesFragment : Fragment() {
             .setPositiveButton("Activate") { _, _ ->
                 val licenseKey = input.text.toString().trim()
                 if (premiumManager.redeemLicenseKey(licenseKey)) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Pro License Activated Successfully!",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    updatePremiumState()
+                    handleActivationSuccess("Pro License Activated Successfully!")
                 } else {
                     Toast.makeText(
                         requireContext(),
@@ -455,15 +469,13 @@ open class PremiumFeaturesFragment : Fragment() {
                     val activeCtx = context ?: return@withContext
                     if (profile != null && !profile.licenseKey.isNullOrBlank()) {
                         if (premiumManager.redeemLicenseKey(profile.licenseKey)) {
-                            Toast.makeText(activeCtx, "AmniShield Pro Activated for $email!", Toast.LENGTH_LONG).show()
-                            updatePremiumState()
+                            handleActivationSuccess("AmniShield Pro Activated for $email!")
                         } else {
                             Toast.makeText(activeCtx, "License key found in profile was invalid or expired.", Toast.LENGTH_LONG).show()
                         }
                     } else if (profile?.isPremium == true) {
                         premiumManager.updatePremiumStatus(true)
-                        updatePremiumState()
-                        Toast.makeText(activeCtx, "AmniShield Pro Status Restored!", Toast.LENGTH_LONG).show()
+                        handleActivationSuccess("AmniShield Pro Status Restored!")
                     } else {
                         Toast.makeText(activeCtx, "No active Pro license found for $email. Please check your purchase email.", Toast.LENGTH_LONG).show()
                     }

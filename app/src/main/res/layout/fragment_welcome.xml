@@ -23,21 +23,21 @@
         <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/onboardingProgress"
             android:layout_width="0dp"
-            android:layout_height="6dp"
+            android:layout_height="4dp"
             android:layout_weight="1"
             android:progress="25"
             app:indicatorColor="?attr/colorPrimary"
-            app:trackColor="?attr/colorSurfaceVariant"
-            app:trackCornerRadius="3dp" />
+            app:trackColor="?attr/colorSurfaceContainerHighest"
+            app:trackCornerRadius="2dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="Step 1 of 4"
-            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-            android:textColor="?attr/colorPrimary" />
+            android:text="1 of 4"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorPrimary"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <ScrollView
@@ -47,8 +47,8 @@
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:paddingHorizontal="24dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="24dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp"
         app:layout_constraintBottom_toTopOf="@+id/bottomContainer"
         app:layout_constraintTop_toBottomOf="@+id/stepHeader">
 
@@ -58,23 +58,23 @@
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
-            <!-- App Logo with Halo -->
+            <!-- App Brand Header -->
             <com.google.android.material.card.MaterialCardView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
                 android:layout_marginTop="8dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="32dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
 
                 <ImageView
                     android:id="@+id/imageView2"
-                    android:layout_width="96dp"
-                    android:layout_height="96dp"
-                    android:padding="8dp"
-                    android:scaleType="centerCrop"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="12dp"
+                    android:scaleType="centerInside"
                     android:src="@mipmap/ic_launcher_round" />
 
             </com.google.android.material.card.MaterialCardView>
@@ -84,8 +84,8 @@
                 style="@style/TextAppearance.Material3.HeadlineMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="@string/welcome_to_amnishield"
+                android:layout_marginTop="16dp"
+                android:text="AmniShield"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -94,19 +94,19 @@
                 style="@style/TextAppearance.Material3.BodyMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:gravity="center"
-                android:lineSpacingExtra="3dp"
-                android:text="Your offline, zero-knowledge companion for digital wellbeing, distraction control, and online focus."
+                android:lineSpacingExtra="2dp"
+                android:text="Your on-device companion for focus, digital wellness, and distraction control."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- Core Value Feature Cards -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                app:cardCornerRadius="20dp"
+                app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -117,7 +117,7 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Feature 1 -->
+                    <!-- Feature 1: Content & Domain Blocking -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -125,8 +125,8 @@
                         android:orientation="horizontal">
 
                         <ImageView
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:src="@drawable/ic_shield"
                             app:tint="?attr/colorPrimary" />
 
@@ -150,7 +150,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Block distracting apps, adult websites, and custom keywords"
+                                android:text="Block distracting apps, restricted websites, and custom keywords"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
                     </LinearLayout>
@@ -161,7 +161,7 @@
                         android:layout_marginVertical="12dp"
                         app:dividerColor="?attr/colorOutlineVariant" />
 
-                    <!-- Feature 2 -->
+                    <!-- Feature 2: Shorts & Reels Blocker -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -169,8 +169,8 @@
                         android:orientation="horizontal">
 
                         <ImageView
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:src="@drawable/ic_reels_blocker"
                             app:tint="?attr/colorPrimary" />
 
@@ -194,7 +194,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Block short feeds (IG Reels, YouTube Shorts, TikTok) to prevent doomscrolling"
+                                android:text="Intercept short-form feeds across Instagram, YouTube, and TikTok"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
                     </LinearLayout>
@@ -205,7 +205,7 @@
                         android:layout_marginVertical="12dp"
                         app:dividerColor="?attr/colorOutlineVariant" />
 
-                    <!-- Feature 3 -->
+                    <!-- Feature 3: Zero Knowledge Privacy -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -213,8 +213,8 @@
                         android:orientation="horizontal">
 
                         <ImageView
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:src="@drawable/baseline_lock_24"
                             app:tint="?attr/colorPrimary" />
 
@@ -238,7 +238,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="100% on-device processing. No data collection, telemetry, or accounts required"
+                                android:text="100% on-device processing. No data collection or remote tracking"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
                     </LinearLayout>
@@ -251,8 +251,8 @@
                 android:id="@+id/cardTermsAgreement"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
@@ -274,7 +274,7 @@
                         android:focusable="true"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="6dp">
+                        android:padding="4dp">
 
                         <com.google.android.material.checkbox.MaterialCheckBox
                             android:id="@+id/cb_tos"
@@ -297,8 +297,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="38dp"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginStart="36dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
@@ -310,10 +309,9 @@
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:clickable="true"
                             android:focusable="true"
-                            android:minHeight="40dp"
+                            android:minHeight="36dp"
                             android:gravity="center_vertical"
-                            android:paddingHorizontal="6dp"
-                            android:paddingVertical="4dp"
+                            android:paddingHorizontal="4dp"
                             android:text="Terms of Service"
                             android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
@@ -334,10 +332,9 @@
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:clickable="true"
                             android:focusable="true"
-                            android:minHeight="40dp"
+                            android:minHeight="36dp"
                             android:gravity="center_vertical"
-                            android:paddingHorizontal="6dp"
-                            android:paddingVertical="4dp"
+                            android:paddingHorizontal="4dp"
                             android:text="Privacy Policy"
                             android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
@@ -353,20 +350,19 @@
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
+            android:layout_height="52dp"
             android:enabled="false"
             android:text="Get Started"
-            app:cornerRadius="16dp" />
+            app:cornerRadius="14dp" />
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
-

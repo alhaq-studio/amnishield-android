@@ -58,26 +58,41 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/premium_active_background"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp"
+                android:orientation="vertical"
+                android:padding="20dp"
                 android:visibility="gone">
 
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/baseline_done_24"
-                    app:tint="?attr/colorPrimary" />
-
-                <TextView
-                    android:id="@+id/txtPremiumActiveMessage"
-                    style="@style/TextAppearance.Material3.BodyLarge"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:text="@string/premium_active_message"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/baseline_done_24"
+                        app:tint="?attr/colorPrimary" />
+
+                    <TextView
+                        android:id="@+id/txtPremiumActiveMessage"
+                        style="@style/TextAppearance.Material3.BodyLarge"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/premium_active_message"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnContinueToApp"
+                    style="@style/Widget.Material3.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="16dp"
+                    android:text="Continue to AmniShield"
+                    app:cornerRadius="14dp" />
             </LinearLayout>
 
             <!-- Upsell Section (Shown when user is NOT Premium) -->
@@ -403,17 +418,18 @@
                     android:text="@string/premium_disclaimer"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
-                <!-- Finish Onboarding Action Button (Visible during onboarding) -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFinishOnboarding"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Continue to AmniShield"
-                    android:visibility="gone" />
-
             </LinearLayout>
+
+            <!-- Finish Onboarding Action Button (Visible during onboarding) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFinishOnboarding"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="20dp"
+                android:text="Continue with Free Version"
+                app:cornerRadius="14dp"
+                android:visibility="gone" />
 
         </LinearLayout>
     </ScrollView>
