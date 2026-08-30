@@ -74,7 +74,7 @@ class AccessibilityGuide : Fragment() {
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(
                     com.alhaq.amnishield.R.id.fragment_holder,
-                    SupportAlHaqFragment()
+                    PermissionsFragment()
                 )
                 .addToBackStack(null)
                 .commit()

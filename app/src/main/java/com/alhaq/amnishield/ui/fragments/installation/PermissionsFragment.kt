@@ -118,14 +118,10 @@ class PermissionsFragment : Fragment() {
         permissionsManager = PermissionsManager(requireContext())
 
         binding.btnNext.setOnClickListener {
-            val sharedPreferences =
-                requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-            sharedPreferences.edit().putBoolean("isFirstLaunchComplete", true).apply()
-
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(
                     R.id.fragment_holder,
-                    AccessibilityGuide()
+                    SupportAlHaqFragment()
                 )
                 .addToBackStack(null)
                 .commit()
@@ -364,7 +360,7 @@ class PermissionsFragment : Fragment() {
         if (isBgOk) grantedCount++
 
         binding.btnNext.text = if (grantedCount >= 3) {
-            "Continue to Quick Guide"
+            "Continue"
         } else {
             "Continue ($grantedCount/4 Ready)"
         }

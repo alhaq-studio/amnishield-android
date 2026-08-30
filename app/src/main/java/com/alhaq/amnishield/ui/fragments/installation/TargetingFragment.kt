@@ -132,7 +132,7 @@ class TargetingFragment : Fragment() {
 
     private fun saveTargetingAndProceed() {
         persistCurrentState()
-        proceedToPermissions()
+        proceedToAccessibilityGuide()
     }
 
     private fun skipTargetingAndProceed() {
@@ -156,12 +156,12 @@ class TargetingFragment : Fragment() {
         loader.setKeywordBlockerFeatureEnabled(false)
         loader.setAppBlockerFeatureEnabled(false)
 
-        proceedToPermissions()
+        proceedToAccessibilityGuide()
     }
 
-    private fun proceedToPermissions() {
+    private fun proceedToAccessibilityGuide() {
         requireActivity().supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_holder, PermissionsFragment())
+            .replace(R.id.fragment_holder, AccessibilityGuide())
             .addToBackStack(null)
             .commit()
     }

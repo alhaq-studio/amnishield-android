@@ -23,21 +23,21 @@
         <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/onboardingProgress"
             android:layout_width="0dp"
-            android:layout_height="6dp"
+            android:layout_height="4dp"
             android:layout_weight="1"
-            android:progress="100"
+            android:progress="75"
             app:indicatorColor="?attr/colorPrimary"
-            app:trackColor="?attr/colorSurfaceVariant"
-            app:trackCornerRadius="3dp" />
+            app:trackColor="?attr/colorSurfaceContainerHighest"
+            app:trackCornerRadius="2dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="Step 4 of 4"
-            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-            android:textColor="?attr/colorPrimary" />
+            android:text="3 of 4"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorPrimary"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <ScrollView
@@ -256,23 +256,22 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Fixed Bottom Action Container -->
     <LinearLayout
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
             style="@style/Widget.Material3.Button"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:text="Complete Setup"
-            app:cornerRadius="16dp" />
+            android:layout_height="52dp"
+            android:text="Continue"
+            app:cornerRadius="14dp" />
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
