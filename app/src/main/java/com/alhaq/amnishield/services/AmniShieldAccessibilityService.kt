@@ -45,6 +45,7 @@ import com.alhaq.amnishield.blockers.ReelBlocker
 import com.alhaq.amnishield.blockers.ViewBlocker
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.trackers.ReelDetectionEngine
+import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
 import com.alhaq.amnishield.ui.activity.MainActivity
 import com.alhaq.amnishield.ui.activity.WarningActivity
 import com.alhaq.amnishield.utils.BlockingStatsManager
@@ -84,7 +85,6 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
     private lateinit var blockingStatsManager: BlockingStatsManager
     private lateinit var premiumManager: PremiumManager
     private lateinit var crashLogger: CrashLogger
-    private lateinit var handGestureOverlayManager: com.alhaq.amnishield.ui.overlay.HandGestureOverlayManager
     private val homeFeedNavigator = HomeFeedNavigator()
 
     private var appBlockerWarningConfig = MainActivity.WarningData()
@@ -115,14 +115,12 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             blockingStatsManager = BlockingStatsManager.getInstance(this)
             premiumManager = PremiumManager.getInstance(this)
             crashLogger = CrashLogger(this)
-            handGestureOverlayManager = com.alhaq.amnishield.ui.overlay.HandGestureOverlayManager(this)
 
             antiUninstallDetector = com.alhaq.amnishield.security.AntiUninstallDetector(this)
             keywordActionHandler = com.alhaq.amnishield.blockers.KeywordActionHandler(
                 context = this,
                 savedPreferencesLoader = savedPreferencesLoader,
-                keywordBlocker = keywordBlocker,
-                handGestureOverlayManager = handGestureOverlayManager
+                keywordBlocker = keywordBlocker
             )
             reelActionHandler = com.alhaq.amnishield.blockers.ReelActionHandler(
                 context = this,
@@ -290,14 +288,30 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 val blockedSocialApps = savedPreferencesLoader.loadBlockedWebsitesApps()
                 if (blockedSocialApps.contains(packageName)) {
                     blockingStatsManager.recordAppBlock(packageName, "Blocked by Website Blocker")
-                    val intent = Intent(this, WarningActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
-                        putExtra("result_id", packageName)
-                        putExtra("blocked_by_feature", "Website Blocker")
+                    val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
+                    if (webStyle == Constants.BLOCKER_WARNING_STYLE_AMNISPACE) {
+                        val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Blocked Social App: $packageName")
+                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                            putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                        }
+                        startActivity(intent)
+                        return
+                    } else if (webStyle == Constants.BLOCKER_WARNING_STYLE_SILENT) {
+                        pressHome()
+                        return
+                    } else {
+                        val intent = Intent(this, WarningActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
+                            putExtra("result_id", packageName)
+                            putExtra("blocked_by_feature", "Website Blocker")
+                        }
+                        startActivity(intent)
+                        return
                     }
-                    startActivity(intent)
-                    return
                 }
             }
 
@@ -306,14 +320,30 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     val appBlockerResult = appBlocker.doesAppNeedToBeBlocked(packageName, savedPreferencesLoader)
                     if (appBlockerResult.isBlocked) {
                         blockingStatsManager.recordAppBlock(packageName, "Blocked by App Blocker")
-                        val intent = Intent(this, WarningActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
-                            putExtra("result_id", packageName)
-                            putExtra("blocked_by_feature", "App Blocker")
+                        val appStyle = savedPreferencesLoader.getAppBlockerWarningStyle()
+                        if (appStyle == Constants.BLOCKER_WARNING_STYLE_AMNISPACE) {
+                            val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted by App Blocker")
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                                putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                            }
+                            startActivity(intent)
+                            return
+                        } else if (appStyle == Constants.BLOCKER_WARNING_STYLE_SILENT) {
+                            pressHome()
+                            return
+                        } else {
+                            val intent = Intent(this, WarningActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
+                                putExtra("result_id", packageName)
+                                putExtra("blocked_by_feature", "App Blocker")
+                            }
+                            startActivity(intent)
+                            return
                         }
-                        startActivity(intent)
-                        return
                     }
                 }
             }
@@ -400,7 +430,19 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 try {
                     if (websiteBlockerDetector.checkBlockedWebsites(rootNode, packageName)) {
                         blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $packageName")
-                        pressHome()
+                        val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
+                        if (webStyle == Constants.BLOCKER_WARNING_STYLE_AMNISPACE) {
+                            val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain Detected")
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                                putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                            }
+                            startActivity(intent)
+                        } else {
+                            pressHome()
+                        }
                         return
                     }
                 } catch (e: Exception) {
@@ -658,12 +700,6 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
         if (::serviceBroadcastManager.isInitialized) {
             serviceBroadcastManager.unregister()
-        }
-        try {
-            if (::handGestureOverlayManager.isInitialized) {
-                handGestureOverlayManager.dismissOverlay()
-            }
-        } catch (_: Exception) {
         }
         eventChannel.close()
         serviceScope.cancel()

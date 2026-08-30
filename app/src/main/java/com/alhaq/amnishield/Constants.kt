@@ -12,9 +12,14 @@ class Constants {
         const val WARNING_SCREEN_MODE_KEYWORD_BLOCKER = 3
 
         // available feedback modes for keyword blocker
-        const val KEYWORD_FEEDBACK_HAND_GESTURE = "HAND_GESTURE"
+        const val KEYWORD_FEEDBACK_AMNISPACE = "AMNISPACE"
         const val KEYWORD_FEEDBACK_WARNING_SCREEN = "WARNING_SCREEN"
         const val KEYWORD_FEEDBACK_SILENT = "SILENT"
+
+        // available blocker warning screen styles (AmniSpace, Standard Dialog, Silent)
+        const val BLOCKER_WARNING_STYLE_AMNISPACE = "AMNISPACE"
+        const val BLOCKER_WARNING_STYLE_DIALOG = "DIALOG"
+        const val BLOCKER_WARNING_STYLE_SILENT = "SILENT"
 
         // available types for focus mode
         const val FOCUS_MODE_BLOCK_ALL_EX_SELECTED = 1

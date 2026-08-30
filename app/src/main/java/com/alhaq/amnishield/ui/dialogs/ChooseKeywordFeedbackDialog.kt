@@ -1,12 +1,14 @@
 package com.alhaq.amnishield.ui.dialogs
 
 import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.R
 import com.alhaq.amnishield.databinding.DialogKeywordFeedbackStyleBinding
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
+import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class ChooseKeywordFeedbackDialog(
@@ -17,17 +19,21 @@ class ChooseKeywordFeedbackDialog(
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val binding = DialogKeywordFeedbackStyleBinding.inflate(layoutInflater)
         val currentMode = savedPreferencesLoader?.getKeywordBlockerFeedbackMode()
-            ?: Constants.KEYWORD_FEEDBACK_HAND_GESTURE
+            ?: Constants.KEYWORD_FEEDBACK_AMNISPACE
 
         when (currentMode) {
             Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> binding.radioWarningScreen.isChecked = true
             Constants.KEYWORD_FEEDBACK_SILENT -> binding.radioSilent.isChecked = true
-            else -> binding.radioHandGesture.isChecked = true
+            else -> binding.radioAmnispace.isChecked = true
         }
 
-        binding.btnPreviewHandGesture.setOnClickListener {
-            val overlayManager = com.alhaq.amnishield.ui.overlay.HandGestureOverlayManager(requireContext())
-            overlayManager.showGestureOverlay(detectedKeyword = "gambling", isHomePress = false)
+        binding.btnPreviewAmnispace.setOnClickListener {
+            val intent = Intent(requireContext(), AmniSpaceActivity::class.java).apply {
+                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Keyword Blocker Preview")
+                putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+            }
+            startActivity(intent)
         }
 
         return MaterialAlertDialogBuilder(requireContext())
@@ -36,7 +42,7 @@ class ChooseKeywordFeedbackDialog(
                 val selectedMode = when (binding.rgFeedbackMode.checkedRadioButtonId) {
                     R.id.radio_warning_screen -> Constants.KEYWORD_FEEDBACK_WARNING_SCREEN
                     R.id.radio_silent -> Constants.KEYWORD_FEEDBACK_SILENT
-                    else -> Constants.KEYWORD_FEEDBACK_HAND_GESTURE
+                    else -> Constants.KEYWORD_FEEDBACK_AMNISPACE
                 }
                 savedPreferencesLoader?.setKeywordBlockerFeedbackMode(selectedMode)
                 onModeChanged?.invoke(selectedMode)

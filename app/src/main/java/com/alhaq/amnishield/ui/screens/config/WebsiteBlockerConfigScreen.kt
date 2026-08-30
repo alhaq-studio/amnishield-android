@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.fragments.BlocksManagerFragment
@@ -46,6 +47,8 @@ fun WebsiteBlockerConfigScreen(
     val loader = remember { SavedPreferencesLoader(context) }
 
     var isFeatureEnabled by remember { mutableStateOf(loader.isWebsiteBlockerEnabled()) }
+    var warningStyle by remember { mutableStateOf(loader.getWebsiteBlockerWarningStyle()) }
+    var showWarningStyleDialog by remember { mutableStateOf(false) }
 
     val blockedWebsitesCount = remember { loader.loadBlockedWebsites().size }
     val websiteRulesCount = remember {
@@ -231,7 +234,7 @@ fun WebsiteBlockerConfigScreen(
                 }
             }
 
-            // 3. Intercept Warning Screen Settings
+            // 3. Intercept Reaction & Warning Style Card
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
@@ -242,7 +245,7 @@ fun WebsiteBlockerConfigScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .bounceClick()
-                    .clickable { onConfigureWarning() }
+                    .clickable { showWarningStyleDialog = true }
             ) {
                 Row(
                     modifier = Modifier
@@ -254,36 +257,192 @@ fun WebsiteBlockerConfigScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Warning,
+                            imageVector = Icons.Outlined.SelfImprovement,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Warning Screen Customization",
+                            text = "Intercept Reaction Style",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        val styleTitle = when (warningStyle) {
+                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> "Standard Warning Dialog"
+                            Constants.BLOCKER_WARNING_STYLE_SILENT -> "Instant Safe Return"
+                            else -> "AmniSpace Mindful Focus Space"
+                        }
                         Text(
-                            text = "Customize message, cooldown delays, and motivation",
+                            text = "Current: $styleTitle",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Configure",
+                        contentDescription = "Change",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            // 4. Warning Screen Dialog Customization (if Dialog mode is selected)
+            if (warningStyle == Constants.BLOCKER_WARNING_STYLE_DIALOG) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bounceClick()
+                        .clickable { onConfigureWarning() }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Warning Screen Customization",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Customize message, cooldown delays, and motivation",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Configure",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    // Intercept Warning Style Dialog
+    if (showWarningStyleDialog) {
+        val warningOptions = listOf(
+            Triple(
+                Constants.BLOCKER_WARNING_STYLE_AMNISPACE,
+                "AmniSpace Mindful Focus Space",
+                "Disrupts access with guided mindful breathing or transitions into the minimalist AmniSpace focus workspace."
+            ),
+            Triple(
+                Constants.BLOCKER_WARNING_STYLE_DIALOG,
+                "Standard Warning Dialog",
+                "Displays the classic warning dialog with cooldown timer, customized message, and unlock button."
+            ),
+            Triple(
+                Constants.BLOCKER_WARNING_STYLE_SILENT,
+                "Instant Safe Return",
+                "Silently intercepts restricted websites by returning directly to the safe screen."
+            )
+        )
+
+        AlertDialog(
+            onDismissRequest = { showWarningStyleDialog = false },
+            title = {
+                Text(
+                    text = "Choose Intercept Reaction",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    warningOptions.forEach { (styleCode, title, desc) ->
+                        val isSelected = warningStyle == styleCode
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    Log.i(TAG, "Selected website blocker warning style: $styleCode ($title)")
+                                    warningStyle = styleCode
+                                    loader.setWebsiteBlockerWarningStyle(styleCode)
+                                    showWarningStyleDialog = false
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        warningStyle = styleCode
+                                        loader.setWebsiteBlockerWarningStyle(styleCode)
+                                        showWarningStyleDialog = false
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = desc,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showWarningStyleDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 }

@@ -217,7 +217,7 @@
                             android:layout_weight="1"
                             android:layout_marginEnd="8dp"
                             android:text="Change Reaction"
-                            app:icon="@drawable/ic_hand_gesture_stop" />
+                            app:icon="@drawable/ic_self_improvement" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_warning_screen"

@@ -329,13 +329,35 @@ class SavedPreferencesLoader(val context: Context) {
 
     fun getKeywordBlockerFeedbackMode(): String {
         val sharedPreferences = context.getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("feedback_mode", com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_HAND_GESTURE)
-            ?: com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_HAND_GESTURE
+        val mode = sharedPreferences.getString("feedback_mode", com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_AMNISPACE)
+        return if (mode == "HAND_GESTURE" || mode.isNullOrEmpty()) com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_AMNISPACE else mode
     }
 
     fun setKeywordBlockerFeedbackMode(mode: String) {
         val sharedPreferences = context.getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
         sharedPreferences.edit().putString("feedback_mode", mode).apply()
+    }
+
+    fun getAppBlockerWarningStyle(): String {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("app_blocker_warning_style", com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE)
+            ?: com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE
+    }
+
+    fun setAppBlockerWarningStyle(style: String) {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putString("app_blocker_warning_style", style).apply()
+    }
+
+    fun getWebsiteBlockerWarningStyle(): String {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("website_blocker_warning_style", com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE)
+            ?: com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE
+    }
+
+    fun setWebsiteBlockerWarningStyle(style: String) {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putString("website_blocker_warning_style", style).apply()
     }
 
     fun saveCheatHoursForViewBlocker(startTime: Int, endTime: Int) {

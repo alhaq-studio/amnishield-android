@@ -344,7 +344,7 @@ fun KeywordBlockerConfigScreen(
                         val feedbackTitle = when (feedbackMode) {
                             Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> "Warning Screen Dialog"
                             Constants.KEYWORD_FEEDBACK_SILENT -> "Silent / Instant Intercept"
-                            else -> "Animated Hand Gesture Overlay"
+                            else -> "AmniSpace Mindful Focus Space"
                         }
                         Text(
                             text = "Current: $feedbackTitle",
@@ -475,9 +475,9 @@ fun KeywordBlockerConfigScreen(
     if (showFeedbackDialog) {
         val options = listOf(
             Triple(
-                Constants.KEYWORD_FEEDBACK_HAND_GESTURE,
-                "Animated Hand Gesture",
-                "Displays an animated hand gesture overlay waving at the user to stop without interrupting app flow."
+                Constants.KEYWORD_FEEDBACK_AMNISPACE,
+                "AmniSpace Mindful Focus Space",
+                "Disrupts distraction with a full-screen guided breathing pause or switches to the minimal AmniSpace workspace."
             ),
             Triple(
                 Constants.KEYWORD_FEEDBACK_WARNING_SCREEN,

@@ -26,7 +26,6 @@
         <activity android:name=".ui.activity.FragmentActivity" android:exported="false" />
 
 
-        <activity android:name=".ui.activity.HandGestureActivity" android:exported="false" android:theme="@style/Theme.AmniShield.TransparentOverlay" android:excludeFromRecents="true" android:launchMode="singleInstance" />
         <activity android:name=".ui.activity.ManageKeywordsActivity" android:exported="false" />
         <activity android:name=".ui.activity.SelectAppsActivity" android:exported="false" />
         <activity android:name=".ui.activity.RemindersActivity" android:exported="false" />

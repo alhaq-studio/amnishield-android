@@ -24,15 +24,14 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.alhaq.amnishield.Constants
+import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
 import com.alhaq.amnishield.ui.activity.WarningActivity
-import com.alhaq.amnishield.ui.overlay.HandGestureOverlayManager
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class KeywordActionHandler(
     private val context: Context,
     private val savedPreferencesLoader: SavedPreferencesLoader,
-    private val keywordBlocker: KeywordBlocker,
-    private val handGestureOverlayManager: HandGestureOverlayManager
+    private val keywordBlocker: KeywordBlocker
 ) {
     private var silentAttemptCount = 0
     private var lastSilentPackage: String? = null
@@ -71,26 +70,31 @@ class KeywordActionHandler(
                 if (silentAttemptCount >= 3) {
                     silentAttemptCount = 0
                     Handler(Looper.getMainLooper()).post {
-                        handGestureOverlayManager.showGestureOverlay(
-                            detectedKeyword = result.resultDetectWord,
-                            isHomePress = false,
-                            onComplete = {}
-                        )
+                        val intent = Intent(context, AmniSpaceActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                            putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Repeated Keyword Detection: ${result.resultDetectWord ?: "Restricted Text"}")
+                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                            putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                        }
+                        context.startActivity(intent)
                     }
                 }
             }
 
-            Constants.KEYWORD_FEEDBACK_HAND_GESTURE -> {
+            Constants.KEYWORD_FEEDBACK_AMNISPACE -> {
                 Handler(Looper.getMainLooper()).post {
-                    handGestureOverlayManager.showGestureOverlay(
-                        detectedKeyword = result.resultDetectWord,
-                        isHomePress = isHomePress,
-                        onComplete = {
-                            if (isHomePress) {
-                                onPressHome()
-                            }
-                        }
-                    )
+                    val intent = Intent(context, AmniSpaceActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Keyword Blocked: ${result.resultDetectWord ?: "Restricted Keyword"}")
+                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                        putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                    }
+                    context.startActivity(intent)
+                    if (isHomePress) {
+                        onPressHome()
+                    }
                 }
             }
 
@@ -109,6 +113,18 @@ class KeywordActionHandler(
                     putExtra("blocked_by_feature", "Keyword Blocker")
                 }
                 context.startActivity(dialogIntent)
+            }
+
+            else -> {
+                // Default fallback to AmniSpace Mindful Pause
+                val intent = Intent(context, AmniSpaceActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Keyword Blocked: ${result.resultDetectWord ?: "Restricted Keyword"}")
+                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                }
+                context.startActivity(intent)
             }
         }
     }
