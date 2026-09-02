@@ -56,29 +56,10 @@ class KeywordActionHandler(
 
         when (feedbackMode) {
             Constants.KEYWORD_FEEDBACK_SILENT -> {
-                val now = System.currentTimeMillis()
-                val detectedWord = result.resultDetectWord ?: ""
-                if (lastSilentPackage == packageName && lastSilentKeyword == detectedWord && (now - lastSilentAttemptTime) < 45_000L) {
-                    silentAttemptCount++
-                } else {
-                    silentAttemptCount = 1
-                    lastSilentPackage = packageName
-                    lastSilentKeyword = detectedWord
-                }
-                lastSilentAttemptTime = now
-
-                if (silentAttemptCount >= 3) {
-                    silentAttemptCount = 0
-                    Handler(Looper.getMainLooper()).post {
-                        val intent = Intent(context, AmniSpaceActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Repeated Keyword Detection: ${result.resultDetectWord ?: "Restricted Text"}")
-                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
-                            putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
-                        }
-                        context.startActivity(intent)
-                    }
+                // In silent mode, only clear text and optionally press home if requested.
+                // Do NOT force AmniSpace!
+                if (isHomePress) {
+                    onPressHome()
                 }
             }
 
@@ -116,15 +97,21 @@ class KeywordActionHandler(
             }
 
             else -> {
-                // Default fallback to AmniSpace Mindful Pause
-                val intent = Intent(context, AmniSpaceActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Keyword Blocked: ${result.resultDetectWord ?: "Restricted Keyword"}")
-                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
-                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                // Default fallback to standard WarningActivity
+                val warningConfig = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
+                if (warningConfig.isWarningDialogHidden) {
+                    if (isHomePress) onPressHome()
+                    return
                 }
-                context.startActivity(intent)
+
+                val dialogIntent = Intent(context, WarningActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                    putExtra("result_id", result.resultDetectWord ?: "detected_keyword")
+                    putExtra("is_press_home", isHomePress)
+                    putExtra("blocked_by_feature", "Keyword Blocker")
+                }
+                context.startActivity(dialogIntent)
             }
         }
     }

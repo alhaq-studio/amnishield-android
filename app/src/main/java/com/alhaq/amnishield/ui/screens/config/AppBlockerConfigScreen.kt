@@ -285,9 +285,9 @@ fun AppBlockerConfigScreen(
                             fontWeight = FontWeight.Bold
                         )
                         val styleTitle = when (warningStyle) {
-                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> "Standard Warning Dialog"
+                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> "AmniSpace Mindful Focus Space"
                             Constants.BLOCKER_WARNING_STYLE_SILENT -> "Instant Home Return"
-                            else -> "AmniSpace Mindful Focus Space"
+                            else -> "Standard Warning Dialog"
                         }
                         Text(
                             text = "Current: $styleTitle",
@@ -512,11 +512,6 @@ fun AppBlockerConfigScreen(
     if (showWarningStyleDialog) {
         val warningOptions = listOf(
             Triple(
-                Constants.BLOCKER_WARNING_STYLE_AMNISPACE,
-                "AmniSpace Mindful Focus Space",
-                "Disrupts access with guided mindful breathing or transitions into the minimalist AmniSpace focus workspace."
-            ),
-            Triple(
                 Constants.BLOCKER_WARNING_STYLE_DIALOG,
                 "Standard Warning Dialog",
                 "Displays the classic warning dialog with cooldown timer, customized message, and unlock button."
@@ -525,6 +520,11 @@ fun AppBlockerConfigScreen(
                 Constants.BLOCKER_WARNING_STYLE_SILENT,
                 "Instant Home Return",
                 "Silently intercepts restricted apps by returning directly to the device home screen."
+            ),
+            Triple(
+                Constants.BLOCKER_WARNING_STYLE_AMNISPACE,
+                "AmniSpace Mindful Focus Space",
+                "Disrupts access with guided mindful breathing or transitions into the minimalist AmniSpace focus workspace."
             )
         )
 

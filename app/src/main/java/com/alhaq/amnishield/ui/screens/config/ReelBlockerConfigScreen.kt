@@ -267,25 +267,8 @@ fun ReelBlockerConfigScreen(
                     )
 
                     ResponseModeOptionRow(
-                        title = "Warning Screen (Hard Block)",
-                        description = "Shows the warning screen with cooldown timer & motivation",
-                        icon = Icons.Outlined.Shield,
-                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.HARD_BLOCK,
-                        onClick = {
-                            blockResponseMode = ReelBlocker.BlockResponseMode.HARD_BLOCK
-                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.HARD_BLOCK)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    ResponseModeOptionRow(
-                        title = "Redirect to Home Feed",
-                        description = "Stays in app and redirects to the safe home / news feed",
+                        title = "Redirect to Home Feed (Default)",
+                        description = "Stays in app and redirects to the safe home / news feed without friction",
                         icon = Icons.Outlined.DynamicFeed,
                         isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT,
                         onClick = {
@@ -308,6 +291,23 @@ fun ReelBlockerConfigScreen(
                         onClick = {
                             blockResponseMode = ReelBlocker.BlockResponseMode.ANDROID_HOME
                             loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.ANDROID_HOME)
+                            broadcastReelsRefresh(context)
+                        }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                    )
+
+                    ResponseModeOptionRow(
+                        title = "Warning Screen (Hard Block)",
+                        description = "Shows the warning screen with cooldown timer & motivation",
+                        icon = Icons.Outlined.Shield,
+                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.HARD_BLOCK,
+                        onClick = {
+                            blockResponseMode = ReelBlocker.BlockResponseMode.HARD_BLOCK
+                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.HARD_BLOCK)
                             broadcastReelsRefresh(context)
                         }
                     )

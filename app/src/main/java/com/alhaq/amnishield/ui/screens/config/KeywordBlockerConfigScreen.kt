@@ -343,8 +343,8 @@ fun KeywordBlockerConfigScreen(
                         )
                         val feedbackTitle = when (feedbackMode) {
                             Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> "Warning Screen Dialog"
-                            Constants.KEYWORD_FEEDBACK_SILENT -> "Silent / Instant Intercept"
-                            else -> "AmniSpace Mindful Focus Space"
+                            Constants.KEYWORD_FEEDBACK_AMNISPACE -> "AmniSpace Mindful Focus Space"
+                            else -> "Silent / Instant Intercept"
                         }
                         Text(
                             text = "Current: $feedbackTitle",
@@ -475,9 +475,9 @@ fun KeywordBlockerConfigScreen(
     if (showFeedbackDialog) {
         val options = listOf(
             Triple(
-                Constants.KEYWORD_FEEDBACK_AMNISPACE,
-                "AmniSpace Mindful Focus Space",
-                "Disrupts distraction with a full-screen guided breathing pause or switches to the minimal AmniSpace workspace."
+                Constants.KEYWORD_FEEDBACK_SILENT,
+                "Silent Intercept (Default)",
+                "Silently clears text or returns to the previous screen immediately without interruption."
             ),
             Triple(
                 Constants.KEYWORD_FEEDBACK_WARNING_SCREEN,
@@ -485,9 +485,9 @@ fun KeywordBlockerConfigScreen(
                 "Full-screen interception warning asking the user to reflect before proceeding."
             ),
             Triple(
-                Constants.KEYWORD_FEEDBACK_SILENT,
-                "Silent Intercept",
-                "Silently clears text or returns to the previous screen immediately."
+                Constants.KEYWORD_FEEDBACK_AMNISPACE,
+                "AmniSpace Mindful Focus Space",
+                "Disrupts distraction with a full-screen guided breathing pause or switches to the minimal AmniSpace workspace."
             )
         )
 
