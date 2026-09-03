@@ -132,45 +132,6 @@ fun FocusScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp),
         contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp)
     ) {
-        // Focus Screen Title and Header Description
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "FOCUS SPACE",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.08.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Daily Wellbeing & Mindfulness",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-
-                IconButton(
-                    onClick = onOpenFocusConfig,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = "Focus Settings",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
 
         // Accessibility status check card
         if (!isServiceEnabled) {
@@ -238,12 +199,35 @@ fun FocusScreen(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    IconButton(
+                        onClick = onOpenFocusConfig,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 12.dp, end = 12.dp)
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isFocusModeActive)
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.25f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Focus Settings",
+                            tint = if (isFocusModeActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Box(
@@ -350,6 +334,7 @@ fun FocusScreen(
                     }
                 }
             }
+        }
         }
 
         // Focus Mode Configurations & Settings Card
