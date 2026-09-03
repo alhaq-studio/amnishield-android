@@ -43,10 +43,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material.icons.outlined.SelfImprovement
 import com.alhaq.amnishield.Constants
+import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
+import com.alhaq.amnishield.ui.activity.SelectAppsActivity
 import com.alhaq.amnishield.ui.components.bounceClick
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
@@ -82,12 +87,16 @@ fun FocusScreen(
 
     if (showQuickFocusDialog) {
         StartQuickFocusDialog(
-            defaultMode = defaultMode,
-            preSelectedApps = preSelectedApps,
+            defaultMode = if (defaultMode != 0) defaultMode else loader.getFocusModeData().modeType,
+            preSelectedApps = if (preSelectedApps.isNotEmpty()) preSelectedApps else loader.getFocusModeSelectedApps().toSet(),
             preset1 = presets.first,
             preset2 = presets.second,
             preset3 = presets.third,
             onDismiss = { showQuickFocusDialog = false },
+            onOpenFocusConfig = {
+                showQuickFocusDialog = false
+                onOpenFocusConfig()
+            },
             onStart = { duration, mode, apps ->
                 showQuickFocusDialog = false
                 onStartFocusSession(duration, mode, apps)
@@ -679,10 +688,36 @@ fun StartQuickFocusDialog(
     preset2: Int,
     preset3: Int,
     onDismiss: () -> Unit,
+    onOpenFocusConfig: () -> Unit = {},
     onStart: (Int, Int, Set<String>) -> Unit
 ) {
+    val context = LocalContext.current
+    val loader = remember { SavedPreferencesLoader(context) }
+
     var durationMinutes by remember { mutableIntStateOf(preset2) }
     var selectedMode by remember { mutableIntStateOf(defaultMode) }
+    var selectedApps by remember {
+        mutableStateOf(
+            if (preSelectedApps.isNotEmpty()) preSelectedApps
+            else loader.getFocusModeSelectedApps().toSet()
+        )
+    }
+
+    val selectAppsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val appsList = result.data?.getStringArrayListExtra("SELECTED_APPS")
+            if (appsList != null) {
+                selectedApps = appsList.toSet()
+                loader.saveFocusModeSelectedApps(appsList)
+                val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
+                    setPackage(context.packageName)
+                }
+                context.sendBroadcast(intent)
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -703,13 +738,34 @@ fun StartQuickFocusDialog(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Header
-                    Text(
-                        text = "Quick Focus Session",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Header with Focus Mode Settings / Configuration Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Quick Focus Session",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        IconButton(
+                            onClick = onOpenFocusConfig,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Focus Mode Configurations",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
 
                     // 1. Duration Selection
                     Column {
@@ -834,6 +890,68 @@ fun StartQuickFocusDialog(
                         }
                     }
 
+                    // 3. Target Focus Apps (Dynamic updating based on selected mode)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (selectedMode == Constants.FOCUS_MODE_BLOCK_SELECTED) "Distracting Apps List" else "Allowed Focus Apps List",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (selectedMode == Constants.FOCUS_MODE_BLOCK_SELECTED)
+                                        "${selectedApps.size} distracting apps configured"
+                                    else
+                                        "${selectedApps.size} allowed focus apps configured",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val intent = Intent(context, SelectAppsActivity::class.java).apply {
+                                        putStringArrayListExtra(
+                                            "PRE_SELECTED_APPS",
+                                            ArrayList(selectedApps)
+                                        )
+                                    }
+                                    selectAppsLauncher.launch(intent)
+                                },
+                                modifier = Modifier.bounceClick(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Configure", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(4.dp))
 
                     // Actions Row
@@ -849,7 +967,7 @@ fun StartQuickFocusDialog(
                             Text("Cancel")
                         }
                         Button(
-                            onClick = { onStart(durationMinutes, selectedMode, preSelectedApps) },
+                            onClick = { onStart(durationMinutes, selectedMode, selectedApps) },
                             modifier = Modifier.weight(1.5f),
                             shape = RoundedCornerShape(14.dp)
                         ) {
