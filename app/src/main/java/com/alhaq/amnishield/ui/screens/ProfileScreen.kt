@@ -1,12 +1,11 @@
 package com.alhaq.amnishield.ui.screens
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
-import com.alhaq.amnishield.Constants
-import org.json.JSONObject
-import org.json.JSONArray
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.alhaq.amnishield.Constants
+import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.ui.components.AmniShieldButton
 import com.alhaq.amnishield.ui.components.AmniShieldButtonStyle
 import com.alhaq.amnishield.ui.components.AmniShieldInputField
@@ -44,11 +45,11 @@ import com.alhaq.amnishield.ui.state.AmniShieldState
 import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
-import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 
 data class PresetAvatar(
@@ -75,9 +76,11 @@ fun ProfileScreen(
     isGoogleSignedIn: Boolean,
     onGoogleSignIn: () -> Unit,
     onGoogleSignOut: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit = {},
+    showTopAppBar: Boolean = true
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     var name by remember(state.userName) { mutableStateOf(state.userName) }
     var email by remember(state.userEmail) { mutableStateOf(state.userEmail) }
@@ -87,6 +90,14 @@ fun ProfileScreen(
     var pinProtectionEnabled by remember(state.isPinProtectionEnabled) { mutableStateOf(state.isPinProtectionEnabled) }
     var profilePin by remember(state.profilePin) { mutableStateOf(state.profilePin) }
 
+    // Premium & Offline Licensing State
+    val premiumManager = remember { PremiumManager.getInstance(context) }
+    var isPremiumActive by remember { mutableStateOf(premiumManager.isPremium()) }
+    var showLicenseDialog by remember { mutableStateOf(false) }
+    var licenseInput by remember { mutableStateOf("") }
+    var licenseErrorMsg by remember { mutableStateOf<String?>(null) }
+
+    // Dialog & Flow States
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showAvatarPickerSheet by remember { mutableStateOf(false) }
     var showPairingDialog by remember { mutableStateOf(false) }
@@ -95,9 +106,33 @@ fun ProfileScreen(
     var isPairingInProgress by remember { mutableStateOf(false) }
     var pairingStatusMsg by remember { mutableStateOf<String?>(null) }
     var isPairingSuccess by remember { mutableStateOf(false) }
-    var isPairedWithConsole by remember { mutableStateOf(context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).getBoolean("is_paired_with_console", false)) }
-    var pairedDeviceId by remember { mutableStateOf(context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).getString("paired_device_id", null)) }
-    val coroutineScope = rememberCoroutineScope()
+    var isPairedWithConsole by remember {
+        mutableStateOf(
+            context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                .getBoolean("is_paired_with_console", false)
+        )
+    }
+    var pairedDeviceId by remember {
+        mutableStateOf(
+            context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                .getString("paired_device_id", null)
+        )
+    }
+
+    // Dynamic Guardian Level & Rank
+    val streak = state.focusStreakDays
+    val score = state.focusShieldScore
+    val guardianLevel = remember(streak, score) {
+        ((streak / 3) + (score / 15) + 1).coerceAtLeast(1)
+    }
+    val guardianRank = remember(guardianLevel) {
+        when {
+            guardianLevel >= 15 -> "Zen Grandmaster"
+            guardianLevel >= 10 -> "Shield Sentinel"
+            guardianLevel >= 5 -> "Mindful Guardian"
+            else -> "Apprentice Guardian"
+        }
+    }
 
     val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) { scanResult ->
         val rawContents = scanResult.contents
@@ -116,7 +151,7 @@ fun ProfileScreen(
                         isPairingInProgress = false
                         if (result.success) {
                             isPairingSuccess = true
-                            pairingStatusMsg = "🎉 Linked to Cloud Sync Hub successfully!"
+                            pairingStatusMsg = "[SUCCESS] Linked to Cloud Sync Hub successfully!"
                             val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
                             savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
                             if (result.policyPayload != null) {
@@ -125,7 +160,7 @@ fun ProfileScreen(
                             }
                             isPairedWithConsole = true
                             pairedDeviceId = result.deviceId
-                            Toast.makeText(context, "🎉 Device Linked Successfully!", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "[SUCCESS] Device Linked Successfully!", Toast.LENGTH_LONG).show()
                             coroutineScope.launch(Dispatchers.IO) {
                                 com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
                             }
@@ -218,462 +253,728 @@ fun ProfileScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = { Text("Profile & Identity", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+            if (showTopAppBar) {
+                TopAppBar(
+                    title = { Text("Profile & Identity", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
-            )
+            }
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 40.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // SUCCESS BANNER
-            if (showSuccessMessage) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 680.dp)
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                contentPadding = PaddingValues(top = if (showTopAppBar) 12.dp else 24.dp, bottom = 48.dp)
+            ) {
+                // SUCCESS BANNER
+                if (showSuccessMessage) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Success",
-                                tint = MaterialTheme.colorScheme.primary
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Success",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Column {
+                                    Text(
+                                        text = "Profile Saved Successfully!",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "Your identity and wellbeing settings have been saved locally.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // INTERACTIVE HERO AVATAR & LEVEL
+                item {
+                    val currentAvatar = PRESET_AVATARS.find { it.id == state.profileAvatarId } ?: PRESET_AVATARS.first()
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(112.dp)
+                                    .clip(CircleShape)
+                                    .border(
+                                        BorderStroke(3.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
+                                        CircleShape
+                                    )
+                                    .clickable { showAvatarPickerSheet = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (profileBitmap != null) {
+                                    Image(
+                                        bitmap = profileBitmap,
+                                        contentDescription = "Profile Photo",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else if (state.profileAvatarId != "initials" && state.profileAvatarId.startsWith("avatar_")) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Brush.linearGradient(currentAvatar.gradientColors)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = currentAvatar.icon,
+                                            contentDescription = currentAvatar.name,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(52.dp)
+                                        )
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(
+                                                        MaterialTheme.colorScheme.primary,
+                                                        MaterialTheme.colorScheme.tertiary
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = name.take(2).uppercase().ifEmpty { "ME" },
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Black,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+
+                                // Edit Badge Pill
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "Change picture",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                text = name.ifEmpty { "Anonymous Guardian" },
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            Column {
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
                                 Text(
-                                    text = "Profile Saved Successfully!",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    text = "AmniShield Guardian • Level $guardianLevel • $guardianRank",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // GUARDIAN STATS BADGES (STREAK, SCORE, THREATS)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Streak Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocalFireDepartment,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF6D00),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "${state.focusStreakDays} Days",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Focus Streak",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Score Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shield,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "${state.focusShieldScore}%",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = "Your identity and wellbeing settings have been saved locally.",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    text = "Shield Score",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Threats Filtered Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Bolt,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFB300),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "${state.totalThreatsBlocked}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Filtered Hits",
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // INTERACTIVE HEADER AVATAR
-            item {
-                val currentAvatar = PRESET_AVATARS.find { it.id == state.profileAvatarId } ?: PRESET_AVATARS.first()
+                // SUPPORTER PASS & OFFLINE LICENSING
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.WorkspacePremium,
+                        title = "SUPPORTER PASS & LICENSING"
+                    )
+                }
 
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ) {
+                        Column(
                             modifier = Modifier
-                                .size(112.dp)
-                                .clip(CircleShape)
-                                .border(
-                                    BorderStroke(3.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
-                                    CircleShape
-                                )
-                                .clickable { showAvatarPickerSheet = true },
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            if (profileBitmap != null) {
-                                Image(
-                                    bitmap = profileBitmap,
-                                    contentDescription = "Profile Photo",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else if (state.profileAvatarId != "initials" && state.profileAvatarId.startsWith("avatar_")) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Brush.linearGradient(currentAvatar.gradientColors)),
-                                    contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = currentAvatar.icon,
-                                        contentDescription = currentAvatar.name,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(52.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                if (isPremiumActive) Color(0xFF059669).copy(alpha = 0.15f)
+                                                else MaterialTheme.colorScheme.primaryContainer
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPremiumActive) Icons.Default.Verified else Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = if (isPremiumActive) Color(0xFF059669) else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = if (isPremiumActive) "Supporter Pass Active" else "Community Edition",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (isPremiumActive) "Cryptographic ECDSA Verified" else "100% Free & Open Source",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.linearGradient(
-                                                colors = listOf(
-                                                    MaterialTheme.colorScheme.primary,
-                                                    MaterialTheme.colorScheme.tertiary
-                                                )
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isPremiumActive) Color(0xFF059669).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
                                 ) {
                                     Text(
-                                        text = name.take(2).uppercase().ifEmpty { "ME" },
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontWeight = FontWeight.Black,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        text = if (isPremiumActive) "PRO" else "FREE",
+                                        color = if (isPremiumActive) Color(0xFF059669) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                     )
                                 }
                             }
 
-                            // Edit Badge Pill
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-                                contentAlignment = Alignment.Center
+                            Text(
+                                text = if (isPremiumActive)
+                                    "Your supporter pass is verified offline on-device using ECDSA NIST P-256 signatures. Cloud sync and advanced multi-device management are enabled."
+                                else
+                                    "AmniShield is free and open-source forever. Optional Supporter Passes fund independent privacy engineering and enable cross-device cloud sync.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Change picture",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                Button(
+                                    onClick = {
+                                        licenseInput = ""
+                                        licenseErrorMsg = null
+                                        showLicenseDialog = true
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                ) {
+                                    Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Redeem Key", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { openUrl(context, "https://amnishield.com/#pricing") },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Get Pass", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                }
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = name.ifEmpty { "Anonymous Guardian" },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(top = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.VerifiedUser,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "AmniShield Guardian • Level 8",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
                     }
                 }
-            }
 
-            // GUARDIAN STATS BADGES (STREAK, SCORE, THREATS)
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Streak Card
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocalFireDepartment,
-                                contentDescription = null,
-                                tint = Color(0xFFFF6D00),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "${state.focusStreakDays} Days",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Focus Streak",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Score Card
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "${state.focusShieldScore}%",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "Shield Score",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Threats Blocked Card
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Bolt,
-                                contentDescription = null,
-                                tint = Color(0xFFFFB300),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "${state.totalThreatsBlocked}",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Filtered Hits",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // FOCUS TARGET & WELLBEING GOALS
-            item {
-                Text(
-                    text = "WELLBEING & FOCUS MODE",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
+                // FOCUS TARGET & WELLBEING GOALS
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.SelfImprovement,
+                        title = "WELLBEING & FOCUS MODE"
                     )
-                )
-            }
+                }
 
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                     ) {
-                        // Focus Mode Tone Selector
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Guardian Protection Profile",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                listOf("Deep Focus", "Balanced Guard", "Strict Monk").forEach { mode ->
-                                    val isSelected = profileType == mode
-                                    FilterChip(
-                                        selected = isSelected,
-                                        onClick = { profileType = mode },
-                                        label = {
-                                            Text(
-                                                text = mode,
-                                                fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    )
-                                }
-                            }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                        // Daily Screen Time Limit Target
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Focus Mode Tone Selector
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = "Daily Screen Time Target",
+                                    text = "Guardian Protection Profile",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Text(
-                                    text = "${goalMinutes / 60}h ${goalMinutes % 60}m",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    listOf("Deep Focus", "Balanced Guard", "Strict Monk").forEach { mode ->
+                                        val isSelected = profileType == mode
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { profileType = mode },
+                                            label = {
+                                                Text(
+                                                    text = mode,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                            // Daily Screen Time Limit Target
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Daily Screen Time Target",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${goalMinutes / 60}h ${goalMinutes % 60}m",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = goalMinutes.toFloat(),
+                                    onValueChange = { goalMinutes = it.toInt() },
+                                    valueRange = 30f..360f,
+                                    steps = 10,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
                                 )
                             }
-                            Slider(
-                                value = goalMinutes.toFloat(),
-                                onValueChange = { goalMinutes = it.toInt() },
-                                valueRange = 30f..360f,
-                                steps = 10,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary
-                                )
+                        }
+                    }
+                }
+
+                // PERSONAL DETAILS SECTION
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.Badge,
+                        title = "PERSONAL INFORMATION"
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            AmniShieldInputField(
+                                value = name,
+                                onValueChange = { name = it },
+                                placeholder = "e.g. Alhaq DST",
+                                label = "Guardian Username",
+                                leadingIcon = Icons.Default.Person
+                            )
+
+                            AmniShieldInputField(
+                                value = email,
+                                onValueChange = { email = it },
+                                placeholder = "e.g. info@amnishield.com",
+                                label = "Security Email Address",
+                                leadingIcon = Icons.Default.Email
+                            )
+
+                            AmniShieldInputField(
+                                value = bio,
+                                onValueChange = { bio = it },
+                                placeholder = "Write your focus motto...",
+                                label = "Focus Biography",
+                                leadingIcon = Icons.Default.Description
                             )
                         }
                     }
                 }
-            }
 
-            // PERSONAL DETAILS SECTION
-            item {
-                Text(
-                    text = "PERSONAL INFORMATION",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
+                // LINKED GOOGLE ACCOUNT SECTION
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.AccountCircle,
+                        title = "LINKED ACCOUNT"
                     )
-                )
-            }
+                }
 
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                     ) {
-                        AmniShieldInputField(
-                            value = name,
-                            onValueChange = { name = it },
-                            placeholder = "e.g. Alhaq DST",
-                            label = "Guardian Username",
-                            leadingIcon = Icons.Default.Person
-                        )
+                        if (isGoogleSignedIn) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(Color(0xFF4285F4), Color(0xFF34A853))
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = state.userName.take(1).uppercase().ifEmpty { "G" },
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color.White
+                                        )
+                                    }
 
-                        AmniShieldInputField(
-                            value = email,
-                            onValueChange = { email = it },
-                            placeholder = "e.g. info@amnishield.com",
-                            label = "Security Email Address",
-                            leadingIcon = Icons.Default.Email
-                        )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = state.userName.ifEmpty { "Google Account" },
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = state.userEmail,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
 
-                        AmniShieldInputField(
-                            value = bio,
-                            onValueChange = { bio = it },
-                            placeholder = "Write your focus motto...",
-                            label = "Focus Biography",
-                            leadingIcon = Icons.Default.Description
-                        )
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Linked",
+                                        tint = Color(0xFF34A853),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { onGoogleSignOut() }
+                                        .padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                        contentDescription = "Sign Out",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Sign Out",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = "Link Google Account",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Sign in to backup settings and enable cross-device synchronization.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                )
+
+                                Button(
+                                    onClick = onGoogleSignIn,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF4285F4)
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountCircle,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Sign in with Google",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            // LINKED GOOGLE ACCOUNT SECTION
-            item {
-                Text(
-                    text = "LINKED ACCOUNT",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
+                // ACCOUNT & CLOUD SYNC CARD
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.CloudSync,
+                        title = "ACCOUNT & CLOUD SYNC"
                     )
-                )
-            }
+                }
 
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ) {
-                    if (isGoogleSignedIn) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -681,573 +982,417 @@ fun ProfileScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                colors = listOf(Color(0xFF4285F4), Color(0xFF34A853))
-                                            )
-                                        ),
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = state.userName.take(1).uppercase().ifEmpty { "G" },
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color.White
+                                    Icon(
+                                        imageVector = Icons.Default.Devices,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(
+                                            text = "AmniShield Sync Hub",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (isPairedWithConsole) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFF059669).copy(alpha = 0.15f)
+                                            ) {
+                                                Text(
+                                                    text = "CONNECTED",
+                                                    color = Color(0xFF059669),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        text = if (isPairedWithConsole) "Device ID: ${pairedDeviceId?.take(8) ?: "Linked"}" else "Cross-Device Synchronization",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
 
+                            Text(
+                                text = if (isPairedWithConsole)
+                                    "This phone is linked to your AmniShield Cloud Sync Hub. Focus rules, schedules, and blocklists automatically synchronize across all your connected devices."
+                                else
+                                    "Link this phone to your AmniShield Cloud Sync Hub using a 6-digit PIN or QR code to sync focus rules and blocklists across your devices.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            if (isPairedWithConsole) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            Toast.makeText(context, "Syncing latest policies...", Toast.LENGTH_SHORT).show()
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val ok = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
+                                                withContext(Dispatchers.Main) {
+                                                    if (ok) {
+                                                        Toast.makeText(context, "[SUCCESS] Policies Synchronized!", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        Toast.makeText(context, "[INFO] Sync offline. Locally cached policy active.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .weight(1.2f)
+                                            .height(44.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sync,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Sync Now",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
+                                            savedPrefs.setConsoleManaged(false)
+                                            isPairedWithConsole = false
+                                            pairedDeviceId = null
+                                            Toast.makeText(context, "[INFO] Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(44.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.LinkOff,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Unlink",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val options = ScanOptions().apply {
+                                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                                setPrompt("Align QR code from app.amnishield.com inside the frame")
+                                                setBeepEnabled(true)
+                                                setBarcodeImageEnabled(false)
+                                                setOrientationLocked(true)
+                                            }
+                                            qrScanLauncher.launch(options)
+                                        },
+                                        modifier = Modifier
+                                            .weight(1.2f)
+                                            .height(44.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.QrCodeScanner,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Scan QR Code",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            pairingPinInput = ""
+                                            pairingStatusMsg = null
+                                            isPairingSuccess = false
+                                            showPairingDialog = true
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(44.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Key,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Enter PIN",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // SYNC & DATA PRIVACY TOGGLES
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.Lock,
+                        title = "SYNC & DATA PRIVACY"
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            // Sync Rules Switch
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = state.userName.ifEmpty { "Google Account" },
+                                        text = "Sync Rules & Blocklists",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = state.userEmail,
+                                        text = if (state.syncRulesEnabled) "Cloud sync active for app & domain rules" else "Local rules only (cloud sync off)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Linked",
-                                    tint = Color(0xFF34A853),
-                                    modifier = Modifier.size(22.dp)
+                                Switch(
+                                    checked = state.syncRulesEnabled,
+                                    onCheckedChange = { viewModel.toggleSyncRules() }
                                 )
                             }
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
+                            // Smart Recommendations Switch
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable { onGoogleSignOut() }
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                    contentDescription = "Sign Out",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Sign Out",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.error
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Smart Focus Recommendations",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (state.smartRecommendationsEnabled) "Local focus insights & suggestions active" else "Focus insights disabled",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = state.smartRecommendationsEnabled,
+                                    onCheckedChange = { viewModel.toggleSmartRecommendations() }
                                 )
                             }
                         }
-                    } else {
+                    }
+                }
+
+                // DATA SOVEREIGNTY & ACCOUNT CONTROL
+                item {
+                    ProfileSectionHeader(
+                        icon = Icons.Default.PrivacyTip,
+                        title = "DATA SOVEREIGNTY & ACCOUNT RIGHTS"
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(18.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Text(
-                                text = "Link Google Account",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Sign in to backup settings and enable cross-device synchronization.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-
-                            Button(
-                                onClick = onGoogleSignIn,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF4285F4)
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AccountCircle,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Sign in with Google",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ACCOUNT & CLOUD SYNC CARD
-            item {
-                Text(
-                    text = "ACCOUNT & CLOUD SYNC",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
-                    )
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Devices,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(
-                                        text = "Account & Cloud Sync",
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (isPairedWithConsole) {
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = Color(0xFF059669).copy(alpha = 0.15f)
-                                        ) {
-                                            Text(
-                                                text = "CONNECTED",
-                                                color = Color(0xFF059669),
-                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                Text(
-                                    text = "AmniShield Sync Hub",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = if (isPairedWithConsole)
-                                "This phone is linked to your AmniShield Cloud Sync Hub. Focus rules, schedules, and blocklists automatically synchronize across all your connected devices."
-                            else
-                                "Link this phone to your AmniShield Cloud Sync Hub using a 6-digit PIN or QR code to sync focus rules and blocklists across your devices.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        if (isPairedWithConsole) {
-                            // Paired Controls: Sync Now + Unlink
+                            // Export Data JSON Row
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Button(
-                                    onClick = {
-                                        Toast.makeText(context, "Syncing latest policies...", Toast.LENGTH_SHORT).show()
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            val ok = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
-                                            withContext(Dispatchers.Main) {
-                                                if (ok) {
-                                                    Toast.makeText(context, "✅ Policies Synchronized!", Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                    Toast.makeText(context, "⚠️ Sync offline. Locally cached policy active.", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .weight(1.2f)
-                                        .height(44.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Sync,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Sync Now",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
+                                        text = "Export Account & Rule Data (JSON)",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Download / Share a structured snapshot of your active rules, telemetry, and profile.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
-                                        savedPrefs.setConsoleManaged(false)
-                                        isPairedWithConsole = false
-                                        pairedDeviceId = null
-                                        Toast.makeText(context, "Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.LinkOff,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.error
+                                IconButton(
+                                    onClick = { exportUserData(context, state, name, email, bio, goalMinutes, profileType) },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                ) {
+                                    Icon(Icons.Outlined.FileDownload, contentDescription = "Export Data")
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                            // Delete Account & Purge Data (Danger Zone)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Unlink",
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp,
+                                        text = "Delete Account & Purge Data",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.error
                                     )
+                                    Text(
+                                        text = "Unlink this device from cloud sync, wipe local profile data, and reset tokens.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showDeleteAccountDialog = true },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                ) {
+                                    Icon(Icons.Outlined.DeleteForever, contentDescription = "Delete Account")
                                 }
                             }
-                        } else {
-                            // Unpaired Controls: Scan QR (Primary) + Enter PIN (Outlined)
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                            // Legal & Privacy Portal Links
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Button(
-                                    onClick = {
-                                        val options = ScanOptions().apply {
-                                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                            setPrompt("Align QR code from app.amnishield.com inside the frame")
-                                            setBeepEnabled(true)
-                                            setBarcodeImageEnabled(false)
-                                            setOrientationLocked(true)
-                                        }
-                                        qrScanLauncher.launch(options)
-                                    },
-                                    modifier = Modifier
-                                        .weight(1.2f)
-                                        .height(44.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
+                                TextButton(
+                                    onClick = { openUrl(context, Constants.PRIVACY_POLICY_URL) }
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.QrCodeScanner,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Scan QR Code",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        pairingPinInput = ""
-                                        pairingStatusMsg = null
-                                        isPairingSuccess = false
-                                        showPairingDialog = true
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Key,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Enter PIN",
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Text("Privacy Policy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                TextButton(
+                                    onClick = { openUrl(context, Constants.DATA_DELETION_URL) }
+                                ) {
+                                    Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Deletion Portal", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // SYNC & DATA PRIVACY TOGGLES
-            item {
-                Text(
-                    text = "SYNC & DATA PRIVACY",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
-                    )
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Sync Rules Switch
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Sync Rules & Blocklists",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (state.syncRulesEnabled) "Cloud sync active for app & domain rules" else "Local rules only (cloud sync off)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = state.syncRulesEnabled,
-                                onCheckedChange = { viewModel.toggleSyncRules() }
+                // ACTION SAVE BUTTON
+                item {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    AmniShieldButton(
+                        text = "Save Profile Changes",
+                        onClick = {
+                            viewModel.updateProfile(
+                                name = name,
+                                email = email,
+                                bio = bio,
+                                goalMinutes = goalMinutes,
+                                profileType = profileType,
+                                pinEnabled = pinProtectionEnabled,
+                                pin = profilePin
                             )
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                        // Smart AI Recommendations Switch
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Smart AI Recommendations",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (state.smartRecommendationsEnabled) "AI focus insights & recommendations active" else "AI insights disabled",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = state.smartRecommendationsEnabled,
-                                onCheckedChange = { viewModel.toggleSmartRecommendations() }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // DATA SOVEREIGNTY & ACCOUNT CONTROL
-            item {
-                Text(
-                    text = "DATA SOVEREIGNTY & ACCOUNT RIGHTS",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        letterSpacing = 0.8.sp
+                            val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                            prefs.edit()
+                                .putString("profile_name", name)
+                                .putString("profile_email", email)
+                                .putString("profile_bio", bio)
+                                .putString("profile_type", profileType)
+                                .putInt("profile_goal_minutes", goalMinutes)
+                                .putBoolean("profile_pin_enabled", pinProtectionEnabled)
+                                .putString("profile_pin", profilePin)
+                                .apply()
+                            showSuccessMessage = true
+                        },
+                        style = AmniShieldButtonStyle.Primary,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Export Data JSON Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Export Account & Rule Data (JSON)",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Download / Share a structured snapshot of your active rules, telemetry, and profile.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(
-                                onClick = { exportUserData(context, state, name, email, bio, goalMinutes, profileType) },
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            ) {
-                                Icon(Icons.Outlined.FileDownload, contentDescription = "Export Data")
-                            }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                        // Delete Account & Purge Data (Danger Zone)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Delete Account & Purge Data",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                Text(
-                                    text = "Unlink this device from cloud sync, wipe local profile data, and reset tokens.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(
-                                onClick = { showDeleteAccountDialog = true },
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            ) {
-                                Icon(Icons.Outlined.DeleteForever, contentDescription = "Delete Account")
-                            }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                        // Legal & Privacy Portal Links
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(
-                                onClick = { openUrl(context, Constants.PRIVACY_POLICY_URL) }
-                            ) {
-                                Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Privacy Policy", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                            TextButton(
-                                onClick = { openUrl(context, Constants.DATA_DELETION_URL) }
-                            ) {
-                                Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Deletion Portal", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
                 }
-            }
-
-            // ACTION SAVE BUTTON
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                AmniShieldButton(
-                    text = "Save Profile Changes",
-                    onClick = {
-                        viewModel.updateProfile(
-                            name = name,
-                            email = email,
-                            bio = bio,
-                            goalMinutes = goalMinutes,
-                            profileType = profileType,
-                            pinEnabled = pinProtectionEnabled,
-                            pin = profilePin
-                        )
-                        // Persist to SharedPreferences
-                        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-                        prefs.edit()
-                            .putString("profile_name", name)
-                            .putString("profile_email", email)
-                            .putString("profile_bio", bio)
-                            .putString("profile_type", profileType)
-                            .putInt("profile_goal_minutes", goalMinutes)
-                            .putBoolean("profile_pin_enabled", pinProtectionEnabled)
-                            .putString("profile_pin", profilePin)
-                            .apply()
-                        showSuccessMessage = true
-                    },
-                    style = AmniShieldButtonStyle.Primary,
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         }
     }
@@ -1418,6 +1563,94 @@ fun ProfileScreen(
         }
     }
 
+    // REDEEM SUPPORTER LICENSE KEY DIALOG
+    if (showLicenseDialog) {
+        AlertDialog(
+            onDismissRequest = { showLicenseDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Key,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Activate Supporter Pass",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Paste your cryptographic license key (received via email upon supporter pass purchase). Validation is executed 100% offline on-device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = licenseInput,
+                        onValueChange = {
+                            licenseInput = it
+                            licenseErrorMsg = null
+                        },
+                        label = { Text("License Key") },
+                        placeholder = { Text("Paste Base64 license key string...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                val clipData = clipboard?.primaryClip
+                                if (clipData != null && clipData.itemCount > 0) {
+                                    licenseInput = clipData.getItemAt(0).text?.toString() ?: ""
+                                    licenseErrorMsg = null
+                                }
+                            }) {
+                                Icon(Icons.Default.ContentPaste, contentDescription = "Paste from clipboard")
+                            }
+                        }
+                    )
+                    if (licenseErrorMsg != null) {
+                        Text(
+                            text = licenseErrorMsg.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = licenseInput.trim()
+                        if (trimmed.isNotBlank()) {
+                            val success = premiumManager.redeemLicenseKey(trimmed)
+                            if (success) {
+                                isPremiumActive = true
+                                showLicenseDialog = false
+                                Toast.makeText(context, "[SUCCESS] Supporter Pass Activated Successfully!", Toast.LENGTH_LONG).show()
+                            } else {
+                                licenseErrorMsg = "[ERROR] Invalid or expired license signature. Please verify your key."
+                            }
+                        }
+                    },
+                    enabled = licenseInput.isNotBlank(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Verify & Activate", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLicenseDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // PAIRING PIN DIALOG
     if (showPairingDialog) {
         AlertDialog(
@@ -1490,14 +1723,14 @@ fun ProfileScreen(
                             isPairingInProgress = true
                             pairingStatusMsg = "Connecting to Supabase cloud..."
                             val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            coroutineScope.launch(Dispatchers.IO) {
                                 val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
                                 val result = rest.claimPairingToken(pairingPinInput, deviceName, "android")
-                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                withContext(Dispatchers.Main) {
                                     isPairingInProgress = false
                                     if (result.success) {
                                         isPairingSuccess = true
-                                        pairingStatusMsg = "🎉 Linked to Cloud Sync Hub successfully!"
+                                        pairingStatusMsg = "[SUCCESS] Linked to Cloud Sync Hub successfully!"
                                         val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
                                         savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
                                         if (result.policyPayload != null) {
@@ -1506,11 +1739,11 @@ fun ProfileScreen(
                                         }
                                         isPairedWithConsole = true
                                         pairedDeviceId = result.deviceId
-                                        Toast.makeText(context, "🎉 Device Linked Successfully!", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "[SUCCESS] Device Linked Successfully!", Toast.LENGTH_LONG).show()
                                         coroutineScope.launch(Dispatchers.IO) {
                                             com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
                                         }
-                                        kotlinx.coroutines.delay(1200)
+                                        delay(1200)
                                         showPairingDialog = false
                                     } else {
                                         isPairingSuccess = false
@@ -1580,7 +1813,6 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         showDeleteAccountDialog = false
-                        // Reset local profile
                         val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
                         prefs.edit()
                             .putString("profile_name", "AmniShield User")
@@ -1613,6 +1845,33 @@ fun ProfileScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun ProfileSectionHeader(
+    icon: ImageVector,
+    title: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(top = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 1.sp
+            )
         )
     }
 }
@@ -1680,7 +1939,6 @@ private fun extractPinFromQr(content: String): String {
     val trimmed = content.trim()
     if (trimmed.length in 6..10 && trimmed.all { it.isDigit() }) return trimmed
 
-    // JSON payload check (e.g. {"token":"48139226", ...})
     if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
         try {
             val jsonObj = com.google.gson.JsonParser.parseString(trimmed).asJsonObject
@@ -1691,7 +1949,6 @@ private fun extractPinFromQr(content: String): String {
         } catch (_: Exception) {}
     }
 
-    // URI / URL check
     try {
         val uri = Uri.parse(trimmed)
         val token = uri.getQueryParameter("token")
@@ -1702,7 +1959,6 @@ private fun extractPinFromQr(content: String): String {
         if (!token.isNullOrBlank()) return token.trim()
     } catch (_: Exception) {}
 
-    // Regex fallback for any 6-10 digit number in the string
     val regexMatch = Regex("\\b\\d{6,10}\\b").find(trimmed)
     return regexMatch?.value ?: trimmed
 }
