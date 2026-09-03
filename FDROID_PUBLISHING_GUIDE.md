@@ -71,7 +71,7 @@ F-Droid is managed via the [fdroiddata](https://gitlab.com/fdroid/fdroiddata) re
 2. Clone your fork locally:
 
    ```bash
-   git clone https://gitlab.com/YOUR_USERNAME/fdroiddata.git
+   git clone https://gitlab.com/Afrasyaab-GH/fdroiddata.git
    cd fdroiddata
    ```
 

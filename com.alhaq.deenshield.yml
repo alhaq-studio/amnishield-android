@@ -1,0 +1,29 @@
+Categories:
+  - Security
+  - System
+License: GPL-3.0-only
+AuthorName: Afrasyaab
+SourceCode: https://github.com/alhaq-studio/amnishield-android
+IssueTracker: https://github.com/alhaq-studio/amnishield-android/issues
+
+Summary: Privacy-focused app blocker, keyword filter, and focus mode utility.
+Description: |-
+  AmniShield is an open-source accessibility based reels & shorts blocker, app blocker, domain & keyword blocker, and focus mode
+  utility designed to help you stay focused and protect your digital wellness.
+
+  All processing is performed entirely offline on your device for maximum privacy.
+
+RepoType: git
+Repo: https://github.com/alhaq-studio/amnishield-android.git
+
+Builds:
+  - versionName: '0.2.0 (2026.09.03)'
+    versionCode: 142
+    commit: v0.2.0
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+AutoName: AmniShield Reels blocker & Focus Mode
