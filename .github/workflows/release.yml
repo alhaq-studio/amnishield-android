@@ -104,7 +104,7 @@ jobs:
           body: |
             ## AmniShield ${{ github.ref_name }}
 
-            > ✅ All unit tests passed before this release was published.
+            > [PASSED] All unit tests passed before this release was published.
 
             ### Download
 

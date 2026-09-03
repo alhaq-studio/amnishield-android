@@ -17,6 +17,15 @@ RepoType: git
 Repo: https://github.com/alhaq-studio/amnishield-android.git
 
 Builds:
+  - versionName: '0.2.1 (2026.09.03)'
+    versionCode: 143
+    commit: v0.2.1
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
   - versionName: '0.2.0 (2026.09.03)'
     versionCode: 142
     commit: v0.2.0
