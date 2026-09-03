@@ -146,10 +146,20 @@ fun FocusModeConfigScreen(
                 ServiceRequiredCard(onEnableClick = onEnableServiceClick)
             }
 
+            // =========================================================================
+            // CATEGORY 1: QUICK FOCUS CONFIGURATIONS
+            // =========================================================================
+            CategoryHeaderBanner(
+                title = "QUICK FOCUS DEFAULTS",
+                subtitle = "Configuration applied when starting instant Quick Focus sessions or tapping the Home Screen widget.",
+                icon = Icons.Outlined.Timer
+            )
+
             // 1. Protection Strategy (Blacklist vs Strict Whitelist)
             ConfigSectionCard(
                 title = "DEFAULT PROTECTION STRATEGY",
-                icon = Icons.Outlined.Shield
+                icon = Icons.Outlined.Shield,
+                badge = "QUICK FOCUS"
             ) {
                 val isBlockSelected = focusModeType == Constants.FOCUS_MODE_BLOCK_SELECTED
                 ModeSelectionOptionCard(
@@ -183,7 +193,8 @@ fun FocusModeConfigScreen(
             // 2. Target Focus Apps
             ConfigSectionCard(
                 title = "TARGET FOCUS APPS",
-                icon = Icons.Outlined.Apps
+                icon = Icons.Outlined.Apps,
+                badge = "QUICK FOCUS"
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -223,10 +234,65 @@ fun FocusModeConfigScreen(
                 }
             }
 
-            // 3. Always-Ignored / Global Whitelist (Emergency & Essential Tools)
+            // 3. Quick-Focus Duration Presets
+            ConfigSectionCard(
+                title = "QUICK-FOCUS DURATION PRESETS",
+                icon = Icons.Outlined.Timer,
+                badge = "QUICK FOCUS"
+            ) {
+                Text(
+                    text = "Preset button options available on the main Focus tab and Home Screen widget.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    PresetBadge("PRESET 1", preset1, Modifier.weight(1f))
+                    PresetBadge("PRESET 2", preset2, Modifier.weight(1f))
+                    PresetBadge("PRESET 3", preset3, Modifier.weight(1f))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { showPresetDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bounceClick(),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                ) {
+                    Icon(imageVector = Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Customize Durations", fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+
+            // =========================================================================
+            // CATEGORY 2: GLOBAL FOCUS & SECURITY ENGINE
+            // =========================================================================
+            CategoryHeaderBanner(
+                title = "GLOBAL FOCUS & SECURITY ENGINE",
+                subtitle = "System-wide rules that govern all focus sessions, widgets, and scheduled automation rules.",
+                icon = Icons.Outlined.Security
+            )
+
+            // 4. Always-Ignored / Global Whitelist (Emergency & Essential Tools)
             ConfigSectionCard(
                 title = "ALWAYS-WHITELISTED APPS (EMERGENCY)",
-                icon = Icons.Outlined.VerifiedUser
+                icon = Icons.Outlined.VerifiedUser,
+                badge = "GLOBAL"
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -263,10 +329,11 @@ fun FocusModeConfigScreen(
                 }
             }
 
-            // 4. Strictness & Intercept Rules
+            // 5. Strictness & Intercept Rules
             ConfigSectionCard(
                 title = "STRICTNESS & LOCK PREFERENCES",
-                icon = Icons.Outlined.Lock
+                icon = Icons.Outlined.Lock,
+                badge = "GLOBAL"
             ) {
                 // Strictness Selector
                 Row(
@@ -375,10 +442,11 @@ fun FocusModeConfigScreen(
                 }
             }
 
-            // 5. AmniSpace (Mindful Focus Launcher Space)
+            // 6. AmniSpace (Mindful Focus Launcher Space)
             ConfigSectionCard(
                 title = "AMNISPACE (MINDFUL FOCUS LAUNCHER)",
-                icon = Icons.Outlined.SelfImprovement
+                icon = Icons.Outlined.SelfImprovement,
+                badge = "GLOBAL"
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -451,48 +519,11 @@ fun FocusModeConfigScreen(
                 }
             }
 
-            // 6. Quick-Focus Presets
-            ConfigSectionCard(
-                title = "QUICK-FOCUS DURATION PRESETS",
-                icon = Icons.Outlined.Timer
-            ) {
-                Text(
-                    text = "Preset button options available on the main Focus tab.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    PresetBadge("PRESET 1", preset1, Modifier.weight(1f))
-                    PresetBadge("PRESET 2", preset2, Modifier.weight(1f))
-                    PresetBadge("PRESET 3", preset3, Modifier.weight(1f))
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedButton(
-                    onClick = { showPresetDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bounceClick(),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-                ) {
-                    Icon(imageVector = Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Customize Durations", fontWeight = FontWeight.SemiBold)
-                }
-            }
-
-            // 6. Active Focus Mode Automation Rules Link
+            // 7. Active Focus Mode Automation Rules Link
             ConfigSectionCard(
                 title = "AUTOMATED FOCUS SCHEDULES",
-                icon = Icons.Outlined.CalendarMonth
+                icon = Icons.Outlined.CalendarMonth,
+                badge = "GLOBAL"
             ) {
                 Text(
                     text = "Recurring focus sessions that activate automatically based on time of day and active days.",
@@ -581,13 +612,62 @@ fun FocusModeConfigScreen(
 }
 
 @Composable
+private fun CategoryHeaderBanner(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp, bottom = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                letterSpacing = 0.5.sp
+            )
+        }
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 36.dp)
+        )
+    }
+}
+
+@Composable
 private fun ConfigSectionCard(
     title: String,
     icon: ImageVector,
+    badge: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -595,25 +675,48 @@ private fun ConfigSectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.8.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+
+                if (badge != null) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = badge,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
             content()
         }
