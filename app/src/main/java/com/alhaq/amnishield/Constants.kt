@@ -10,6 +10,7 @@ class Constants {
         const val WARNING_SCREEN_MODE_VIEW_BLOCKER = 1
         const val WARNING_SCREEN_MODE_APP_BLOCKER = 2
         const val WARNING_SCREEN_MODE_KEYWORD_BLOCKER = 3
+        const val WARNING_SCREEN_MODE_FOCUS_MODE = 4
 
         // available feedback modes for keyword blocker
         const val KEYWORD_FEEDBACK_AMNISPACE = "AMNISPACE"
@@ -20,6 +21,11 @@ class Constants {
         const val BLOCKER_WARNING_STYLE_AMNISPACE = "AMNISPACE"
         const val BLOCKER_WARNING_STYLE_DIALOG = "DIALOG"
         const val BLOCKER_WARNING_STYLE_SILENT = "SILENT"
+
+        // available focus mode interception feedback styles
+        const val FOCUS_INTERCEPTION_STYLE_WORKSPACE = "WORKSPACE"
+        const val FOCUS_INTERCEPTION_STYLE_DIALOG = "DIALOG"
+        const val FOCUS_INTERCEPTION_STYLE_SILENT = "SILENT"
 
         // available types for focus mode
         const val FOCUS_MODE_BLOCK_ALL_EX_SELECTED = 1

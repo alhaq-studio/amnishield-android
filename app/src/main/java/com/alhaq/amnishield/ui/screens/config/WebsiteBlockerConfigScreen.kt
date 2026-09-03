@@ -276,7 +276,7 @@ fun WebsiteBlockerConfigScreen(
                         )
                         val styleTitle = when (warningStyle) {
                             Constants.BLOCKER_WARNING_STYLE_DIALOG -> "Standard Warning Dialog"
-                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> "AmniSpace Mindful Focus Space"
+                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> "Mindful Breathing Pause"
                             else -> "Silent URL Clean & Intercept"
                         }
                         Text(
@@ -367,8 +367,8 @@ fun WebsiteBlockerConfigScreen(
             ),
             Triple(
                 Constants.BLOCKER_WARNING_STYLE_AMNISPACE,
-                "AmniSpace Mindful Focus Space",
-                "Disrupts access with guided mindful breathing or transitions into the minimalist AmniSpace focus workspace."
+                "Mindful Breathing Pause",
+                "Disrupts access with a guided mindful breathing pause to choose intentionally before returning to home."
             )
         )
 

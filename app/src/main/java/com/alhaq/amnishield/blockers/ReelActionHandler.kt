@@ -46,10 +46,19 @@ class ReelActionHandler(
                 return
             }
             ReelBlocker.BlockResponseMode.MINDFUL_PAUSE -> {
+                val root = getRootInActiveWindow()
+                val pkg = root?.packageName?.toString().orEmpty()
+                try {
+                    @Suppress("DEPRECATION")
+                    root?.recycle()
+                } catch (_: Exception) {}
                 val amnispaceIntent = Intent(context, com.alhaq.amnishield.ui.activity.AmniSpaceActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
                     putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Reels Interception")
+                    if (pkg.isNotEmpty()) {
+                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, pkg)
+                    }
                 }
                 context.startActivity(amnispaceIntent)
                 return

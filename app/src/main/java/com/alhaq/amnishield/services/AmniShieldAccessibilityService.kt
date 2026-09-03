@@ -279,8 +279,33 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
                 if (focusModeResult.isBlocked) {
                     blockingStatsManager.recordAppBlock(packageName, "Blocked by Focus Mode")
-                    pressHome()
-                    return
+                    val focusStyle = savedPreferencesLoader.getFocusModeInterceptionStyle()
+                    when (focusStyle) {
+                        Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE -> {
+                            val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_FOCUS_LAUNCHER)
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Focus Session Active")
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                            }
+                            startActivity(intent)
+                            return
+                        }
+                        Constants.FOCUS_INTERCEPTION_STYLE_SILENT -> {
+                            pressHome()
+                            return
+                        }
+                        else -> { // Constants.FOCUS_INTERCEPTION_STYLE_DIALOG (Default)
+                            val intent = Intent(this, WarningActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                putExtra("mode", Constants.WARNING_SCREEN_MODE_FOCUS_MODE)
+                                putExtra("result_id", packageName)
+                                putExtra("blocked_by_feature", "Focus Mode")
+                            }
+                            startActivity(intent)
+                            return
+                        }
+                    }
                 }
             }
 
@@ -444,7 +469,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                                     putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
                                     putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain: $blockedSite")
-                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, blockedSite)
                                     putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
                                 }
                                 startActivity(intent)

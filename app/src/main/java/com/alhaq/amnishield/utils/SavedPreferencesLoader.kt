@@ -360,6 +360,54 @@ class SavedPreferencesLoader(val context: Context) {
         sharedPreferences.edit().putString("website_blocker_warning_style", style).apply()
     }
 
+    fun getFocusModeInterceptionStyle(): String {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        val defaultStyle = if (isAmniSpaceFocusLauncherEnabled()) {
+            com.alhaq.amnishield.Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE
+        } else {
+            com.alhaq.amnishield.Constants.FOCUS_INTERCEPTION_STYLE_DIALOG
+        }
+        return sharedPreferences.getString("focus_mode_interception_style", defaultStyle) ?: defaultStyle
+    }
+
+    fun setFocusModeInterceptionStyle(style: String) {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putString("focus_mode_interception_style", style).apply()
+        // Sync with legacy boolean preference for backwards compatibility
+        setAmniSpaceFocusLauncherEnabled(style == com.alhaq.amnishield.Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE)
+    }
+
+    fun loadFocusModeWarningInfo(): MainActivity.WarningData {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        val gson = Gson()
+        val json = sharedPreferences.getString("focus_mode_warning", null)
+        if (json.isNullOrEmpty()) return MainActivity.WarningData(
+            message = "This app is restricted during your active Focus Session.",
+            isProceedDisabled = true
+        )
+        val type = object : TypeToken<MainActivity.WarningData>() {}.type
+        return try {
+            gson.fromJson(json, type) ?: MainActivity.WarningData(
+                message = "This app is restricted during your active Focus Session.",
+                isProceedDisabled = true
+            )
+        } catch (e: Exception) {
+            MainActivity.WarningData(
+                message = "This app is restricted during your active Focus Session.",
+                isProceedDisabled = true
+            )
+        }
+    }
+
+    fun saveFocusModeWarningInfo(warningData: MainActivity.WarningData) {
+        val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val gson = Gson()
+        val json = gson.toJson(warningData)
+        editor.putString("focus_mode_warning", json)
+        editor.apply()
+    }
+
     fun saveCheatHoursForViewBlocker(startTime: Int, endTime: Int) {
         val sharedPreferences = context.getSharedPreferences("cheat_hours", Context.MODE_PRIVATE)
         val edit = sharedPreferences.edit()

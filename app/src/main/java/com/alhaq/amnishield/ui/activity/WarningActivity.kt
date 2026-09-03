@@ -27,10 +27,12 @@ class WarningActivity : AppCompatActivity() {
 
 
         val mode = intent.getIntExtra("mode", 0)
+        val isFocusMode = mode == Constants.WARNING_SCREEN_MODE_FOCUS_MODE
         
         val warningScreenConfig = when (mode) {
             Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER -> savedPreferencesLoader.loadViewBlockerWarningInfo()
             Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER -> savedPreferencesLoader.loadKeywordBlockerWarningInfo()
+            Constants.WARNING_SCREEN_MODE_FOCUS_MODE -> savedPreferencesLoader.loadFocusModeWarningInfo()
             else -> savedPreferencesLoader.loadAppBlockerWarningInfo()
         }
         val binding = DialogWarningOverlayBinding.inflate(layoutInflater)
@@ -41,11 +43,11 @@ class WarningActivity : AppCompatActivity() {
 
         val isSimpleMode = savedPreferencesLoader.getEnforcementMode() == "SIMPLE"
         val blockedFeature = intent.getStringExtra("blocked_by_feature") 
-            ?: if (isKeywordBlockerMode) "Keyword Blocker" else if (isReelBlockerWarning) "Reels Blocker" else "App Blocker"
+            ?: if (isFocusMode) "Focus Mode" else if (isKeywordBlockerMode) "Keyword Blocker" else if (isReelBlockerWarning) "Reels Blocker" else "App Blocker"
 
         binding.minsPicker.setValue(3)
         binding.minsPicker.minValue = 2
-        var isDialogCancelable = !isAppBlockerMode || isHomePressRequested
+        var isDialogCancelable = !isAppBlockerMode || isHomePressRequested || isFocusMode
 
         if (isSimpleMode) {
             binding.warningTitle.text = "Access Blocked"
@@ -54,6 +56,12 @@ class WarningActivity : AppCompatActivity() {
             binding.proceedSeconds.visibility = View.GONE
             binding.minsPicker.visibility = View.GONE
             isDialogCancelable = false
+        } else if (isFocusMode) {
+            binding.warningTitle.text = "Focus Session Active"
+            binding.btnProceed.visibility = View.GONE
+            binding.proceedSeconds.visibility = View.GONE
+            binding.minsPicker.visibility = View.GONE
+            isDialogCancelable = true
         } else {
             binding.warningTitle.text = when {
                 isAppBlockerMode -> getString(R.string.warning_title_app_blocker)
@@ -95,6 +103,7 @@ class WarningActivity : AppCompatActivity() {
             .show()
 
         val fallbackMessage = when {
+            isFocusMode -> "This app is restricted during your active Focus Session."
             isAppBlockerMode -> getString(R.string.warning_default_message_app)
             isKeywordBlockerMode -> "Content containing a blocked keyword was detected."
             else -> getString(R.string.warning_default_message_reels)
@@ -103,6 +112,9 @@ class WarningActivity : AppCompatActivity() {
 
         if (isSimpleMode) {
             binding.btnCancel.text = "Go Home"
+        } else if (isFocusMode) {
+            binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
+            binding.btnCancel.text = "Return Home"
         } else {
             binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
             binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
@@ -114,7 +126,7 @@ class WarningActivity : AppCompatActivity() {
         }
 
         binding.btnCancel.setOnClickListener {
-            if (isSimpleMode || isAppBlockerMode || isHomePressRequested) {
+            if (isSimpleMode || isAppBlockerMode || isHomePressRequested || isFocusMode) {
                 val intent = Intent(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_HOME)
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

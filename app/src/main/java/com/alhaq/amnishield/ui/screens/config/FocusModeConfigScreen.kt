@@ -74,7 +74,7 @@ fun FocusModeConfigScreen(
 
     var strictnessMode by remember { mutableStateOf(loader.getFocusModeStrictness()) }
     var allowEarlyStop by remember { mutableStateOf(loader.isFocusModeEarlyStopAllowed()) }
-    var isAmniSpaceEnabled by remember { mutableStateOf(loader.isAmniSpaceFocusLauncherEnabled()) }
+    var interceptionStyle by remember { mutableStateOf(loader.getFocusModeInterceptionStyle()) }
     var amnispaceAppsCount by remember { mutableStateOf(loader.getAmniSpaceEssentialApps().size) }
 
     val initialPresets = remember { loader.getQuickFocusDurationPresets() }
@@ -83,6 +83,8 @@ fun FocusModeConfigScreen(
     var preset3 by remember { mutableIntStateOf(initialPresets.third) }
 
     var showPresetDialog by remember { mutableStateOf(false) }
+    var showWarningMessageDialog by remember { mutableStateOf(false) }
+    var warningMessageInput by remember { mutableStateOf(loader.loadFocusModeWarningInfo().message) }
 
     val autoFocusRulesCount = remember {
         loader.loadAppBlockerScheduleRules()
@@ -329,7 +331,152 @@ fun FocusModeConfigScreen(
                 }
             }
 
-            // 5. Strictness & Intercept Rules
+            // 5. Interception Reaction Style
+            ConfigSectionCard(
+                title = "INTERCEPTION REACTION STYLE",
+                icon = Icons.Outlined.Visibility,
+                badge = "GLOBAL"
+            ) {
+                Text(
+                    text = "Choose what happens when you attempt to open a blocked distraction during an active focus session.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Option 1: Focus Space Workspace Overlay (Recommended)
+                ModeSelectionOptionCard(
+                    title = "Focus Space Workspace Overlay (Recommended)",
+                    description = "Takes you to your distraction-free session workspace with live countdown and allowed tools.",
+                    selected = interceptionStyle == Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE,
+                    onClick = {
+                        interceptionStyle = Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE
+                        loader.setFocusModeInterceptionStyle(Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Option 2: Focus Warning Dialog (Default when Workspace is OFF)
+                ModeSelectionOptionCard(
+                    title = "Focus Warning Dialog (Default)",
+                    description = "Informative popup reminding you that a Focus Session is running with remaining time.",
+                    selected = interceptionStyle == Constants.FOCUS_INTERCEPTION_STYLE_DIALOG,
+                    onClick = {
+                        interceptionStyle = Constants.FOCUS_INTERCEPTION_STYLE_DIALOG
+                        loader.setFocusModeInterceptionStyle(Constants.FOCUS_INTERCEPTION_STYLE_DIALOG)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Option 3: Silent Instant Exit
+                ModeSelectionOptionCard(
+                    title = "Silent Instant Exit (Opt-in)",
+                    description = "Silently closes restricted apps and returns to the device home screen without an overlay.",
+                    selected = interceptionStyle == Constants.FOCUS_INTERCEPTION_STYLE_SILENT,
+                    onClick = {
+                        interceptionStyle = Constants.FOCUS_INTERCEPTION_STYLE_SILENT
+                        loader.setFocusModeInterceptionStyle(Constants.FOCUS_INTERCEPTION_STYLE_SILENT)
+                    }
+                )
+
+                // Sub-action for Workspace (Configure allowed workspace apps)
+                if (interceptionStyle == Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Allowed Workspace Apps",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "$amnispaceAppsCount essential tools accessible inside workspace",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Button(
+                            onClick = onSelectAlwaysWhitelistedClick,
+                            modifier = Modifier.bounceClick(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Apps,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Manage", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // Sub-action for Dialog (Configure Warning Message)
+                if (interceptionStyle == Constants.FOCUS_INTERCEPTION_STYLE_DIALOG) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick()
+                            .clickable { showWarningMessageDialog = true }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.EditNote,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Focus Warning Dialog Message",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Customize reminder text shown during focus lockdown",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Configure",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // 6. Strictness & Lock Rules
             ConfigSectionCard(
                 title = "STRICTNESS & LOCK PREFERENCES",
                 icon = Icons.Outlined.Lock,
@@ -393,129 +540,6 @@ fun FocusModeConfigScreen(
                             loader.setFocusModeEarlyStopAllowed(checked)
                         }
                     )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                )
-
-                // Intercept Screen Tweaks
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bounceClick()
-                        .clickable { onConfigureWarning() }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Focus Warning Screen Behavior",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Customize warning dialog message and options",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Configure",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // 6. AmniSpace (Mindful Focus Launcher Space)
-            ConfigSectionCard(
-                title = "AMNISPACE (MINDFUL FOCUS LAUNCHER)",
-                icon = Icons.Outlined.SelfImprovement,
-                badge = "GLOBAL"
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enable AmniSpace Workspace",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isAmniSpaceEnabled) "Replaces active screen with an ultra-minimal focus workspace" else "Disabled — standard app blocker overlay active",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = isAmniSpaceEnabled,
-                        onCheckedChange = { checked ->
-                            isAmniSpaceEnabled = checked
-                            loader.setAmniSpaceFocusLauncherEnabled(checked)
-                        }
-                    )
-                }
-
-                if (isAmniSpaceEnabled) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "AmniSpace Allowed Apps",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "$amnispaceAppsCount essential tools accessible during focus",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Button(
-                            onClick = onSelectAlwaysWhitelistedClick,
-                            modifier = Modifier.bounceClick(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Apps,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Manage", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
                 }
             }
 
@@ -604,6 +628,55 @@ fun FocusModeConfigScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showPresetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Focus Warning Dialog Message Customization Dialog
+    if (showWarningMessageDialog) {
+        var tempMsg by remember { mutableStateOf(warningMessageInput) }
+
+        AlertDialog(
+            onDismissRequest = { showWarningMessageDialog = false },
+            title = { Text("Focus Warning Message", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Customize the message shown when a restricted app is blocked during a focus session.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = tempMsg,
+                        onValueChange = { tempMsg = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Reminder Message") },
+                        placeholder = { Text("This app is restricted during your active Focus Session.") },
+                        shape = RoundedCornerShape(12.dp),
+                        maxLines = 4
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = tempMsg.trim().ifEmpty { "This app is restricted during your active Focus Session." }
+                        warningMessageInput = trimmed
+                        loader.saveFocusModeWarningInfo(loader.loadFocusModeWarningInfo().copy(message = trimmed))
+                        showWarningMessageDialog = false
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWarningMessageDialog = false }) {
                     Text("Cancel")
                 }
             }

@@ -17,8 +17,10 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
+import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
 import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.activity.SelectAppsActivity
 import com.alhaq.amnishield.ui.fragments.features.BaseFeatureFragment
@@ -197,6 +199,15 @@ class FocusFragment : BaseFeatureFragment() {
         )
         
         refreshFocusState()
+
+        if (loader.getFocusModeInterceptionStyle() == Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE) {
+            val workspaceIntent = Intent(requireContext(), AmniSpaceActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_FOCUS_LAUNCHER)
+                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Focus Session Active")
+            }
+            startActivity(workspaceIntent)
+        }
     }
 
     private fun loadInstalledApps() {

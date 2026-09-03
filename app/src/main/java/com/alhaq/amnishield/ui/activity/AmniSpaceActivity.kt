@@ -110,7 +110,7 @@ class AmniSpaceActivity : ComponentActivity() {
 }
 
 /**
- * Mode 1: Minimalist Focus Launcher Space.
+ * Mode 1: Minimalist Focus Launcher Space / Focus Session Workspace.
  */
 @Composable
 fun AmniSpaceLauncherScreen(
@@ -119,6 +119,40 @@ fun AmniSpaceLauncherScreen(
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
     val packageManager = context.packageManager
+
+    val focusData = remember { loader.getFocusModeData() }
+    var remainingMillis by remember {
+        mutableLongStateOf(
+            if (focusData.isTurnedOn && focusData.endTime > System.currentTimeMillis()) {
+                focusData.endTime - System.currentTimeMillis()
+            } else {
+                0L
+            }
+        )
+    }
+
+    LaunchedEffect(focusData.isTurnedOn, focusData.endTime) {
+        while (focusData.isTurnedOn && remainingMillis > 0L) {
+            delay(1000L)
+            remainingMillis = (focusData.endTime - System.currentTimeMillis()).coerceAtLeast(0L)
+        }
+    }
+
+    val formattedTime = remember(remainingMillis) {
+        if (remainingMillis <= 0L) {
+            "Session Completed"
+        } else {
+            val totalSecs = remainingMillis / 1000
+            val hours = totalSecs / 3600
+            val mins = (totalSecs % 3600) / 60
+            val secs = totalSecs % 60
+            if (hours > 0) {
+                String.format("%02d:%02d:%02d remaining", hours, mins, secs)
+            } else {
+                String.format("%02d:%02d remaining", mins, secs)
+            }
+        }
+    }
 
     val essentialPackageNames = remember { loader.getAmniSpaceEssentialApps() }
     
@@ -167,24 +201,24 @@ fun AmniSpaceLauncherScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "AmniSpace Focus Mode",
+                    text = "Focus Space Workspace",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Deep Focus in Progress",
+                text = if (remainingMillis > 0L) formattedTime else "Deep Focus Session",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
             Text(
-                text = "Only essential allowed tools are accessible.",
+                text = if (remainingMillis > 0L) "Only essential allowed tools are accessible." else "Focus session is active.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -353,7 +387,7 @@ fun AmniSpaceLauncherScreen(
 }
 
 /**
- * Mode 2: Mindful Breathing Interstitial (OneSec-style Friction for Reels/Limits).
+ * Mode 2: Mindful Breathing Interstitial (OneSec-style Friction for Reels/Limits/Blockers).
  */
 @Composable
 fun AmniSpaceBreathingScreen(
@@ -364,11 +398,54 @@ fun AmniSpaceBreathingScreen(
 ) {
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
+    val packageManager = context.packageManager
     val durationSeconds = remember(customDurationSeconds) {
         customDurationSeconds ?: loader.getAmniSpaceBreathingDurationSeconds()
     }
 
     var isBreathingDone by remember { mutableStateOf(false) }
+
+    // Dynamically resolve app name and icon if triggerApp is an installed package
+    val resolvedAppInfo = remember(triggerApp) {
+        if (triggerApp.isNotEmpty() && triggerApp.contains(".")) {
+            try {
+                val info = packageManager.getApplicationInfo(triggerApp, 0)
+                val name = packageManager.getApplicationLabel(info).toString()
+                val icon = packageManager.getApplicationIcon(info)
+                Pair(name, icon)
+            } catch (e: Exception) {
+                Pair(triggerApp, null)
+            }
+        } else if (triggerApp.isNotEmpty()) {
+            Pair(triggerApp, null)
+        } else {
+            Pair(null, null)
+        }
+    }
+
+    val (resolvedAppName, resolvedAppIcon) = resolvedAppInfo
+
+    // Determine category badge and contextual friction copy
+    val isReels = triggerReason.contains("Reel", ignoreCase = true)
+    val isWebsite = triggerReason.contains("Web", ignoreCase = true) || triggerReason.contains("Domain", ignoreCase = true) || triggerReason.contains("Social App", ignoreCase = true)
+    val isKeyword = triggerReason.contains("Keyword", ignoreCase = true)
+    val isFocus = triggerReason.contains("Focus", ignoreCase = true)
+
+    val badgeTitle = when {
+        isFocus -> "FOCUS MODE PAUSE"
+        isReels -> "REELS BLOCKER"
+        isWebsite -> "WEBSITE BLOCKER"
+        isKeyword -> "KEYWORD BLOCKER"
+        else -> "APP BLOCKER"
+    }
+
+    val subtitleText = when {
+        isFocus -> "Focus session is active. Take a mindful breath."
+        isReels -> "Short video feeds are engineered to trap attention. Take a breath and choose intentionally."
+        isWebsite -> if (resolvedAppName != null) "Notice the urge to browse $resolvedAppName. Take a moment of calm." else "Notice the urge to browse this website. Take a moment of calm."
+        isKeyword -> "Content containing restricted terms was detected. Pause and refocus."
+        else -> if (resolvedAppName != null) "Notice the impulse to open $resolvedAppName. Take a breath and choose intentionally." else "Notice the impulse to open this app. Take a moment of calm."
+    }
 
     Column(
         modifier = Modifier
@@ -399,14 +476,25 @@ fun AmniSpaceBreathingScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "AmniSpace Mindful Pause",
+                    text = badgeTitle,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (resolvedAppIcon != null) {
+                Image(
+                    bitmap = resolvedAppIcon.toBitmap().asImageBitmap(),
+                    contentDescription = resolvedAppName,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             Text(
                 text = "Pause & Breathe",
@@ -416,11 +504,7 @@ fun AmniSpaceBreathingScreen(
             )
 
             Text(
-                text = if (triggerReason.contains("Reel", ignoreCase = true)) {
-                    "Short-form video feeds are designed to trap attention. Take a breath and choose intentionally."
-                } else {
-                    "Notice the impulse to open this app. Take a moment of calm."
-                },
+                text = subtitleText,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
