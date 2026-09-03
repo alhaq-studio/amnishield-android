@@ -132,7 +132,7 @@ class SavedPreferencesLoader(val context: Context) {
 
     fun getReelBlockerBlockResponseMode(): ReelBlocker.BlockResponseMode {
         val raw = context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
-            .getInt("block_response_mode", ReelBlocker.BlockResponseMode.HARD_BLOCK.value)
+            .getInt("block_response_mode", ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT.value)
         return ReelBlocker.BlockResponseMode.fromInt(raw)
     }
 
@@ -329,8 +329,8 @@ class SavedPreferencesLoader(val context: Context) {
 
     fun getKeywordBlockerFeedbackMode(): String {
         val sharedPreferences = context.getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
-        val mode = sharedPreferences.getString("feedback_mode", com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_AMNISPACE)
-        return if (mode == "HAND_GESTURE" || mode.isNullOrEmpty()) com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_AMNISPACE else mode
+        val mode = sharedPreferences.getString("feedback_mode", com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_SILENT)
+        return if (mode.isNullOrEmpty()) com.alhaq.amnishield.Constants.KEYWORD_FEEDBACK_SILENT else mode
     }
 
     fun setKeywordBlockerFeedbackMode(mode: String) {
@@ -340,8 +340,8 @@ class SavedPreferencesLoader(val context: Context) {
 
     fun getAppBlockerWarningStyle(): String {
         val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("app_blocker_warning_style", com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE)
-            ?: com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE
+        return sharedPreferences.getString("app_blocker_warning_style", com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_DIALOG)
+            ?: com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_DIALOG
     }
 
     fun setAppBlockerWarningStyle(style: String) {
@@ -351,8 +351,8 @@ class SavedPreferencesLoader(val context: Context) {
 
     fun getWebsiteBlockerWarningStyle(): String {
         val sharedPreferences = context.getSharedPreferences("warning_data", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("website_blocker_warning_style", com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE)
-            ?: com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_AMNISPACE
+        return sharedPreferences.getString("website_blocker_warning_style", com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_SILENT)
+            ?: com.alhaq.amnishield.Constants.BLOCKER_WARNING_STYLE_SILENT
     }
 
     fun setWebsiteBlockerWarningStyle(style: String) {

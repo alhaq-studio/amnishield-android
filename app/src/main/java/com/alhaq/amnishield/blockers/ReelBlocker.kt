@@ -356,7 +356,7 @@ class ReelBlocker : BaseBlocker() {
 
         companion object {
             fun fromInt(value: Int): BlockResponseMode =
-                entries.firstOrNull { it.value == value } ?: HARD_BLOCK
+                entries.firstOrNull { it.value == value } ?: HOME_FEED_REDIRECT
         }
     }
 
@@ -366,7 +366,7 @@ class ReelBlocker : BaseBlocker() {
         val requestHomePressInstead: Boolean = false,
         val isReelFoundInCooldownState: Boolean = false,
         val viewId: String = "",
-        val blockResponseMode: BlockResponseMode = BlockResponseMode.HARD_BLOCK
+        val blockResponseMode: BlockResponseMode = BlockResponseMode.HOME_FEED_REDIRECT
     )
 }
 

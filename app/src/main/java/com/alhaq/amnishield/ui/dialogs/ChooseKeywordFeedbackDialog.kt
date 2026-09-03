@@ -19,12 +19,13 @@ class ChooseKeywordFeedbackDialog(
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val binding = DialogKeywordFeedbackStyleBinding.inflate(layoutInflater)
         val currentMode = savedPreferencesLoader?.getKeywordBlockerFeedbackMode()
-            ?: Constants.KEYWORD_FEEDBACK_AMNISPACE
+            ?: Constants.KEYWORD_FEEDBACK_SILENT
 
         when (currentMode) {
-            Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> binding.radioWarningScreen.isChecked = true
             Constants.KEYWORD_FEEDBACK_SILENT -> binding.radioSilent.isChecked = true
-            else -> binding.radioAmnispace.isChecked = true
+            Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> binding.radioWarningScreen.isChecked = true
+            Constants.KEYWORD_FEEDBACK_AMNISPACE -> binding.radioAmnispace.isChecked = true
+            else -> binding.radioSilent.isChecked = true
         }
 
         binding.btnPreviewAmnispace.setOnClickListener {

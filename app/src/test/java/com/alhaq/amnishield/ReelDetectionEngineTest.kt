@@ -140,9 +140,9 @@ class ReelDetectionEngineTest {
         assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HARD_BLOCK, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(0))
         assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.ANDROID_HOME, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(1))
         assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(2))
-        // Invalid or unknown ints fall back to HARD_BLOCK
-        assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HARD_BLOCK, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(99))
-        assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HARD_BLOCK, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(-1))
+        // Invalid or unknown ints fall back to HOME_FEED_REDIRECT (frictionless default)
+        assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(99))
+        assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(-1))
     }
 }
 

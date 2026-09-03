@@ -459,7 +459,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                                 startActivity(intent)
                             }
                             else -> {
-                                pressHome()
+                                val cleared = websiteBlockerDetector.clearBlockedUrl(rootNode, packageName)
+                                if (!cleared) {
+                                    pressBack()
+                                }
                             }
                         }
                         return
@@ -471,6 +474,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
             val isReelsEnabled = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
             if (isReelsEnabled) {
+                reelBlocker.isEnabled = true
                 reelBlocker.isYoutubeEnabled = savedPreferencesLoader.isReelBlockerYoutubeEnabled()
                 reelBlocker.isInstagramEnabled = savedPreferencesLoader.isReelBlockerInstagramEnabled()
                 reelBlocker.isTiktokEnabled = savedPreferencesLoader.isReelBlockerTiktokEnabled()
