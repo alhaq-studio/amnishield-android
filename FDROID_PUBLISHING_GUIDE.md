@@ -6,23 +6,23 @@ This guide outlines the prerequisites, provides the F-Droid build recipe/metadat
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before submitting to F-Droid, you must complete the following:
 
 1. **Add a License File:**
    F-Droid requires a clear open-source license. Create a file named `LICENSE` in the root of your project directory containing the full text of your chosen license (e.g., GPL-3.0, Apache 2.0, or MIT).
 2. **Release Tag:**
-   F-Droid build servers compile directly from Git tags. Create and push a git tag for your release (e.g., `v0.14.6.2026`):
+   F-Droid build servers compile directly from Git tags. Create and push a git tag for your release (e.g., `v0.2.0`):
 
    ```bash
-   git tag -a v0.14.6.2026 -m "Release v0.14.6.2026"
-   git push origin v0.14.6.2026
+   git tag -a v0.2.0 -m "Release v0.2.0"
+   git push origin v0.2.0
    ```
 
 ---
 
-## 🛠️ F-Droid Metadata Recipe (`com.alhaq.deenshield.yml`)
+## F-Droid Metadata Recipe (`com.alhaq.deenshield.yml`)
 
 Save the following YAML snippet as `com.alhaq.deenshield.yml` in your project root or submit it to the F-Droid metadata repository.
 
@@ -32,8 +32,8 @@ Categories:
   - System
 License: GPL-3.0-only  # Update to match your LICENSE file
 AuthorName: Afrasyaab
-SourceCode: https://github.com/alhaq-studio/AmniShield-Android
-IssueTracker: https://github.com/alhaq-studio/AmniShield-Android/issues
+SourceCode: https://github.com/alhaq-studio/amniShield-android
+IssueTracker: https://github.com/alhaq-studio/amniShield-android/issues
 
 Summary: Privacy-focused app blocker, keyword filter, and focus mode utility.
 Description: |
@@ -43,12 +43,12 @@ Description: |
     All processing is performed entirely offline on your device for maximum privacy.
 
 RepoType: git
-Repo: https://github.com/alhaq-studio/AmniShield-Android
+Repo: https://github.com/alhaq-studio/amnishield-android
 
 Builds:
-  - versionName: 0.14.6.2026
-    versionCode: 125
-    commit: v0.14.6.2026
+  - versionName: 0.2.0
+    versionCode: 142
+    commit: v0.2.0
     subdir: app
     gradle:
       - yes
@@ -61,7 +61,7 @@ AutoName: AmniShield
 
 ---
 
-## 🚀 Step-by-Step Submission Workflow
+## Step-by-Step Submission Workflow
 
 F-Droid is managed via the [fdroiddata](https://gitlab.com/fdroid/fdroiddata) repository on GitLab.
 
@@ -108,7 +108,7 @@ To verify that F-Droid's build server won't run into errors, you can test it usi
 
 ---
 
-## 💰 F-Droid Monetization & Premium Verification
+## F-Droid Monetization & Premium Verification
 
 F-Droid has a strict policy against including proprietary libraries (such as Google Play Billing). To monetize the F-Droid distribution without violating F-Droid policies, AmniShield uses a **Serverless, Offline-First Cryptographic Licensing Model**:
 
