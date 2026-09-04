@@ -903,7 +903,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnCredits.setOnClickListener {
-            openUrl("https://alhaq.uk/legal/index.html")
+            openUrl(Constants.PRIVACY_POLICY_URL)
         }
         binding.btnBackup.setOnClickListener {
             ZipUtils.showDirectoryPicker(directoryPicker)

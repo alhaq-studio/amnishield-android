@@ -43,13 +43,13 @@ class Constants {
         const val AMNISHIELD_WEBSITE_URL = "https://amnishield.com/"
         const val AMNISHIELD_DOCS_URL = "https://amnishield.com/docs/"
         const val AMNISHIELD_SUPPORT_URL = "https://alhaq.uk/support.html"
-        const val AMNISHIELD_TERMS_URL = "https://alhaq.uk/legal/terms.html"
-        const val AMNISHIELD_MOBILE_PRIVACY_URL = "https://alhaq.uk/legal/privacy.html"
+        const val AMNISHIELD_TERMS_URL = "https://amnishield.com/legal/terms/"
+        const val AMNISHIELD_MOBILE_PRIVACY_URL = "https://amnishield.com/legal/privacy/"
         const val ALHAQ_STUDIO_URL = "https://alhaq.uk"
         const val SUPPORT_EMAIL = "support@alhaq.uk"
         const val DATA_DELETION_URL = "https://amnishield.com/legal/delete-account/"
-        const val PRIVACY_POLICY_URL = "https://alhaq.uk/legal/privacy.html"
-        const val TERMS_OF_SERVICE_URL = "https://alhaq.uk/legal/terms.html"
+        const val PRIVACY_POLICY_URL = "https://amnishield.com/legal/privacy/"
+        const val TERMS_OF_SERVICE_URL = "https://amnishield.com/legal/terms/"
 
         // GitHub & Source Code
         const val GITHUB_REPO_URL = "https://github.com/alhaq-studio/amnishield-android"
