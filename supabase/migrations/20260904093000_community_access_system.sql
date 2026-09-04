@@ -25,6 +25,11 @@ CREATE INDEX IF NOT EXISTS idx_comm_access_email ON public.community_access_requ
 CREATE INDEX IF NOT EXISTS idx_comm_access_app_id ON public.community_access_requests(app_id);
 CREATE INDEX IF NOT EXISTS idx_comm_access_status ON public.community_access_requests(status);
 
+-- Partial composite expression index for sub-millisecond check_community_grant_eligibility queries
+CREATE INDEX IF NOT EXISTS idx_comm_access_clean_email 
+    ON public.community_access_requests (lower(trim(email)), requested_at DESC)
+    WHERE status != 'cancelled';
+
 -- Enable Row Level Security
 ALTER TABLE public.community_access_requests ENABLE ROW LEVEL SECURITY;
 

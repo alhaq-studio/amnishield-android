@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
     const blocklist = await getDisposableDomains();
 
     if (blocklist.has(domain)) {
+      console.warn(`[COMMUNITY_ACCESS] REJECTED_DISPOSABLE email_domain=${domain}`);
       return new Response(
         JSON.stringify({
           error: "Disposable or temporary email addresses are not permitted. Please apply with your permanent email address."
@@ -146,6 +147,7 @@ Deno.serve(async (req) => {
 
     // ACTION: CANCEL COMMUNITY ACCESS
     if (action === "cancel") {
+      console.log(`[COMMUNITY_ACCESS] CANCELLED email_domain=${domain}`);
       if (SUPABASE_SERVICE_ROLE_KEY) {
         // Update community request status to cancelled
         await fetch(`${SUPABASE_URL}/rest/v1/community_access_requests?email=eq.${encodeURIComponent(cleanEmail)}`, {
@@ -206,6 +208,7 @@ Deno.serve(async (req) => {
           if (rpcRes.ok) {
             const eligibility = await rpcRes.json();
             if (eligibility && eligibility.eligible === false) {
+              console.log(`[COMMUNITY_ACCESS] INELIGIBLE email_domain=${domain} status=${eligibility.status}`);
               return new Response(
                 JSON.stringify({
                   error: eligibility.reason || "This email is not currently eligible for the Community Access Program.",
@@ -225,9 +228,14 @@ Deno.serve(async (req) => {
       const fullExpiresAt = now + (372 * 24 * 60 * 60 * 1000); // 7 days grace + 365 days
 
       let licenseKey = "";
+      let signDurationMs = 0;
       if (PRIVATE_KEY_PEM) {
+        const signStart = performance.now();
         licenseKey = await signCommunityLicense(cleanEmail, cleanAppId, fullExpiresAt);
+        signDurationMs = Math.round(performance.now() - signStart);
       }
+
+      console.log(`[COMMUNITY_ACCESS] GRANTED action=request email_domain=${domain} app_id=${cleanAppId} sign_latency_ms=${signDurationMs}`);
 
       // Persist in Supabase Database via Service Role
       if (SUPABASE_SERVICE_ROLE_KEY) {
