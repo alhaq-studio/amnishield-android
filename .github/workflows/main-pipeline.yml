@@ -98,8 +98,6 @@ jobs:
           supabase start
           supabase db lint
           supabase test db
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   # =========================================================================
   # Target 3: Security & Compliance Audit

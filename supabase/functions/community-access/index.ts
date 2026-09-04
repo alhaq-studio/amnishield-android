@@ -11,7 +11,7 @@ const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") ?? "https://jrgpmcomvibgklmvn
 const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").replace(/^["']|["']$/g, "").trim();
 
 // Built-in list of disposable/temporary email domains
-const FALLBACK_DISPOSABLE_DOMAINS = new Set([
+export const FALLBACK_DISPOSABLE_DOMAINS = new Set([
   "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com",
   "trashmail.com", "yopmail.com", "sharklasers.com", "dispostable.com",
   "getairmail.com", "mohmal.com", "inboxkitten.com", "fakemailgenerator.com",
@@ -319,6 +319,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 }
 
