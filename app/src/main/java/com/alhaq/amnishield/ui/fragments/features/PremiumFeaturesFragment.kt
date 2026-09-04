@@ -434,22 +434,22 @@ open class PremiumFeaturesFragment : Fragment() {
     private fun showOtpVerificationDialog(email: String) {
         val ctx = context ?: return
         val codeInput = EditText(ctx).apply {
-            hint = "Enter verification code (e.g. 48139226)"
+            hint = "Enter 6 to 8-digit code (e.g. 123456)"
             inputType = InputType.TYPE_CLASS_NUMBER
-            filters = arrayOf(android.text.InputFilter.LengthFilter(12))
+            filters = arrayOf(android.text.InputFilter.LengthFilter(8))
         }
 
         MaterialAlertDialogBuilder(ctx)
             .setTitle("Enter Verification Code")
-            .setMessage("We sent a verification email to $email.\n\n• Enter the verification code below, OR\n• Tap the link in the email to verify and activate automatically.")
+            .setMessage("We sent a verification email to $email.\n\n• Enter the 6 to 8-digit verification code below, OR\n• Tap the link in the email to verify and activate automatically.")
             .setView(codeInput)
             .setPositiveButton("Verify & Activate") { _, _ ->
                 val code = codeInput.text.toString().trim()
-                if (code.length >= 6 && code.all { it.isDigit() }) {
+                if (code.length in 6..8 && code.all { it.isDigit() }) {
                     verifyOtpAndActivate(email, code)
                 } else {
                     val activeCtx = context ?: return@setPositiveButton
-                    Toast.makeText(activeCtx, "Please enter the verification code", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(activeCtx, "Please enter a valid 6 to 8-digit verification code", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.cancel, null)
