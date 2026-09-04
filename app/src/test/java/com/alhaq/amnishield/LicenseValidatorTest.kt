@@ -156,6 +156,42 @@ class LicenseValidatorTest {
         assertNotNull("Cloud generated license should verify!", payload)
     }
 
+    @Test
+    fun testLicenseVerificationWithAppId() {
+        val payloadWithApp = LicensePayload(
+            email = "community-user@alhaq.org",
+            user_id = "community-uuid-1234",
+            type = "community",
+            expires = System.currentTimeMillis() + 86400000L * 365,
+            version = 1,
+            app_id = "amnishield-android"
+        )
+        val licenseKey = generateLicenseString(payloadWithApp)
+        val verified = LicenseValidator.verifyLicense(licenseKey)
+
+        assertNotNull("License with app_id must verify successfully", verified)
+        assertEquals("community-user@alhaq.org", verified?.email)
+        assertEquals("community", verified?.type)
+        assertEquals("amnishield-android", verified?.app_id)
+    }
+
+    @Test
+    fun testLicenseVerificationCorruptedBase64Payload() {
+        // Corrupt base64 character in payload part
+        val invalidBase64 = "not-a-valid-base64-payload.TeTV1qsULJtzgqzzO8t7lMKhByJfngXfHVAHgTGwiEjaAoWuIZkk9CdyRANiw/fO3q/I1gnGB+Vnd57RmSZ6pQ=="
+        val payload = LicenseValidator.verifyLicense(invalidBase64)
+        assertNull("Malformed base64 payload must return null gracefully", payload)
+    }
+
+    @Test
+    fun testLicenseVerificationEmptyAndMalformedInputs() {
+        assertNull("Empty string must return null", LicenseValidator.verifyLicense(""))
+        assertNull("Whitespace string must return null", LicenseValidator.verifyLicense("   "))
+        assertNull("Single dot must return null", LicenseValidator.verifyLicense("."))
+        assertNull("Three dots must return null", LicenseValidator.verifyLicense("a.b.c"))
+        assertNull("Random string must return null", LicenseValidator.verifyLicense("just-a-plain-string"))
+    }
+
     private fun generateLicenseString(payload: LicensePayload): String {
         val gson = Gson()
         val payloadJson = gson.toJson(payload)

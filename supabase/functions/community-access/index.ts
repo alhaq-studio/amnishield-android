@@ -24,7 +24,7 @@ let cachedDisposableDomains: Set<string> = new Set(FALLBACK_DISPOSABLE_DOMAINS);
 let lastCacheUpdate = 0;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-async function getDisposableDomains(): Promise<Set<string>> {
+export async function getDisposableDomains(): Promise<Set<string>> {
   const now = Date.now();
   if (now - lastCacheUpdate < CACHE_TTL_MS && cachedDisposableDomains.size > FALLBACK_DISPOSABLE_DOMAINS.size) {
     return cachedDisposableDomains;
@@ -45,8 +45,17 @@ async function getDisposableDomains(): Promise<Set<string>> {
   return cachedDisposableDomains;
 }
 
+export async function isDisposableEmail(email: string): Promise<boolean> {
+  const clean = (email || "").toLowerCase().trim();
+  const parts = clean.split("@");
+  if (parts.length < 2) return false;
+  const domain = parts[parts.length - 1];
+  const blocklist = await getDisposableDomains();
+  return blocklist.has(domain);
+}
+
 // Helper: Import ECDSA Private Key for NIST P-256 signing
-async function importPrivateKey(pem: string): Promise<CryptoKey> {
+export async function importPrivateKey(pem: string): Promise<CryptoKey> {
   const cleanPem = pem.replace(/^["']|["']$/g, "").trim();
 
   if (cleanPem.startsWith("{")) {
@@ -79,7 +88,12 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
 }
 
 // Sign a 1-year community license key
-async function signCommunityLicense(email: string, appId: string, expiryTimestamp: number): Promise<string> {
+export async function signCommunityLicense(
+  email: string,
+  appId: string,
+  expiryTimestamp: number,
+  customPrivateKeyPem?: string
+): Promise<string> {
   const payload = {
     email: email.toLowerCase().trim(),
     app_id: appId,
@@ -93,7 +107,8 @@ async function signCommunityLicense(email: string, appId: string, expiryTimestam
   const payloadBytes = encoder.encode(payloadJson);
   const base64Payload = btoa(payloadJson);
 
-  const privateKey = await importPrivateKey(PRIVATE_KEY_PEM);
+  const pemToUse = customPrivateKeyPem || PRIVATE_KEY_PEM;
+  const privateKey = await importPrivateKey(pemToUse);
   const signatureBytes = await crypto.subtle.sign(
     { name: "ECDSA", hash: { name: "SHA-256" } },
     privateKey,
@@ -103,7 +118,7 @@ async function signCommunityLicense(email: string, appId: string, expiryTimestam
   return `${base64Payload}.${base64Signature}`;
 }
 
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -304,6 +319,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   }
-});
+}
+
+Deno.serve(handleRequest);
+
