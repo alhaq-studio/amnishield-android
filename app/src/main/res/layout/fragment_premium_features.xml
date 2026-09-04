@@ -93,6 +93,16 @@
                     android:layout_marginTop="16dp"
                     android:text="Continue to AmniShield"
                     app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelCompassionateAccess"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/cancel_community_access_btn"
+                    android:textColor="?attr/colorError"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Upsell Section (Shown when user is NOT Premium) -->

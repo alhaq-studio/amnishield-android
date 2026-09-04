@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -131,6 +132,9 @@ open class PremiumFeaturesFragment : Fragment() {
         binding.btnCompassionateAccess.setOnClickListener {
             showCompassionateAccessDialog()
         }
+        binding.btnCancelCompassionateAccess.setOnClickListener {
+            showCancelCompassionateAccessDialog()
+        }
         binding.btnRedeemLicense.setOnClickListener {
             val key = binding.etKey.text?.toString()?.trim().orEmpty()
             val ctx = context ?: return@setOnClickListener
@@ -218,6 +222,7 @@ open class PremiumFeaturesFragment : Fragment() {
         binding.btnBuyYearly.isEnabled = !isPremium
         binding.btnBuyLifetime.isEnabled = !isPremium
         binding.btnRestore.visibility = if (isPremium || !BuildConfig.IS_PLAYSTORE) View.GONE else View.VISIBLE
+        binding.btnCancelCompassionateAccess.visibility = if (userType == PremiumManager.UserType.COMPASSIONATE) View.VISIBLE else View.GONE
 
         val isOnboarding = arguments?.getBoolean(ARG_IS_ONBOARDING, false) ?: false
         binding.btnFinishOnboarding.visibility = if (isOnboarding && !isPremium) View.VISIBLE else View.GONE
@@ -226,13 +231,25 @@ open class PremiumFeaturesFragment : Fragment() {
             PremiumManager.UserType.PREMIUM -> getString(R.string.premium_active_message)
             PremiumManager.UserType.COMPASSIONATE -> {
                 val expiry = preferencesLoader.getCompassionateAccessExpiry()
-                if (expiry > 0L) {
-                    getString(
-                        R.string.compassionate_access_active_until,
-                        DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(expiry))
-                    )
+                val status = preferencesLoader.getCompassionateAccessStatus()
+                val formattedDate = if (expiry > 0L) {
+                    DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(expiry))
                 } else {
-                    getString(R.string.compassionate_access_active_description)
+                    ""
+                }
+                when {
+                    status == "flagged_email" -> {
+                        getString(R.string.community_access_flagged_message)
+                    }
+                    status == "verified_active" && formattedDate.isNotEmpty() -> {
+                        getString(R.string.compassionate_access_verified_active_until, formattedDate)
+                    }
+                    formattedDate.isNotEmpty() -> {
+                        getString(R.string.compassionate_access_review_active_until, formattedDate)
+                    }
+                    else -> {
+                        getString(R.string.compassionate_access_active_description)
+                    }
                 }
             }
             PremiumManager.UserType.FREE -> getString(R.string.premium_active_message)
@@ -272,7 +289,7 @@ open class PremiumFeaturesFragment : Fragment() {
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             val horizontalPadding = resources.getDimensionPixelSize(R.dimen.padding_normal)
-            setPadding(horizontalPadding, 0, horizontalPadding, 0)
+            setPadding(horizontalPadding, 8, horizontalPadding, 0)
         }
 
         val nameInput = EditText(context).apply {
@@ -285,8 +302,15 @@ open class PremiumFeaturesFragment : Fragment() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
         }
 
+        val noticeText = TextView(context).apply {
+            text = getString(R.string.compassionate_access_internet_notice)
+            textSize = 12f
+            setPadding(0, 16, 0, 8)
+        }
+
         container.addView(nameInput)
         container.addView(emailInput)
+        container.addView(noticeText)
 
         MaterialAlertDialogBuilder(context)
             .setTitle(R.string.compassionate_access_form_title)
@@ -306,31 +330,38 @@ open class PremiumFeaturesFragment : Fragment() {
                             return@setOnClickListener
                         }
 
-                        if (email.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        if (email.isEmpty()) {
+                            emailInput.error = getString(R.string.compassionate_access_email_required)
+                            return@setOnClickListener
+                        }
+
+                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                             emailInput.error = getString(R.string.compassionate_access_email_invalid)
                             return@setOnClickListener
                         }
 
                         dialog.dismiss()
-                        grantCompassionateAccess(name, email.ifBlank { null })
+                        grantCompassionateAccess(name, email)
                     }
                 }
             }
             .show()
     }
 
-    private fun grantCompassionateAccess(userName: String, email: String?) {
+    private fun grantCompassionateAccess(userName: String, email: String) {
         val grantedAt = System.currentTimeMillis()
         val appId = "CAP-$grantedAt-${(10000..99999).random()}"
-        val expiresAt = grantedAt + (365L * 24 * 60 * 60 * 1000)
+        val tempExpiresAt = grantedAt + (7L * 24 * 60 * 60 * 1000L) // 7 days grace window
 
         try {
+            // 1. Immediately grant local 7-day temporary access (Offline-First)
             preferencesLoader.saveCompassionateAccessGrant(
                 appId = appId,
                 userName = userName,
                 email = email,
                 grantedAt = grantedAt,
-                expiresAt = expiresAt
+                expiresAt = tempExpiresAt,
+                status = "pending_review"
             )
             premiumManager.resetReminderWindow()
             updatePremiumState()
@@ -342,7 +373,7 @@ open class PremiumFeaturesFragment : Fragment() {
                     getString(
                         R.string.compassionate_access_success_message,
                         appId,
-                        email ?: getString(R.string.compassionate_access_no_email_value)
+                        email
                     )
                 )
                 .setPositiveButton(if (isOnboarding) "Continue to AmniShield" else "OK") { _, _ ->
@@ -352,12 +383,79 @@ open class PremiumFeaturesFragment : Fragment() {
                 }
                 .setCancelable(!isOnboarding)
                 .show()
+
+            // 2. Asynchronously sync registration to Supabase backend
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val rest = SupabaseRest()
+                    val result = rest.registerCommunityAccess(userName, email, appId)
+                    if (result.success) {
+                        if (!result.licenseKey.isNullOrBlank()) {
+                            preferencesLoader.setCompassionateAccessLicenseKey(result.licenseKey)
+                        }
+                        if (!result.status.isNullOrBlank()) {
+                            preferencesLoader.setCompassionateAccessStatus(result.status)
+                        }
+                        if (result.verifiedExpiresAt != null && result.status == "verified_active") {
+                            preferencesLoader.setCompassionateAccessExpiry(result.verifiedExpiresAt)
+                        }
+                        withContext(Dispatchers.Main) {
+                            if (isAdded && _binding != null) {
+                                updatePremiumState()
+                            }
+                        }
+                    } else if (result.status == "flagged" || result.status == "flagged_email") {
+                        preferencesLoader.setCompassionateAccessStatus("flagged_email")
+                        withContext(Dispatchers.Main) {
+                            if (isAdded && _binding != null) {
+                                updatePremiumState()
+                                Toast.makeText(
+                                    requireContext(),
+                                    R.string.community_access_flagged_message,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Fail-safe offline tolerance: Local 7-day grace grant remains active
+                }
+            }
         } catch (_: Exception) {
             Toast.makeText(
                 requireContext(),
                 R.string.compassionate_access_error,
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    private fun showCancelCompassionateAccessDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.cancel_community_access_dialog_title)
+            .setMessage(R.string.cancel_community_access_dialog_message)
+            .setPositiveButton(R.string.cancel_community_access_confirm) { _, _ ->
+                cancelCompassionateAccess()
+            }
+            .setNegativeButton(R.string.cancel_community_access_keep, null)
+            .show()
+    }
+
+    private fun cancelCompassionateAccess() {
+        val email = preferencesLoader.getCompassionateAccessEmail()
+        preferencesLoader.cancelCompassionateAccess()
+        updatePremiumState()
+        Toast.makeText(requireContext(), R.string.cancel_community_access_success, Toast.LENGTH_LONG).show()
+
+        if (email.isNotBlank()) {
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val rest = SupabaseRest()
+                    rest.cancelCommunityAccess(email)
+                } catch (_: Exception) {
+                    // Fail-safe; local cancellation already in effect
+                }
+            }
         }
     }
 

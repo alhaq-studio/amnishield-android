@@ -442,6 +442,126 @@ class SupabaseRest(
         }
     }
 
+    data class CommunityAccessResult(
+        val success: Boolean,
+        val status: String? = null,
+        val appId: String? = null,
+        val licenseKey: String? = null,
+        val tempExpiresAt: Long? = null,
+        val verifiedExpiresAt: Long? = null,
+        val message: String? = null,
+    )
+
+    fun registerCommunityAccess(
+        userName: String,
+        email: String,
+        appId: String,
+        deviceIdentifier: String? = null
+    ): CommunityAccessResult {
+        return try {
+            val payload = JsonObject().apply {
+                addProperty("action", "request")
+                addProperty("name", userName)
+                addProperty("email", email)
+                addProperty("app_id", appId)
+                if (!deviceIdentifier.isNullOrBlank()) {
+                    addProperty("device_identifier", deviceIdentifier)
+                }
+            }
+            val req = Request.Builder()
+                .url("$baseUrl/functions/v1/community-access")
+                .header("apikey", anonKey)
+                .header("Authorization", "Bearer $anonKey")
+                .header("Content-Type", "application/json")
+                .post(payload.toString().toRequestBody(jsonType))
+                .build()
+
+            client.newCall(req).execute().use { resp ->
+                val text = resp.body?.string().orEmpty()
+                val obj = if (text.isNotBlank()) {
+                    try {
+                        gson.fromJson(text, JsonObject::class.java)
+                    } catch (_: Exception) {
+                        JsonObject()
+                    }
+                } else JsonObject()
+
+                if (resp.isSuccessful) {
+                    CommunityAccessResult(
+                        success = true,
+                        status = obj.get("status")?.takeIf { !it.isJsonNull }?.asString ?: "pending_review",
+                        appId = obj.get("app_id")?.takeIf { !it.isJsonNull }?.asString ?: appId,
+                        licenseKey = obj.get("license_key")?.takeIf { !it.isJsonNull }?.asString,
+                        tempExpiresAt = obj.get("temp_expires_at")?.takeIf { !it.isJsonNull }?.asLong,
+                        verifiedExpiresAt = obj.get("verified_expires_at")?.takeIf { !it.isJsonNull }?.asLong,
+                        message = obj.get("message")?.takeIf { !it.isJsonNull }?.asString
+                    )
+                } else {
+                    val errMsg = obj.get("error")?.takeIf { !it.isJsonNull }?.asString
+                        ?: "Request failed (${resp.code})"
+                    val status = obj.get("status")?.takeIf { !it.isJsonNull }?.asString
+                    CommunityAccessResult(
+                        success = false,
+                        status = status,
+                        message = errMsg
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            CommunityAccessResult(
+                success = false,
+                message = e.message ?: "Network error"
+            )
+        }
+    }
+
+    fun cancelCommunityAccess(email: String): CommunityAccessResult {
+        return try {
+            val payload = JsonObject().apply {
+                addProperty("action", "cancel")
+                addProperty("email", email)
+            }
+            val req = Request.Builder()
+                .url("$baseUrl/functions/v1/community-access")
+                .header("apikey", anonKey)
+                .header("Authorization", "Bearer $anonKey")
+                .header("Content-Type", "application/json")
+                .post(payload.toString().toRequestBody(jsonType))
+                .build()
+
+            client.newCall(req).execute().use { resp ->
+                val text = resp.body?.string().orEmpty()
+                val obj = if (text.isNotBlank()) {
+                    try {
+                        gson.fromJson(text, JsonObject::class.java)
+                    } catch (_: Exception) {
+                        JsonObject()
+                    }
+                } else JsonObject()
+
+                if (resp.isSuccessful) {
+                    CommunityAccessResult(
+                        success = true,
+                        status = "cancelled",
+                        message = obj.get("message")?.takeIf { !it.isJsonNull }?.asString ?: "Cancelled"
+                    )
+                } else {
+                    val errMsg = obj.get("error")?.takeIf { !it.isJsonNull }?.asString
+                        ?: "Cancellation failed (${resp.code})"
+                    CommunityAccessResult(
+                        success = false,
+                        message = errMsg
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            CommunityAccessResult(
+                success = false,
+                message = e.message ?: "Network error"
+            )
+        }
+    }
+
     companion object {
         const val ANON_KEY =
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZ3BtY29tdmliZ2tsbXZueHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NzE0MjQsImV4cCI6MjA5OTQ0NzQyNH0.JvPyt8ye2OCBsLXMBUoIOXUz1E5UHDHOY55oDH6Ce10"

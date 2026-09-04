@@ -15,6 +15,7 @@ import com.alhaq.amnishield.ui.activity.MainActivity
 import java.util.Calendar
 import java.util.UUID
 import java.util.ArrayList
+import android.os.SystemClock
 
 class SavedPreferencesLoader(val context: Context) {
 
@@ -861,14 +862,23 @@ class SavedPreferencesLoader(val context: Context) {
         userName: String,
         email: String?,
         grantedAt: Long,
-        expiresAt: Long
+        expiresAt: Long,
+        status: String = "pending_review",
+        licenseKey: String? = null
     ) {
+        val nowElapsed = SystemClock.elapsedRealtime()
         getCompassionateAccessPrefs().edit()
             .putString("app_id", appId)
             .putString("user_name", userName)
             .putString("email", email.orEmpty())
             .putLong("granted_at", grantedAt)
             .putLong("expires_at", expiresAt)
+            .putString("status", status)
+            .putString("license_key", licenseKey.orEmpty())
+            .putLong("granted_elapsed_realtime", nowElapsed)
+            .putLong("last_observed_elapsed_realtime", nowElapsed)
+            .putLong("last_observed_wall_clock", grantedAt)
+            .putLong("accumulated_uptime_ms", 0L)
             .apply()
     }
 
@@ -876,12 +886,113 @@ class SavedPreferencesLoader(val context: Context) {
         return getCompassionateAccessPrefs().getString("app_id", "") ?: ""
     }
 
+    fun getCompassionateAccessEmail(): String {
+        return getCompassionateAccessPrefs().getString("email", "") ?: ""
+    }
+
+    fun getCompassionateAccessUserName(): String {
+        return getCompassionateAccessPrefs().getString("user_name", "") ?: ""
+    }
+
+    fun getCompassionateAccessStatus(): String {
+        return getCompassionateAccessPrefs().getString("status", "pending_review") ?: "pending_review"
+    }
+
+    fun setCompassionateAccessStatus(status: String) {
+        getCompassionateAccessPrefs().edit().putString("status", status).apply()
+    }
+
     fun getCompassionateAccessExpiry(): Long {
         return getCompassionateAccessPrefs().getLong("expires_at", 0L)
     }
 
+    fun setCompassionateAccessExpiry(expiry: Long) {
+        getCompassionateAccessPrefs().edit().putLong("expires_at", expiry).apply()
+    }
+
+    fun getCompassionateAccessLicenseKey(): String? {
+        val key = getCompassionateAccessPrefs().getString("license_key", "")
+        return if (key.isNullOrBlank()) null else key
+    }
+
+    fun setCompassionateAccessLicenseKey(key: String) {
+        getCompassionateAccessPrefs().edit().putString("license_key", key).apply()
+    }
+
     fun clearCompassionateAccessGrant() {
         getCompassionateAccessPrefs().edit().clear().apply()
+    }
+
+    fun cancelCompassionateAccess() {
+        getCompassionateAccessPrefs().edit()
+            .putString("status", "cancelled")
+            .putLong("expires_at", 0L)
+            .remove("license_key")
+            .apply()
+    }
+
+    /**
+     * Anti-Clock Manipulation Guard & Monotonic Progression:
+     * - Uses SystemClock.elapsedRealtime() to track monotonic hardware uptime across boots.
+     * - Detects backwards clock manipulation (wall clock set back by > 5 minutes).
+     * - Automatically graduates a "pending_review" grant to "verified_active" (1-year pass)
+     *   once 7 days have elapsed without being flagged or cancelled.
+     */
+    fun updateCompassionateUptimeAndVerify(): Boolean {
+        val prefs = getCompassionateAccessPrefs()
+        val appId = prefs.getString("app_id", null) ?: return false
+        val status = prefs.getString("status", "pending_review") ?: "pending_review"
+
+        if (status == "cancelled" || status == "flagged_email") {
+            return false
+        }
+
+        val grantedAt = prefs.getLong("granted_at", 0L)
+        if (grantedAt <= 0L) return false
+
+        val currentWall = System.currentTimeMillis()
+        val currentElapsed = SystemClock.elapsedRealtime()
+        val lastObservedWall = prefs.getLong("last_observed_wall_clock", grantedAt)
+        val lastObservedElapsed = prefs.getLong("last_observed_elapsed_realtime", currentElapsed)
+        var accumulatedUptime = prefs.getLong("accumulated_uptime_ms", 0L)
+
+        // 1. Detect backwards clock manipulation (e.g. manual rollback > 5 minutes)
+        val isClockTurnedBack = currentWall < (lastObservedWall - 5 * 60 * 1000L)
+
+        // 2. Track monotonic elapsed uptime
+        val deltaElapsed = if (currentElapsed >= lastObservedElapsed) {
+            currentElapsed - lastObservedElapsed
+        } else {
+            // Device rebooted; currentElapsed is uptime since boot
+            currentElapsed
+        }
+        accumulatedUptime += maxOf(0L, deltaElapsed)
+
+        // 3. Monotonically advance observed wall clock
+        val newObservedWall = if (isClockTurnedBack) lastObservedWall else maxOf(lastObservedWall, currentWall)
+
+        val editor = prefs.edit()
+            .putLong("last_observed_elapsed_realtime", currentElapsed)
+            .putLong("last_observed_wall_clock", newObservedWall)
+            .putLong("accumulated_uptime_ms", accumulatedUptime)
+
+        // 4. Seven-day grace window check (7 days = 604,800,000 ms)
+        val gracePeriodMs = 7L * 24 * 60 * 60 * 1000L
+        val wallClockElapsed = newObservedWall - grantedAt
+
+        // Auto-graduate from pending_review to verified_active if 7 days have elapsed
+        if (status == "pending_review") {
+            if (wallClockElapsed >= gracePeriodMs || accumulatedUptime >= gracePeriodMs) {
+                val fullExpiry = grantedAt + (372L * 24 * 60 * 60 * 1000L)
+                editor.putString("status", "verified_active")
+                editor.putLong("expires_at", fullExpiry)
+            }
+        }
+
+        editor.apply()
+
+        val currentExpiry = prefs.getLong("expires_at", 0L)
+        return currentExpiry > currentWall && !isClockTurnedBack
     }
 
     private fun getHomePrefs(): android.content.SharedPreferences {

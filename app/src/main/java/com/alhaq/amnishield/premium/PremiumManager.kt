@@ -28,7 +28,22 @@ class PremiumManager private constructor(context: Context) {
     }
 
     fun isCompassionateAccessActive(): Boolean {
-        return preferencesLoader.getCompassionateAccessExpiry() > System.currentTimeMillis()
+        val status = preferencesLoader.getCompassionateAccessStatus()
+        if (status == "cancelled" || status == "flagged_email") {
+            return false
+        }
+
+        // Verify cryptographic offline ECDSA license key if present
+        val communityKey = preferencesLoader.getCompassionateAccessLicenseKey()
+        if (!communityKey.isNullOrBlank()) {
+            val payload = LicenseValidator.verifyLicense(communityKey)
+            if (payload != null && payload.expires > System.currentTimeMillis()) {
+                return true
+            }
+        }
+
+        // Anti-clock manipulation guard & monotonic verification
+        return preferencesLoader.updateCompassionateUptimeAndVerify()
     }
 
     /**
@@ -59,7 +74,14 @@ class PremiumManager private constructor(context: Context) {
     fun getUserTypeLabel(): String {
         return when (getUserType()) {
             UserType.FREE -> "Free"
-            UserType.COMPASSIONATE -> "Compassionate Access"
+            UserType.COMPASSIONATE -> {
+                val status = preferencesLoader.getCompassionateAccessStatus()
+                if (status == "verified_active") {
+                    "Al-Haq Community Pass"
+                } else {
+                    "Community Access (Review)"
+                }
+            }
             UserType.PREMIUM -> "Premium"
         }
     }
