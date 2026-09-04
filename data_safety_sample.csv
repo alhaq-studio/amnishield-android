@@ -49,8 +49,8 @@ PSL_DATA_TYPES_HEALTH_AND_FITNESS,PSL_HEALTH,,MULTIPLE_CHOICE,Health and fitness
 PSL_DATA_TYPES_HEALTH_AND_FITNESS,PSL_FITNESS,,MULTIPLE_CHOICE,Health and fitness/Fitness info
 PSL_DATA_TYPES_CONTACTS,PSL_CONTACTS,,MULTIPLE_CHOICE,Contacts/Contacts
 PSL_DATA_TYPES_CALENDAR,PSL_CALENDAR,,MULTIPLE_CHOICE,Calendar/Calendar events
-PSL_DATA_TYPES_APP_PERFORMANCE,PSL_CRASH_LOGS,true,MULTIPLE_CHOICE,App info and performance/Crash logs
-PSL_DATA_TYPES_APP_PERFORMANCE,PSL_PERFORMANCE_DIAGNOSTICS,true,MULTIPLE_CHOICE,App info and performance/Diagnostics
+PSL_DATA_TYPES_APP_PERFORMANCE,PSL_CRASH_LOGS,,MULTIPLE_CHOICE,App info and performance/Crash logs
+PSL_DATA_TYPES_APP_PERFORMANCE,PSL_PERFORMANCE_DIAGNOSTICS,,MULTIPLE_CHOICE,App info and performance/Diagnostics
 PSL_DATA_TYPES_APP_PERFORMANCE,PSL_OTHER_PERFORMANCE,,MULTIPLE_CHOICE,App info and performance/Other app performance data
 PSL_DATA_TYPES_FILES_AND_DOCS,PSL_FILES_AND_DOCS,,MULTIPLE_CHOICE,Files and docs/Files and docs
 PSL_DATA_TYPES_APP_ACTIVITY,PSL_USER_INTERACTION,,MULTIPLE_CHOICE,App activity/App interactions
@@ -591,13 +591,13 @@ PSL_DATA_USAGE_RESPONSES:PSL_CALENDAR:DATA_USAGE_SHARING_PURPOSE,PSL_FRAUD_PREVE
 PSL_DATA_USAGE_RESPONSES:PSL_CALENDAR:DATA_USAGE_SHARING_PURPOSE,PSL_ADVERTISING,,MULTIPLE_CHOICE,Data usage and handling (Calendar events)/Why is this user data shared? Select all that apply./Advertising or marketing
 PSL_DATA_USAGE_RESPONSES:PSL_CALENDAR:DATA_USAGE_SHARING_PURPOSE,PSL_PERSONALIZATION,,MULTIPLE_CHOICE,Data usage and handling (Calendar events)/Why is this user data shared? Select all that apply./Personalisation
 PSL_DATA_USAGE_RESPONSES:PSL_CALENDAR:DATA_USAGE_SHARING_PURPOSE,PSL_ACCOUNT_MANAGEMENT,,MULTIPLE_CHOICE,Data usage and handling (Calendar events)/Why is this user data shared? Select all that apply./Account management
-PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:PSL_DATA_USAGE_COLLECTION_AND_SHARING,PSL_DATA_USAGE_ONLY_COLLECTED,true,MULTIPLE_CHOICE,"Data usage and handling (Crash logs)/Is this data collected, shared or both?/Collected"
+PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:PSL_DATA_USAGE_COLLECTION_AND_SHARING,PSL_DATA_USAGE_ONLY_COLLECTED,,MULTIPLE_CHOICE,"Data usage and handling (Crash logs)/Is this data collected, shared or both?/Collected"
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:PSL_DATA_USAGE_COLLECTION_AND_SHARING,PSL_DATA_USAGE_ONLY_SHARED,,MULTIPLE_CHOICE,"Data usage and handling (Crash logs)/Is this data collected, shared or both?/Shared"
-PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:PSL_DATA_USAGE_EPHEMERAL,,true,MAYBE_REQUIRED,Data usage and handling (Crash logs)/Is this data processed ephemerally?
-PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_USER_CONTROL,PSL_DATA_USAGE_USER_CONTROL_OPTIONAL,true,SINGLE_CHOICE,"Data usage and handling (Crash logs)/Is this data required for your app, or can users choose whether it's collected?/Users can choose whether this data is collected"
+PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:PSL_DATA_USAGE_EPHEMERAL,,,MAYBE_REQUIRED,Data usage and handling (Crash logs)/Is this data processed ephemerally?
+PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_USER_CONTROL,PSL_DATA_USAGE_USER_CONTROL_OPTIONAL,,SINGLE_CHOICE,"Data usage and handling (Crash logs)/Is this data required for your app, or can users choose whether it's collected?/Users can choose whether this data is collected"
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_USER_CONTROL,PSL_DATA_USAGE_USER_CONTROL_REQUIRED,,SINGLE_CHOICE,"Data usage and handling (Crash logs)/Is this data required for your app, or can users choose whether it's collected?/Data collection is required (users can't turn off this data collection)"
-PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_APP_FUNCTIONALITY,true,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./App functionality
-PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_ANALYTICS,true,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./Analytics
+PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_APP_FUNCTIONALITY,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./App functionality
+PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_ANALYTICS,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./Analytics
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_DEVELOPER_COMMUNICATIONS,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./Developer communications
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_FRAUD_PREVENTION_SECURITY,,MULTIPLE_CHOICE,"Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./Fraud prevention, security and compliance"
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_COLLECTION_PURPOSE,PSL_ADVERTISING,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data collected? Select all that apply./Advertising or marketing
@@ -610,13 +610,13 @@ PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_SHARING_PURPOSE,PSL_FRAUD_PRE
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_SHARING_PURPOSE,PSL_ADVERTISING,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data shared? Select all that apply./Advertising or marketing
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_SHARING_PURPOSE,PSL_PERSONALIZATION,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data shared? Select all that apply./Personalisation
 PSL_DATA_USAGE_RESPONSES:PSL_CRASH_LOGS:DATA_USAGE_SHARING_PURPOSE,PSL_ACCOUNT_MANAGEMENT,,MULTIPLE_CHOICE,Data usage and handling (Crash logs)/Why is this user data shared? Select all that apply./Account management
-PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:PSL_DATA_USAGE_COLLECTION_AND_SHARING,PSL_DATA_USAGE_ONLY_COLLECTED,true,MULTIPLE_CHOICE,"Data usage and handling (Diagnostics)/Is this data collected, shared or both?/Collected"
+PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:PSL_DATA_USAGE_COLLECTION_AND_SHARING,PSL_DATA_USAGE_ONLY_COLLECTED,,MULTIPLE_CHOICE,"Data usage and handling (Diagnostics)/Is this data collected, shared or both?/Collected"
 PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:PSL_DATA_USAGE_COLLECTION_AND_SHARING,PSL_DATA_USAGE_ONLY_SHARED,,MULTIPLE_CHOICE,"Data usage and handling (Diagnostics)/Is this data collected, shared or both?/Shared"
-PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:PSL_DATA_USAGE_EPHEMERAL,,true,MAYBE_REQUIRED,Data usage and handling (Diagnostics)/Is this data processed ephemerally?
-PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_USER_CONTROL,PSL_DATA_USAGE_USER_CONTROL_OPTIONAL,true,SINGLE_CHOICE,"Data usage and handling (Diagnostics)/Is this data required for your app, or can users choose whether it's collected?/Users can choose whether this data is collected"
+PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:PSL_DATA_USAGE_EPHEMERAL,,,MAYBE_REQUIRED,Data usage and handling (Diagnostics)/Is this data processed ephemerally?
+PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_USER_CONTROL,PSL_DATA_USAGE_USER_CONTROL_OPTIONAL,,SINGLE_CHOICE,"Data usage and handling (Diagnostics)/Is this data required for your app, or can users choose whether it's collected?/Users can choose whether this data is collected"
 PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_USER_CONTROL,PSL_DATA_USAGE_USER_CONTROL_REQUIRED,,SINGLE_CHOICE,"Data usage and handling (Diagnostics)/Is this data required for your app, or can users choose whether it's collected?/Data collection is required (users can't turn off this data collection)"
-PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_APP_FUNCTIONALITY,true,MULTIPLE_CHOICE,Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./App functionality
-PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_ANALYTICS,true,MULTIPLE_CHOICE,Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./Analytics
+PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_APP_FUNCTIONALITY,,MULTIPLE_CHOICE,Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./App functionality
+PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_ANALYTICS,,MULTIPLE_CHOICE,Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./Analytics
 PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_DEVELOPER_COMMUNICATIONS,,MULTIPLE_CHOICE,Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./Developer communications
 PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_FRAUD_PREVENTION_SECURITY,,MULTIPLE_CHOICE,"Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./Fraud prevention, security and compliance"
 PSL_DATA_USAGE_RESPONSES:PSL_PERFORMANCE_DIAGNOSTICS:DATA_USAGE_COLLECTION_PURPOSE,PSL_ADVERTISING,,MULTIPLE_CHOICE,Data usage and handling (Diagnostics)/Why is this user data collected? Select all that apply./Advertising or marketing
