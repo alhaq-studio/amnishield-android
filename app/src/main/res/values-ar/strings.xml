@@ -1,6 +1,6 @@
-﻿<resources xmlns:tools="http://schemas.android.com/tools">
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">AmniShield</string>
-    <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">789500018505-bu2s7nklnev9nhfomgdul7tfju6i7u5j.apps.googleusercontent.com</string>
     <string name="launcher_options">خيارات المشغل</string>
     <string name="focus_mode">وضع التركيز</string>
     <string name="app_blocker">حاجب التطبيقات</string>

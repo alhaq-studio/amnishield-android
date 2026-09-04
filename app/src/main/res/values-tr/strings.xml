@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <resources xmlns:tools="http://schemas.android.com/tools">
 
@@ -12,7 +12,7 @@
 
     <string name="api_permission_deny">Reddet</string>
 
-    <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">789500018505-bu2s7nklnev9nhfomgdul7tfju6i7u5j.apps.googleusercontent.com</string>
 
     <string name="launcher_options">Başlatıcı Seçenekleri</string>
 

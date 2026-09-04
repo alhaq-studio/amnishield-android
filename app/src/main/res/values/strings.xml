@@ -4,7 +4,7 @@
     <string name="api_permission_message">The application <b>%s</b> is requesting permission to access the AmniShield Blocker API. This will allow the app to view and modify blocklists, focus mode, and other wellbeing settings.</string>
     <string name="api_permission_allow">Allow</string>
     <string name="api_permission_deny">Deny</string>
-    <string name="default_web_client_id" translatable="false">789500018505-flp9rag7c34jguaej4h2kglenc4svrie.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">789500018505-bu2s7nklnev9nhfomgdul7tfju6i7u5j.apps.googleusercontent.com</string>
     <string name="launcher_options">Launcher Options</string>
     <string name="focus_mode">Focus Mode</string>
     <string name="app_blocker">App Blocker</string>
