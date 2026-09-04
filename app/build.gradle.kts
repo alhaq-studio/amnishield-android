@@ -127,6 +127,10 @@ android {
         baseline = file("lint-baseline.xml")
         abortOnError = false
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 

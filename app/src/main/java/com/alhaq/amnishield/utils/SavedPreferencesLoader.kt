@@ -17,7 +17,13 @@ import java.util.UUID
 import java.util.ArrayList
 import android.os.SystemClock
 
-class SavedPreferencesLoader(val context: Context) {
+open class SavedPreferencesLoader(
+    val context: Context,
+    private val injectedCompassionatePrefs: SharedPreferences? = null,
+    private val injectedPremiumPrefs: SharedPreferences? = null,
+    private val elapsedRealtimeProvider: () -> Long = { SystemClock.elapsedRealtime() },
+    private val wallClockProvider: () -> Long = { System.currentTimeMillis() }
+) {
 
     fun loadPinnedApps(): Set<String> {
         val sharedPreferences =
@@ -769,8 +775,8 @@ class SavedPreferencesLoader(val context: Context) {
 
 
 
-    private fun getPremiumPrefs(): android.content.SharedPreferences {
-        return context.getSharedPreferences("premium_state", Context.MODE_PRIVATE)
+    protected open fun getPremiumPrefs(): android.content.SharedPreferences {
+        return injectedPremiumPrefs ?: context.getSharedPreferences("premium_state", Context.MODE_PRIVATE)
     }
 
     fun isPremiumUser(): Boolean {
@@ -853,8 +859,8 @@ class SavedPreferencesLoader(val context: Context) {
     }
 
 
-    private fun getCompassionateAccessPrefs(): android.content.SharedPreferences {
-        return context.getSharedPreferences("compassionate_access", Context.MODE_PRIVATE)
+    protected open fun getCompassionateAccessPrefs(): android.content.SharedPreferences {
+        return injectedCompassionatePrefs ?: context.getSharedPreferences("compassionate_access", Context.MODE_PRIVATE)
     }
 
     fun saveCompassionateAccessGrant(
@@ -866,7 +872,7 @@ class SavedPreferencesLoader(val context: Context) {
         status: String = "pending_review",
         licenseKey: String? = null
     ) {
-        val nowElapsed = SystemClock.elapsedRealtime()
+        val nowElapsed = elapsedRealtimeProvider()
         getCompassionateAccessPrefs().edit()
             .putString("app_id", appId)
             .putString("user_name", userName)
@@ -950,8 +956,8 @@ class SavedPreferencesLoader(val context: Context) {
         val grantedAt = prefs.getLong("granted_at", 0L)
         if (grantedAt <= 0L) return false
 
-        val currentWall = System.currentTimeMillis()
-        val currentElapsed = SystemClock.elapsedRealtime()
+        val currentWall = wallClockProvider()
+        val currentElapsed = elapsedRealtimeProvider()
         val lastObservedWall = prefs.getLong("last_observed_wall_clock", grantedAt)
         val lastObservedElapsed = prefs.getLong("last_observed_elapsed_realtime", currentElapsed)
         var accumulatedUptime = prefs.getLong("accumulated_uptime_ms", 0L)

@@ -4,10 +4,10 @@ import android.content.Context
 import com.alhaq.amnishield.BuildConfig
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
-class PremiumManager private constructor(context: Context) {
-
-    private val appContext = context.applicationContext
-    private val preferencesLoader = SavedPreferencesLoader(appContext)
+class PremiumManager internal constructor(
+    private val preferencesLoader: SavedPreferencesLoader
+) {
+    constructor(context: Context) : this(SavedPreferencesLoader(context.applicationContext))
 
     enum class UserType {
         FREE,
