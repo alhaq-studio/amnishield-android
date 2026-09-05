@@ -53,7 +53,7 @@ class Constants {
 
         // GitHub & Source Code
         const val GITHUB_REPO_URL = "https://github.com/alhaq-studio/amnishield-android"
-        const val GITHUB_SPONSORS_PERSONAL_URL = "https://github.com/sponsors/Afrasyaab-GH"
+        const val GITHUB_SPONSORS_PERSONAL_URL = "https://github.com/sponsors/habibmukhlis"
         const val GITHUB_SPONSORS_INITIATIVE_URL = "https://github.com/sponsors/alhaq-initiative"
 
         // Donation & Tip Platforms (from FUNDING.yml)

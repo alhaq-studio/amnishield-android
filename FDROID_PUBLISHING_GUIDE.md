@@ -31,7 +31,7 @@ Categories:
   - Security
   - System
 License: GPL-3.0-only  # Update to match your LICENSE file
-AuthorName: Afrasyaab
+AuthorName: Habib Mukhlis
 SourceCode: https://github.com/alhaq-studio/amniShield-android
 IssueTracker: https://github.com/alhaq-studio/amniShield-android/issues
 
@@ -71,7 +71,7 @@ F-Droid is managed via the [fdroiddata](https://gitlab.com/fdroid/fdroiddata) re
 2. Clone your fork locally:
 
    ```bash
-   git clone https://gitlab.com/Afrasyaab-GH/fdroiddata.git
+   git clone https://gitlab.com/habibmukhlis/fdroiddata.git
    cd fdroiddata
    ```
 

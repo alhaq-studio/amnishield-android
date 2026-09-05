@@ -1,6 +1,6 @@
 # Privacy Policy for AmniShield
 
-**Last Updated: 2026-05-15** · _Policy last reviewed for accuracy: 2026-05-29_
+**Last Updated: 2026-05-15**
 
 ## 1. Introduction
 
