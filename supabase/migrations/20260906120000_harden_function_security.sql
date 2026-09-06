@@ -66,13 +66,13 @@ BEGIN
 END;
 $$;
 
--- 3. Revoke public/anonymous execution on get_device_policy
-REVOKE EXECUTE ON FUNCTION public.get_device_policy(UUID) FROM PUBLIC, anon;
+-- 3. Revoke public, anonymous, and authenticated execution on get_device_policy
+REVOKE EXECUTE ON FUNCTION public.get_device_policy(UUID) FROM PUBLIC, anon, authenticated;
 
--- 4. Restrict execution to authenticated callers and service_role
-GRANT EXECUTE ON FUNCTION public.get_device_policy(UUID) TO authenticated, service_role;
+-- 4. Restrict execution to service_role (backend / Edge Functions only)
+GRANT EXECUTE ON FUNCTION public.get_device_policy(UUID) TO service_role;
 
--- 5. Additional System Security Hardening: Pin search_path on all existing functions
+-- 5. Additional System Security Hardening: Pin search_path on all existing functions & add missing RLS policies
 DO $$
 BEGIN
     -- Pin search_path on generate_device_pairing_token
@@ -91,5 +91,18 @@ BEGIN
         WHERE n.nspname = 'public' AND p.proname = 'protect_profile_privileged_fields'
     ) THEN
         EXECUTE 'ALTER FUNCTION public.protect_profile_privileged_fields() SET search_path = public';
+    END IF;
+
+    -- Add policy for stripe_webhook_events if missing to clear rls_enabled_no_policy
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'stripe_webhook_events'
+    ) THEN
+        CREATE POLICY "Service role full access on stripe events" 
+            ON public.stripe_webhook_events 
+            FOR ALL 
+            TO service_role 
+            USING (true) 
+            WITH CHECK (true);
     END IF;
 END $$;
