@@ -102,7 +102,7 @@ fun AdvancedScreen(
     if (showPinCooldownDialog) {
         CooldownSelectionDialog(
             title = "PIN Reset Cooldown",
-            subtitle = "Enforce a minimum waiting delay before a forgotten PIN can be reset. Hard floor: 5 minutes.",
+            subtitle = "Enforce a waiting delay before a forgotten PIN can be reset. Minimum: 2 minutes (5 minutes recommended).",
             selectedMinutes = state.pinResetCooldownMinutes,
             onDismiss = { showPinCooldownDialog = false },
             onSelectMinutes = { mins ->
@@ -115,7 +115,7 @@ fun AdvancedScreen(
     if (showEmergencyCooldownDialog) {
         CooldownSelectionDialog(
             title = "Emergency Access Cooldown",
-            subtitle = "Enforce a minimum emergency delay before protection can be overridden in Timed Mode. Hard floor: 5 minutes.",
+            subtitle = "Enforce an emergency delay before protection can be overridden in Timed Mode. Minimum: 2 minutes (5 minutes recommended).",
             selectedMinutes = state.emergencyAccessCooldownMinutes,
             onDismiss = { showEmergencyCooldownDialog = false },
             onSelectMinutes = { mins ->
@@ -723,7 +723,7 @@ fun CooldownSelectionDialog(
     onDismiss: () -> Unit,
     onSelectMinutes: (Int) -> Unit
 ) {
-    val options = listOf(5, 10, 15, 30)
+    val options = listOf(2, 5, 10, 15, 30)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -770,7 +770,7 @@ fun CooldownSelectionDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "$minutes minutes" + if (minutes == 5) " (Default)" else "",
+                                text = "$minutes minutes" + if (minutes == 5) " (Recommended Default)" else "",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface

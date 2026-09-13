@@ -454,7 +454,7 @@ class MainActivity : AppCompatActivity() {
     private fun showDevicePairingSuccessDialog(pin: String, deviceName: String, isManaged: Boolean) {
         val modeText = if (isManaged) "Protected Sync Mode" else "Personal Focus Mode"
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("📱 Device Linked Successfully!")
+            .setTitle("Device Linked Successfully")
             .setMessage("Your device is now securely connected to the AmniShield Cloud Sync Hub.\n\n• Device: $deviceName\n• Pairing Token: $pin\n• Mode: $modeText\n\nRules, blocklists, and schedules configured in your account will now automatically sync to this device.")
             .setPositiveButton("Awesome", null)
             .show()
@@ -1034,9 +1034,9 @@ class MainActivity : AppCompatActivity() {
                     • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
                     • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}"><b>GitHub Sponsors (Developer)</b></a><br/>
                     • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a> • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/>
-                    • ⭐ <a href="${Constants.GITHUB_REPO_URL}"><b>Star us on GitHub</b></a><br/><br/>
-                    🌐 Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
-                    📂 GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
+                    • <a href="${Constants.GITHUB_REPO_URL}"><b>Star us on GitHub</b></a><br/><br/>
+                    Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
+                    GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
                     Your support helps keep AmniShield free and accessible for everyone worldwide. JazakAllahu Khairan!
                 """.trimIndent()
 
@@ -1354,18 +1354,18 @@ class MainActivity : AppCompatActivity() {
             • Focus Mode - Time-boxed app restrictions with timer<br/>
             • Launch Limits - Restrict daily app launch frequencies<br/>
             • Notifications &amp; Statistics - Activity reports &amp; productivity trends<br/><br/>
-            <b>⭐ Premium Security:</b><br/>
+            <b>Pro Security:</b><br/>
             • Anti-Uninstall Protection - Device Admin protection<br/>
             • 4-Digit Security PIN &amp; App Lock - Master PIN lock for settings<br/>
             • Bypass PIN Lock - Require PIN to edit active blocks<br/><br/>
             <b>Privacy First:</b> 100% local processing, zero tracking<br/><br/>
-            🌐 <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
-            📂 <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
-            ⭐ <a href="${Constants.GITHUB_REPO_URL}">Star us on GitHub to show your support!</a><br/><br/>
-            💬 <b>Community:</b><br/>
+            <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
+            <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
+            <a href="${Constants.GITHUB_REPO_URL}">Star us on GitHub to show your support!</a><br/><br/>
+            <b>Community:</b><br/>
             • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
             • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
-            💖 <b>Support Development:</b><br/>
+            <b>Support Development:</b><br/>
             • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
             • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
             • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>

@@ -522,7 +522,7 @@
     <string name="accessibility_disclosure_point_apps">• App &amp; URL Blocker: Detects active foreground apps and browser URLs to enforce your scheduled blocks, focus sessions, and launch limits.</string>
     <string name="accessibility_disclosure_point_keywords">• Keyword &amp; Search Inspection: Reads on-screen text and search inputs to detect and block explicit content, adult keywords, and harmful websites.</string>
     <string name="accessibility_disclosure_point_gestures">• Navigation &amp; Reel Redirection: Performs automated \"Back\" or \"Home\" gestures to safely navigate away from blocked apps and short video feeds (YouTube Shorts, Instagram Reels, TikTok).</string>
-    <string name="accessibility_disclosure_privacy_title">🔒 Data Privacy Guarantee</string>
+    <string name="accessibility_disclosure_privacy_title">Data Privacy Guarantee</string>
     <string name="accessibility_disclosure_privacy_desc">Data Privacy: Zero personal or sensitive user data is collected, stored, or transmitted using this service.</string>
     <string name="accessibility_disclosure_agree">Agree &amp; Enable</string>
     <string name="accessibility_disclosure_decline">Deny</string>

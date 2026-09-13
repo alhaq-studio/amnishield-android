@@ -19,6 +19,7 @@ package com.alhaq.amnishield.blockers
 
 import android.content.Context
 import com.alhaq.amnishield.Constants
+import com.alhaq.amnishield.security.SystemExclusionManager
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class FocusModeBlocker : BaseBlocker() {
@@ -126,8 +127,17 @@ class FocusModeBlocker : BaseBlocker() {
         savedPreferencesLoader: SavedPreferencesLoader,
         defaultLauncher: String? = null
     ): FocusModeResult {
-        // 1. NEVER block essential system apps or AmniShield itself
-        if (ESSENTIAL_SYSTEM_APPS.contains(packageName) ||
+        val isBlockAll = focusModeData.isTurnedOn && focusModeData.modeType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED
+
+        // 1. Authoritative check: NEVER block emergency dialers, SOS, keyboards, launcher, or exempt system apps
+        if (SystemExclusionManager.isExempt(
+                packageName = packageName,
+                context = context,
+                isFocusModeBlockAll = isBlockAll,
+                savedPreferencesLoader = savedPreferencesLoader,
+                cachedDefaultLauncher = defaultLauncher
+            ) ||
+            ESSENTIAL_SYSTEM_APPS.contains(packageName) ||
             packageName.equals("com.alhaq.amnishield", ignoreCase = true) ||
             packageName.equals("com.alhaq.deenshield", ignoreCase = true) ||
             packageName.startsWith("com.alhaq.deenshield.", ignoreCase = true) ||

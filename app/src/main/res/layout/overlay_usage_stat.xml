@@ -30,7 +30,7 @@
         android:textSize="13sp"
         android:textStyle="bold"
         android:fontFamily="sans-serif-medium"
-        tools:text="🔥 12 Reels" />
+        tools:text="12 Reels" />
 
     <View
         android:id="@+id/overlay_divider"

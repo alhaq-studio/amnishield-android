@@ -44,6 +44,7 @@ import com.alhaq.amnishield.blockers.HomeFeedNavigator
 import com.alhaq.amnishield.blockers.ReelBlocker
 import com.alhaq.amnishield.blockers.ViewBlocker
 import com.alhaq.amnishield.premium.PremiumManager
+import com.alhaq.amnishield.security.SystemExclusionManager
 import com.alhaq.amnishield.trackers.ReelDetectionEngine
 import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
 import com.alhaq.amnishield.ui.activity.MainActivity
@@ -245,6 +246,15 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
             val rootPackage = rootNode?.packageName?.toString() ?: packageName
 
+            // 1. Authoritative safety fast-path: Never block emergency services, dialers, keyboards, or launcher
+            if (SystemExclusionManager.isExempt(rootPackage, this, savedPreferencesLoader = savedPreferencesLoader, cachedDefaultLauncher = cachedDefaultLauncher)) {
+                // If it is the settings app, allow AntiUninstallDetector to inspect sensitive sub-pages (if anti-uninstall enabled)
+                if (SystemExclusionManager.isSettingsApp(rootPackage)) {
+                    antiUninstallDetector.inspect(event, rootNode)
+                }
+                return
+            }
+
             if (rootPackage.equals(myPackageName, ignoreCase = true) ||
                 rootPackage.equals("com.alhaq.amnishield", ignoreCase = true) ||
                 rootPackage.equals("com.android.systemui", ignoreCase = true)
@@ -342,7 +352,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
             if (!isFocusBlockAllExSelectedActive) {
                 if (savedPreferencesLoader.isAppBlockerFeatureEnabled(false) && isFeatureCurrentlyActive("app_blocker")) {
-                    val appBlockerResult = appBlocker.doesAppNeedToBeBlocked(packageName, savedPreferencesLoader)
+                    val appBlockerResult = appBlocker.doesAppNeedToBeBlocked(packageName, savedPreferencesLoader, this)
                     if (appBlockerResult.isBlocked) {
                         blockingStatsManager.recordAppBlock(packageName, "Blocked by App Blocker")
                         val appStyle = savedPreferencesLoader.getAppBlockerWarningStyle()

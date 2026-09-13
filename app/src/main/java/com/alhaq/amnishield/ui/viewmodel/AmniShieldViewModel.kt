@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import com.alhaq.amnishield.ui.state.AmniShieldState
 import com.alhaq.amnishield.ui.state.AppTheme
+import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class AmniShieldViewModel : ViewModel() {
     private val _state = MutableStateFlow(AmniShieldState())
@@ -34,12 +35,12 @@ class AmniShieldViewModel : ViewModel() {
     }
 
     fun updatePinResetCooldown(minutes: Int) {
-        val safeMinutes = minutes.coerceAtLeast(5)
+        val safeMinutes = minutes.coerceAtLeast(SavedPreferencesLoader.MIN_COOLDOWN_MINUTES)
         _state.update { it.copy(pinResetCooldownMinutes = safeMinutes) }
     }
 
     fun updateEmergencyAccessCooldown(minutes: Int) {
-        val safeMinutes = minutes.coerceAtLeast(5)
+        val safeMinutes = minutes.coerceAtLeast(SavedPreferencesLoader.MIN_COOLDOWN_MINUTES)
         _state.update { it.copy(emergencyAccessCooldownMinutes = safeMinutes) }
     }
 

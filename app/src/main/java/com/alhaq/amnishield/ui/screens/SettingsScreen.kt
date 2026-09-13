@@ -68,7 +68,7 @@ fun SettingsScreen(
     if (showPinCooldownDialog) {
         CooldownSelectionDialog(
             title = "PIN Reset Cooldown",
-            subtitle = "Enforce a minimum waiting delay before a forgotten PIN can be reset. Hard floor: 5 minutes.",
+            subtitle = "Enforce a waiting delay before a forgotten PIN can be reset. Minimum: 2 minutes (5 minutes recommended).",
             selectedMinutes = state.pinResetCooldownMinutes,
             onDismiss = { showPinCooldownDialog = false },
             onSelectMinutes = { mins ->
@@ -81,7 +81,7 @@ fun SettingsScreen(
     if (showEmergencyCooldownDialog) {
         CooldownSelectionDialog(
             title = "Emergency Access Cooldown",
-            subtitle = "Enforce a minimum emergency delay before protection can be overridden in Timed Mode. Hard floor: 5 minutes.",
+            subtitle = "Enforce an emergency delay before protection can be overridden in Timed Mode. Minimum: 2 minutes (5 minutes recommended).",
             selectedMinutes = state.emergencyAccessCooldownMinutes,
             onDismiss = { showEmergencyCooldownDialog = false },
             onSelectMinutes = { mins ->

@@ -698,7 +698,7 @@ class AllAppsUsageFragment : Fragment() {
                                 updateRecommendations(statsList, false, null)
                                 updateUsageList(false, statsList)
                             },
-                            label = { Text("📱 Apps", fontSize = 13.sp) },
+                            label = { Text("Apps", fontSize = 13.sp) },
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.padding(end = 8.dp)
                         )
@@ -711,7 +711,7 @@ class AllAppsUsageFragment : Fragment() {
                                 updateRecommendations(statsList, true, null)
                                 updateUsageList(true, statsList)
                             },
-                            label = { Text("🌐 Websites", fontSize = 13.sp) },
+                            label = { Text("Websites", fontSize = 13.sp) },
                             shape = RoundedCornerShape(12.dp)
                         )
                     }
@@ -732,7 +732,7 @@ class AllAppsUsageFragment : Fragment() {
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = "🔒 App Usage Tracking Paused",
+                                        text = "App Usage Tracking Paused",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -769,7 +769,7 @@ class AllAppsUsageFragment : Fragment() {
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = "🔒 Website Usage Tracking Paused",
+                                        text = "Website Usage Tracking Paused",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )

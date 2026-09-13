@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="8dp"
-                android:text="✅ Completed Milestones (V1.0 Baseline)"
+                android:text="Completed Milestones (V1.0 Baseline)"
                 android:textColor="?attr/colorPrimary"
                 android:textStyle="bold" />
 
@@ -248,7 +248,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="8dp"
-                android:text="🚧 In Active Development (V1.1 - V1.5)"
+                android:text="In Active Development (V1.1 - V1.5)"
                 android:textColor="#E65100"
                 android:textStyle="bold" />
 
@@ -365,7 +365,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="8dp"
-                android:text="🔮 Future Vision (V2.0 Ecosystem)"
+                android:text="Future Vision (V2.0 Ecosystem)"
                 android:textColor="#1976D2"
                 android:textStyle="bold" />
 

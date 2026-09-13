@@ -1067,7 +1067,7 @@ open class SavedPreferencesLoader(
         )
 
         // PIN Security, Cooldown & Reset Engine
-        const val MIN_COOLDOWN_MINUTES = 5
+        const val MIN_COOLDOWN_MINUTES = 2
         const val DEFAULT_COOLDOWN_MINUTES = 5
         const val PREF_PIN_RESET_COOLDOWN_MINS = "pin_reset_cooldown_mins"
         const val PREF_EMERGENCY_ACCESS_COOLDOWN_MINS = "emergency_access_cooldown_mins"
@@ -1528,7 +1528,7 @@ open class SavedPreferencesLoader(
         context.sendBroadcast(intent)
     }
 
-    // --- PIN Reset Cooldown Settings & State (Hard minimum 5 minutes) ---
+    // --- PIN Reset Cooldown Settings & State (Hard minimum 2 minutes) ---
 
     fun getPinResetCooldownMinutes(): Int {
         val mins = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
@@ -1581,7 +1581,7 @@ open class SavedPreferencesLoader(
         return requestedAt > 0L && getPinResetRemainingMillis() <= 0L
     }
 
-    // --- Emergency Access Cooldown Settings & State (Hard minimum 5 minutes) ---
+    // --- Emergency Access Cooldown Settings & State (Hard minimum 2 minutes) ---
 
     fun getEmergencyAccessCooldownMinutes(): Int {
         val mins = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)

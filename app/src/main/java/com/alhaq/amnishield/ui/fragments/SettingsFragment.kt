@@ -440,15 +440,15 @@ class SettingsFragment : Fragment() {
                 • Zero Data Collection &amp; Zero Telemetry<br/>
                 • No Internet required for core features<br/><br/>
                 
-                🌐 <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
-                📂 <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
-                ⭐ <a href="${Constants.GITHUB_REPO_URL}">Star us on GitHub to support our work!</a><br/><br/>
+                <b>Website:</b> <a href="${Constants.AMNISHIELD_WEBSITE_URL}">amnishield.com</a><br/>
+                <b>Source Code:</b> <a href="${Constants.GITHUB_REPO_URL}">github.com/alhaq-studio/amnishield-android</a><br/>
+                <a href="${Constants.GITHUB_REPO_URL}">Star us on GitHub to support our work!</a><br/><br/>
                 
-                💬 <b>Community:</b><br/>
+                <b>Community:</b><br/>
                 • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
                 • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
                 
-                💖 <b>Support Development:</b><br/>
+                <b>Support Development:</b><br/>
                 • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
                 • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
                 • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>

@@ -1,7 +1,9 @@
 package com.alhaq.amnishield.blockers
 
+import android.content.Context
 import android.os.SystemClock
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.security.SystemExclusionManager
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import com.alhaq.amnishield.utils.ScheduleUtils
 import com.alhaq.amnishield.utils.TimeTools
@@ -46,9 +48,17 @@ class AppBlocker : BaseBlocker() {
      * @param savedPrefs Optional SavedPreferencesLoader for launch limit checking
      * @return
      */
-    fun doesAppNeedToBeBlocked(packageName: String, savedPrefs: SavedPreferencesLoader? = null): AppBlockerResult {
+    fun doesAppNeedToBeBlocked(
+        packageName: String,
+        savedPrefs: SavedPreferencesLoader? = null,
+        context: Context? = null
+    ): AppBlockerResult {
 
-        // 1. Core exclusions (Never block essential system apps, launchers, system UI)
+        // 1. Core exclusions (Emergency services, dialers, keyboards, launcher, system UI)
+        if (context != null && SystemExclusionManager.isExempt(packageName, context, savedPreferencesLoader = savedPrefs)) {
+            return AppBlockerResult(isBlocked = false)
+        }
+
         if (ESSENTIAL_SYSTEM_APPS.contains(packageName) ||
             packageName.equals("com.alhaq.amnishield", ignoreCase = true) ||
             packageName.equals("com.alhaq.deenshield", ignoreCase = true) ||
@@ -56,6 +66,11 @@ class AppBlocker : BaseBlocker() {
             packageName.equals("com.android.systemui", ignoreCase = true) ||
             packageName.equals("android", ignoreCase = true)
         ) {
+            return AppBlockerResult(isBlocked = false)
+        }
+
+        // 2. User-configured Always-Whitelisted Emergency Apps
+        if (savedPrefs != null && savedPrefs.getAlwaysWhitelistedApps().contains(packageName)) {
             return AppBlockerResult(isBlocked = false)
         }
 

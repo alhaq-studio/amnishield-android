@@ -9,16 +9,37 @@ class SecurityCooldownAndResetTest {
 
     @Test
     fun testHardMinimumCooldownFloor() {
-        val minFloor = 5
+        val minFloor = 2
 
-        // Attempting to set under 5 minutes must be coerced to 5
-        val testInputs = listOf(-1, 0, 1, 3, 4, 5, 10, 15, 30)
-        val expectedOutputs = listOf(5, 5, 5, 5, 5, 5, 10, 15, 30)
+        // Attempting to set under 2 minutes must be coerced to 2
+        val testInputs = listOf(-1, 0, 1, 2, 3, 5, 10, 15, 30)
+        val expectedOutputs = listOf(2, 2, 2, 2, 3, 5, 10, 15, 30)
 
         testInputs.zip(expectedOutputs).forEach { (input, expected) ->
             val coerced = input.coerceAtLeast(minFloor)
             assertEquals("Input $input should be coerced to $expected", expected, coerced)
         }
+    }
+
+    @Test
+    fun testTwoMinuteCooldownTransition() {
+        val now = 1_000_000L
+        val cooldownMinutes = 2
+        val cooldownMs = cooldownMinutes * 60 * 1000L // 120,000 ms
+
+        val requestedAt = now
+        val duringCooldown = now + 60_000L  // 1 min in
+        val afterCooldown = now + 120_001L  // 2 mins + 1ms
+
+        val isDuringActive = duringCooldown < (requestedAt + cooldownMs)
+        val remainingDuring = ((requestedAt + cooldownMs) - duringCooldown).coerceAtLeast(0L)
+        assertTrue("During 2-minute cooldown should be active", isDuringActive)
+        assertEquals("Remaining should be 60,000 ms", 60_000L, remainingDuring)
+
+        val isAfterActive = afterCooldown < (requestedAt + cooldownMs)
+        val remainingAfter = ((requestedAt + cooldownMs) - afterCooldown).coerceAtLeast(0L)
+        assertFalse("After 2-minute cooldown should not be active", isAfterActive)
+        assertEquals("Remaining should be 0 ms", 0L, remainingAfter)
     }
 
     @Test

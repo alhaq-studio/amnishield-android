@@ -29,6 +29,7 @@ import com.alhaq.amnishield.R
 import com.alhaq.amnishield.data.blockers.PackageWand
 import com.alhaq.amnishield.databinding.ActivitySelectAppsBinding
 import com.alhaq.amnishield.databinding.DialogAddKeywordBinding
+import com.alhaq.amnishield.security.SystemExclusionManager
 import java.util.Locale
 
 class SelectAppsActivity : AppCompatActivity() {
@@ -134,7 +135,9 @@ class SelectAppsActivity : AppCompatActivity() {
                         selectedAppList.remove(appItem.packageName)
                     }
                     else {
-                        selectedAppList.add(appItem.packageName)
+                        if (!SystemExclusionManager.isSettingsApp(appItem.packageName)) {
+                            selectedAppList.add(appItem.packageName)
+                        }
                     }
                 }
                 adapter.notifyDataSetChanged() // To update checkboxes
@@ -282,17 +285,65 @@ class SelectAppsActivity : AppCompatActivity() {
             holder.checkbox.setOnCheckedChangeListener(null)
             holder.checkbox.isChecked = selectedAppList.contains(appItem.packageName)
 
-            holder.checkbox.setOnCheckedChangeListener { _, isChecked ->
+            val checkListener: (Boolean) -> Unit = { isChecked ->
                 if (isChecked) {
-                    selectedAppList.add(appItem.packageName)
+                    if (SystemExclusionManager.isSettingsApp(appItem.packageName)) {
+                        showSettingsAppWarningDialog(
+                            onConfirm = {
+                                selectedAppList.add(appItem.packageName)
+                                updateSelectAllButton()
+                            },
+                            onCancel = {
+                                holder.checkbox.setOnCheckedChangeListener(null)
+                                holder.checkbox.isChecked = false
+                                selectedAppList.remove(appItem.packageName)
+                                updateSelectAllButton()
+                                holder.checkbox.setOnCheckedChangeListener { _, rechecked ->
+                                    // re-attach listener
+                                }
+                            }
+                        )
+                    } else {
+                        selectedAppList.add(appItem.packageName)
+                        updateSelectAllButton()
+                    }
                 } else {
                     selectedAppList.remove(appItem.packageName)
+                    updateSelectAllButton()
                 }
             }
 
+            holder.checkbox.setOnCheckedChangeListener { _, isChecked ->
+                checkListener(isChecked)
+            }
+
             holder.itemView.setOnClickListener {
-                holder.checkbox.isChecked = !holder.checkbox.isChecked
-                updateSelectAllButton()
+                val newState = !holder.checkbox.isChecked
+                if (newState && SystemExclusionManager.isSettingsApp(appItem.packageName)) {
+                    showSettingsAppWarningDialog(
+                        onConfirm = {
+                            holder.checkbox.setOnCheckedChangeListener(null)
+                            holder.checkbox.isChecked = true
+                            selectedAppList.add(appItem.packageName)
+                            updateSelectAllButton()
+                            holder.checkbox.setOnCheckedChangeListener { _, isChecked ->
+                                checkListener(isChecked)
+                            }
+                        },
+                        onCancel = {
+                            holder.checkbox.setOnCheckedChangeListener(null)
+                            holder.checkbox.isChecked = false
+                            selectedAppList.remove(appItem.packageName)
+                            updateSelectAllButton()
+                            holder.checkbox.setOnCheckedChangeListener { _, isChecked ->
+                                checkListener(isChecked)
+                            }
+                        }
+                    )
+                } else {
+                    holder.checkbox.isChecked = newState
+                    updateSelectAllButton()
+                }
             }
         }
 
@@ -392,6 +443,22 @@ class SelectAppsActivity : AppCompatActivity() {
             }
             .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
                 dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showSettingsAppWarningDialog(onConfirm: () -> Unit, onCancel: () -> Unit) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("System Settings Warning")
+            .setMessage("Blocking System Settings can prevent you from configuring Wi-Fi, Bluetooth, network connections, or screen brightness.\n\nTo prevent AmniShield from being stopped or uninstalled without locking yourself out of Settings, we recommend enabling Anti-Uninstall Protection instead.")
+            .setPositiveButton("Block Settings Anyway") { _, _ ->
+                onConfirm()
+            }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                onCancel()
+            }
+            .setOnCancelListener {
+                onCancel()
             }
             .show()
     }
