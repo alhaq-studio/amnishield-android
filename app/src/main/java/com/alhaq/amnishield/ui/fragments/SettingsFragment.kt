@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.alhaq.amnishield.BuildConfig
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.R
 import com.alhaq.amnishield.ui.activity.MainActivity
@@ -338,16 +339,23 @@ class SettingsFragment : Fragment() {
                 <b>Q: Where can I find the source code?</b><br/>
                 A: Our repository is on GitHub:<br/>
                 <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/>
-                ⭐ Please consider <a href="${Constants.GITHUB_REPO_URL}"><b>starring the repository</b></a> to support our work!<br/><br/>
+                Please consider <a href="${Constants.GITHUB_REPO_URL}"><b>starring the repository</b></a> to support our work!<br/><br/>
                 
                 <b>Q: Where can I see other Al-Haq projects?</b><br/>
                 A: Visit <a href="${Constants.ALHAQ_STUDIO_URL}"><b>alhaq.uk</b></a> and <a href="${Constants.ALHAQ_INITIATIVE_URL}"><b>alhaq-initiative.org</b></a> for our full suite of privacy and wellbeing tools.<br/><br/>
                 
                 <b>═══════════════════════════</b><br/>
-                <b>SUPPORT &amp; DONATIONS</b><br/>
+                <b>SUPPORTING AMNISHIELD</b><br/>
                 <b>═══════════════════════════</b><br/><br/>
                 
-                <b>Q: How can I support or donate to AmniShield?</b><br/>
+                <b>Q: How can I support AmniShield?</b><br/>
+                ${if (BuildConfig.IS_PLAYSTORE) """
+                A: You can support ongoing development through:<br/>
+                • <a href="${Constants.GITHUB_REPO_URL}"><b>Starring on GitHub</b></a><br/>
+                • Sharing AmniShield with friends and community<br/>
+                • Joining our <a href="${Constants.TELEGRAM_URL}"><b>Telegram</b></a> or <a href="${Constants.DISCORD_URL}"><b>Discord</b></a><br/>
+                • Upgrading to the Supporter Pass in App Settings<br/><br/>
+                """.trimIndent() else """
                 A: You can support ongoing development through:<br/>
                 • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}"><b>Al-Haq Central Funding Hub</b></a><br/>
                 • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
@@ -355,6 +363,7 @@ class SettingsFragment : Fragment() {
                 • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a><br/>
                 • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a><br/>
                 • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/><br/>
+                """.trimIndent()}
                 
                 <b>═══════════════════════════</b><br/>
                 <b>TROUBLESHOOTING</b><br/>
@@ -448,11 +457,16 @@ class SettingsFragment : Fragment() {
                 • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
                 • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
                 
+                ${if (BuildConfig.IS_PLAYSTORE) """
+                <b>Supporter Pass:</b><br/>
+                • Upgrade in Settings to support open source development<br/><br/>
+                """.trimIndent() else """
                 <b>Support Development:</b><br/>
                 • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
                 • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
                 • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>
                 • <a href="${Constants.KOFI_URL}">Ko-fi</a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}">Buy Me a Coffee</a> • <a href="${Constants.PATREON_URL}">Patreon</a><br/><br/>
+                """.trimIndent()}
                 
                 Developer: <a href="${Constants.ALHAQ_STUDIO_URL}">Al-Haq Studio</a><br/>
                 Free Access Program: <a href="${Constants.ALHAQ_INITIATIVE_URL}">Al-Haq Initiative</a><br/>

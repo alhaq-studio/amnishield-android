@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.alhaq.amnishield.BuildConfig
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.R
 
@@ -43,6 +44,15 @@ class RoadmapFragment : Fragment() {
             .setView(dialogView)
             .setNegativeButton(R.string.close, null)
             .create()
+
+        if (BuildConfig.IS_PLAYSTORE) {
+            dialogView.findViewById<View>(R.id.card_initiative_hub)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_sponsors_initiative)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_sponsors_developer)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_kofi)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_buymeacoffee)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_patreon)?.visibility = View.GONE
+        }
 
         dialogView.findViewById<View>(R.id.card_initiative_hub)?.setOnClickListener {
             openUrl(Constants.ALHAQ_INITIATIVE_DONATE_URL)

@@ -43,6 +43,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.alhaq.amnishield.AmniShield
+import com.alhaq.amnishield.BuildConfig
 import com.alhaq.amnishield.data.AmniShieldAccount
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
@@ -1026,19 +1027,34 @@ class MainActivity : AppCompatActivity() {
 
             if (daysPassed > 5L) {
                 sharedPreferences.edit().putBoolean("is_donation_alerted", true).apply()
-                val donationHtml = """
-                    Thank you for using AmniShield!<br/><br/>
-                    My name is Habibur Rahman, founder of <a href="${Constants.ALHAQ_STUDIO_URL}"><b>Al-Haq Studio</b></a>. I'm a student dedicated to building open-source digital wellbeing tools to help maintain a healthy, balanced digital lifestyle.<br/><br/>
-                    AmniShield is <b>100% open-source, free, and ad-free</b>. If you find it beneficial, please consider supporting ongoing development:<br/>
-                    • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}"><b>Al-Haq Central Funding Hub</b></a><br/>
-                    • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
-                    • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}"><b>GitHub Sponsors (Developer)</b></a><br/>
-                    • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a> • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/>
-                    • <a href="${Constants.GITHUB_REPO_URL}"><b>Star us on GitHub</b></a><br/><br/>
-                    Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
-                    GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
-                    Your support helps keep AmniShield free and accessible for everyone worldwide. JazakAllahu Khairan!
-                """.trimIndent()
+                val donationHtml = if (BuildConfig.IS_PLAYSTORE) {
+                    """
+                        Thank you for using AmniShield!<br/><br/>
+                        My name is Habibur Rahman, founder of <a href="${Constants.ALHAQ_STUDIO_URL}"><b>Al-Haq Studio</b></a>. I'm dedicated to building open-source digital wellbeing tools to help maintain a healthy, balanced digital lifestyle.<br/><br/>
+                        AmniShield is <b>100% open-source, free, and ad-free</b>. If you find it beneficial, you can support our mission:<br/>
+                        • <a href="${Constants.GITHUB_REPO_URL}"><b>Star our repository on GitHub</b></a><br/>
+                        • Share AmniShield with friends and community<br/>
+                        • Join our community on Telegram or Discord<br/>
+                        • Upgrade to the Supporter Pass in App Settings<br/><br/>
+                        Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
+                        GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
+                        Your support helps keep AmniShield accessible for everyone worldwide. JazakAllahu Khairan!
+                    """.trimIndent()
+                } else {
+                    """
+                        Thank you for using AmniShield!<br/><br/>
+                        My name is Habibur Rahman, founder of <a href="${Constants.ALHAQ_STUDIO_URL}"><b>Al-Haq Studio</b></a>. I'm a student dedicated to building open-source digital wellbeing tools to help maintain a healthy, balanced digital lifestyle.<br/><br/>
+                        AmniShield is <b>100% open-source, free, and ad-free</b>. If you find it beneficial, please consider supporting ongoing development:<br/>
+                        • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}"><b>Al-Haq Central Funding Hub</b></a><br/>
+                        • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}"><b>GitHub Sponsors (Initiative)</b></a><br/>
+                        • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}"><b>GitHub Sponsors (Developer)</b></a><br/>
+                        • <a href="${Constants.KOFI_URL}"><b>Ko-fi</b></a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}"><b>Buy Me a Coffee</b></a> • <a href="${Constants.PATREON_URL}"><b>Patreon</b></a><br/>
+                        • <a href="${Constants.GITHUB_REPO_URL}"><b>Star us on GitHub</b></a><br/><br/>
+                        Website: <a href="${Constants.AMNISHIELD_WEBSITE_URL}"><b>amnishield.com</b></a><br/>
+                        GitHub: <a href="${Constants.GITHUB_REPO_URL}"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>
+                        Your support helps keep AmniShield free and accessible for everyone worldwide. JazakAllahu Khairan!
+                    """.trimIndent()
+                }
 
                 val donationMsgView = android.widget.TextView(this).apply {
                     text = androidx.core.text.HtmlCompat.fromHtml(donationHtml, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
@@ -1079,6 +1095,16 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .setNegativeButton(R.string.close, null)
             .create()
+
+        if (BuildConfig.IS_PLAYSTORE) {
+            dialogView.findViewById<View>(R.id.card_initiative_hub)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_sponsors_initiative)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_sponsors_developer)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_kofi)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_buymeacoffee)?.visibility = View.GONE
+            dialogView.findViewById<View>(R.id.card_patreon)?.visibility = View.GONE
+            dialogView.findViewById<android.widget.TextView>(R.id.tv_support_intro)?.text = "AmniShield is built and maintained as a public good by Al-Haq Studio under the Al-Haq Initiative. 100% free core, zero tracking, no ads. You can support our work by starring us on GitHub or getting a Supporter Pass:"
+        }
 
         dialogView.findViewById<View>(R.id.card_initiative_hub)?.setOnClickListener {
             openUrl(Constants.ALHAQ_INITIATIVE_DONATE_URL)
@@ -1365,11 +1391,16 @@ class MainActivity : AppCompatActivity() {
             <b>Community:</b><br/>
             • <a href="${Constants.TELEGRAM_URL}">Telegram: t.me/amnishield</a><br/>
             • <a href="${Constants.DISCORD_URL}">Discord: discord.gg/zXz7pGVJY</a><br/><br/>
+            ${if (BuildConfig.IS_PLAYSTORE) """
+            <b>Supporter Pass:</b><br/>
+            • Upgrade in Settings to support open source development<br/><br/>
+            """.trimIndent() else """
             <b>Support Development:</b><br/>
             • <a href="${Constants.ALHAQ_INITIATIVE_DONATE_URL}">Al-Haq Central Funding Hub</a><br/>
             • <a href="${Constants.GITHUB_SPONSORS_INITIATIVE_URL}">GitHub Sponsors (Initiative)</a><br/>
             • <a href="${Constants.GITHUB_SPONSORS_PERSONAL_URL}">GitHub Sponsors (Developer)</a><br/>
             • <a href="${Constants.KOFI_URL}">Ko-fi</a> • <a href="${Constants.BUY_ME_A_COFFEE_URL}">Buy Me a Coffee</a> • <a href="${Constants.PATREON_URL}">Patreon</a><br/><br/>
+            """.trimIndent()}
             Built under: <a href="${Constants.ALHAQ_STUDIO_URL}">Al-Haq Studio</a><br/>
             Free Access Program: <a href="${Constants.ALHAQ_INITIATIVE_URL}">Al-Haq Initiative</a><br/>
             <b>100% Open Source • No Ads • No Tracking • Privacy First</b>
@@ -1713,9 +1744,13 @@ class MainActivity : AppCompatActivity() {
             "What is Focus Mode?" to "Focus Mode lets you time-box app restrictions (e.g., block gaming apps for 2 hours). It tracks your focus sessions and shows productivity insights.",
             "How do I disable Anti-Uninstall protection?" to "Go to Settings → Anti-Uninstall, enter your password, and tap Disable. You can then uninstall AmniShield normally.",
             "Is AmniShield really privacy-focused?" to "Yes! All text analysis, keyword detection, and content blocking happens locally on your device. We never send your data to servers.",
-            "Is AmniShield open source?" to "Yes! AmniShield is 100% open-source. You can view the full source code, report issues, and contribute on our GitHub repository:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>⭐ Please consider starring the repository to support us!",
+            "Is AmniShield open source?" to "Yes! AmniShield is 100% open-source. You can view the full source code, report issues, and contribute on our GitHub repository:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>Please consider starring the repository to support us!",
             "Where can I find the source code?" to "AmniShield's source code is publicly available on GitHub:<br/><br/><a href=\"${Constants.GITHUB_REPO_URL}\"><b>github.com/alhaq-studio/amnishield-android</b></a><br/><br/>You can also explore our other open-source projects at <a href=\"${Constants.ALHAQ_STUDIO_URL}\"><b>alhaq.uk</b></a>",
-            "How can I support AmniShield?" to "There are many ways to support AmniShield development:<br/><br/>• <a href=\"${Constants.ALHAQ_INITIATIVE_DONATE_URL}\"><b>Al-Haq Central Funding Hub</b></a><br/>• <a href=\"${Constants.GITHUB_SPONSORS_INITIATIVE_URL}\"><b>GitHub Sponsors (Initiative)</b></a><br/>• <a href=\"${Constants.GITHUB_SPONSORS_PERSONAL_URL}\"><b>GitHub Sponsors (Developer)</b></a><br/>• <a href=\"${Constants.KOFI_URL}\"><b>Ko-fi</b></a><br/>• <a href=\"${Constants.BUY_ME_A_COFFEE_URL}\"><b>Buy Me a Coffee</b></a><br/>• <a href=\"${Constants.PATREON_URL}\"><b>Patreon</b></a><br/><br/>⭐ You can also <a href=\"${Constants.GITHUB_REPO_URL}\"><b>star us on GitHub</b></a> and share AmniShield with others!"
+            "How can I support AmniShield?" to if (BuildConfig.IS_PLAYSTORE) {
+                "You can support AmniShield development by:<br/><br/>• <a href=\"${Constants.GITHUB_REPO_URL}\"><b>Starring us on GitHub</b></a><br/>• Sharing AmniShield with friends and community<br/>• Joining our <a href=\"${Constants.TELEGRAM_URL}\"><b>Telegram</b></a> or <a href=\"${Constants.DISCORD_URL}\"><b>Discord</b></a><br/>• Upgrading to the Supporter Pass in App Settings"
+            } else {
+                "There are many ways to support AmniShield development:<br/><br/>• <a href=\"${Constants.ALHAQ_INITIATIVE_DONATE_URL}\"><b>Al-Haq Central Funding Hub</b></a><br/>• <a href=\"${Constants.GITHUB_SPONSORS_INITIATIVE_URL}\"><b>GitHub Sponsors (Initiative)</b></a><br/>• <a href=\"${Constants.GITHUB_SPONSORS_PERSONAL_URL}\"><b>GitHub Sponsors (Developer)</b></a><br/>• <a href=\"${Constants.KOFI_URL}\"><b>Ko-fi</b></a><br/>• <a href=\"${Constants.BUY_ME_A_COFFEE_URL}\"><b>Buy Me a Coffee</b></a><br/>• <a href=\"${Constants.PATREON_URL}\"><b>Patreon</b></a><br/><br/>You can also <a href=\"${Constants.GITHUB_REPO_URL}\"><b>star us on GitHub</b></a> and share AmniShield with others!"
+            }
         )
         
         val questions = faqItems.map { it.first }.toTypedArray()
