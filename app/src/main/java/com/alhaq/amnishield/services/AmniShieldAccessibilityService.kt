@@ -38,6 +38,8 @@ import com.alhaq.amnishield.CrashLogger
 import com.alhaq.amnishield.R
 import com.alhaq.amnishield.blockers.AppBlocker
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.BlockerType
+import com.alhaq.amnishield.data.blockers.UniversalScheduleRule
 import com.alhaq.amnishield.blockers.FocusModeBlocker
 import com.alhaq.amnishield.blockers.KeywordBlocker
 import com.alhaq.amnishield.blockers.HomeFeedNavigator
@@ -482,12 +484,9 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
             val isKeywordEnabled = savedPreferencesLoader.isKeywordBlockerFeatureEnabled(false)
             if (isKeywordEnabled && isFeatureCurrentlyActive("keyword_blocker")) {
-                val manualKeywords = savedPreferencesLoader.loadBlockedKeywords()
-                    .map { it.trim().lowercase(Locale.ROOT) }
-                    .filter { it.isNotEmpty() }
-
-                if (manualKeywords.isNotEmpty()) {
-                    keywordBlocker.blockedKeyword = HashSet(manualKeywords)
+                val activeKeywords = getActiveBlockedKeywords()
+                if (activeKeywords.isNotEmpty()) {
+                    keywordBlocker.blockedKeyword = HashSet(activeKeywords)
                     try {
                         val keywordResult = keywordBlocker.checkIfUserGettingFreaky(rootNode, event)
                         if (keywordResult.resultDetectWord != null) {
@@ -659,28 +658,29 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun isFeatureCurrentlyActive(featureKey: String): Boolean {
-        val isFocusTarget = featureKey.equals("FOCUS_MODE", ignoreCase = true) || featureKey.equals("focus_mode", ignoreCase = true)
-        val isAppBlockerTarget = featureKey.equals("app_blocker", ignoreCase = true)
+        val targetType = when {
+            featureKey.equals("FOCUS_MODE", ignoreCase = true) || featureKey.equals("focus_mode", ignoreCase = true) -> BlockerType.FOCUS_MODE
+            featureKey.equals("app_blocker", ignoreCase = true) -> BlockerType.APP
+            featureKey.equals("website_blocker", ignoreCase = true) -> BlockerType.WEBSITE
+            featureKey.equals("keyword_blocker", ignoreCase = true) -> BlockerType.KEYWORD
+            featureKey.equals("reel_blocker", ignoreCase = true) -> BlockerType.REELS
+            else -> BlockerType.fromPackageName(featureKey)
+        }
 
         val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
 
-        val featureRules = when {
-            isAppBlockerTarget -> {
-                rawRules.filter {
-                    it.packageName != "keyword_blocker" &&
-                    it.packageName != "website_blocker" &&
-                    it.packageName != "reel_blocker" &&
-                    !it.packageName.equals("FOCUS_MODE", ignoreCase = true) &&
-                    !it.packageName.equals("focus_mode", ignoreCase = true)
-                }
-            }
-            else -> {
-                rawRules.filter {
-                    it.packageName.equals(featureKey, ignoreCase = true) ||
-                    it.groupTitle?.equals(featureKey, ignoreCase = true) == true ||
-                    it.title.equals(featureKey, ignoreCase = true)
-                }
-            }
+        val featureRules = rawRules.filter {
+            it.blockerType == targetType ||
+            (targetType == BlockerType.APP && (
+                it.packageName != "keyword_blocker" &&
+                it.packageName != "website_blocker" &&
+                it.packageName != "reel_blocker" &&
+                !it.packageName.equals("FOCUS_MODE", ignoreCase = true) &&
+                !it.packageName.equals("focus_mode", ignoreCase = true)
+            )) ||
+            it.packageName.equals(featureKey, ignoreCase = true) ||
+            it.groupTitle?.equals(featureKey, ignoreCase = true) == true ||
+            it.title.equals(featureKey, ignoreCase = true)
         }
 
         if (featureRules.isEmpty()) {
@@ -740,6 +740,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
     private fun getActiveBlockedWebsites(): Set<String> {
         val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
         val websiteRules = rawRules.filter {
+            it.blockerType == BlockerType.WEBSITE ||
             it.packageName.equals("website_blocker", ignoreCase = true) ||
             it.groupTitle?.equals("website_blocker", ignoreCase = true) == true ||
             it.title.contains("Website Blocker", ignoreCase = true)
@@ -766,8 +767,9 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
         for (rule in blockRules) {
             if (isRuleCurrentlyActive(rule, nowMillis)) {
-                if (rule.targetWebsites.isNotEmpty()) {
-                    activeWebsites.addAll(rule.targetWebsites)
+                val targets = rule.targets.ifEmpty { rule.targetWebsites }
+                if (targets.isNotEmpty()) {
+                    activeWebsites.addAll(targets)
                 } else {
                     // Fallback for legacy rules created before per-rule websites were introduced
                     activeWebsites.addAll(savedPreferencesLoader.loadBlockedWebsites())
@@ -776,6 +778,49 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
 
         return activeWebsites
+    }
+
+    private fun getActiveBlockedKeywords(): Set<String> {
+        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val keywordRules = rawRules.filter {
+            it.blockerType == BlockerType.KEYWORD ||
+            it.packageName.equals("keyword_blocker", ignoreCase = true) ||
+            it.groupTitle?.equals("keyword_blocker", ignoreCase = true) == true ||
+            it.title.contains("Keyword Blocker", ignoreCase = true)
+        }
+
+        if (keywordRules.isEmpty()) return emptySet()
+
+        val enabledRules = keywordRules.filter { it.isRuleEnabled }
+        if (enabledRules.isEmpty()) return emptySet()
+
+        // Check cheat hours (cheat window bypasses blocking)
+        val cheatRules = enabledRules.filter { it.type == AppBlockScheduleRule.RuleType.CHEAT }
+        val activeCheatEnd = getActiveRuleEndTimeLocal(cheatRules)
+        if (activeCheatEnd != null) {
+            return emptySet() // Bypassed during active cheat window
+        }
+
+        // Check block schedules
+        val blockRules = enabledRules.filter { it.type == AppBlockScheduleRule.RuleType.BLOCK }
+        if (blockRules.isEmpty()) return emptySet()
+
+        val activeKeywords = mutableSetOf<String>()
+        val nowMillis = System.currentTimeMillis()
+
+        for (rule in blockRules) {
+            if (isRuleCurrentlyActive(rule, nowMillis)) {
+                val targets = rule.targets.ifEmpty { rule.targetKeywords }
+                if (targets.isNotEmpty()) {
+                    activeKeywords.addAll(targets)
+                } else {
+                    // Fallback for legacy rules created before per-rule keywords were introduced
+                    activeKeywords.addAll(savedPreferencesLoader.loadBlockedKeywords())
+                }
+            }
+        }
+
+        return activeKeywords
     }
 
     private fun getActiveRuleEndTimeLocal(rules: List<AppBlockScheduleRule>): Long? {

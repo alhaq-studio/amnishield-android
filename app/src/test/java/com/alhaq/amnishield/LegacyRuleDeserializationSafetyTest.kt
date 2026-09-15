@@ -97,4 +97,66 @@ class LegacyRuleDeserializationSafetyTest {
         val updated = sanitized.copy(isActive = false)
         assertFalse(updated.isActive)
     }
+
+    @Test
+    fun `test legacy rules automatically map to BlockerType and targets during sanitization`() {
+        val legacyRulesJson = """
+            [
+                {
+                    "id": "web_1",
+                    "title": "Block Social Sites",
+                    "packageName": "website_blocker",
+                    "targetWebsites": ["reddit.com", "x.com"]
+                },
+                {
+                    "id": "kw_1",
+                    "title": "Block Explicit Terms",
+                    "packageName": "keyword_blocker"
+                },
+                {
+                    "id": "app_1",
+                    "title": "Block Instagram",
+                    "packageName": "com.instagram.android"
+                }
+            ]
+        """.trimIndent()
+
+        val type = object : TypeToken<List<AppBlockScheduleRule>>() {}.type
+        val rawList: List<AppBlockScheduleRule> = Gson().fromJson(legacyRulesJson, type)
+
+        assertEquals(3, rawList.size)
+
+        // 1. Website Blocker mapping
+        val webRule = rawList[0].sanitize()
+        assertEquals(com.alhaq.amnishield.data.blockers.BlockerType.WEBSITE, webRule.blockerType)
+        assertEquals(listOf("reddit.com", "x.com"), webRule.targets)
+        assertEquals(listOf("reddit.com", "x.com"), webRule.targetWebsites)
+
+        // 2. Keyword Blocker mapping
+        val kwRule = rawList[1].sanitize()
+        assertEquals(com.alhaq.amnishield.data.blockers.BlockerType.KEYWORD, kwRule.blockerType)
+        assertTrue(kwRule.targets.isEmpty())
+
+        // 3. App Blocker mapping
+        val appRule = rawList[2].sanitize()
+        assertEquals(com.alhaq.amnishield.data.blockers.BlockerType.APP, appRule.blockerType)
+        assertEquals(listOf("com.instagram.android"), appRule.targets)
+    }
+
+    @Test
+    fun `test modern UniversalScheduleRule with BlockerType and targets initializes and sanitizes cleanly`() {
+        val modernRule = com.alhaq.amnishield.data.blockers.UniversalScheduleRule(
+            id = "kw_modern_1",
+            title = "Strict Keyword Shield",
+            blockerType = com.alhaq.amnishield.data.blockers.BlockerType.KEYWORD,
+            targets = listOf("casino", "betting"),
+            recurrence = AppBlockScheduleRule.Recurrence.ALWAYS
+        )
+
+        val sanitized = modernRule.sanitize()
+        assertEquals(com.alhaq.amnishield.data.blockers.BlockerType.KEYWORD, sanitized.blockerType)
+        assertEquals(listOf("casino", "betting"), sanitized.targets)
+        assertEquals(listOf("casino", "betting"), sanitized.targetKeywords)
+        assertEquals("keyword_blocker", sanitized.packageName)
+    }
 }

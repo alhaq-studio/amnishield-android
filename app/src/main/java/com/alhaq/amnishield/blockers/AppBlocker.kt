@@ -3,6 +3,7 @@ package com.alhaq.amnishield.blockers
 import android.content.Context
 import android.os.SystemClock
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.security.SystemExclusionManager
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import com.alhaq.amnishield.utils.ScheduleUtils
@@ -74,7 +75,10 @@ class AppBlocker : BaseBlocker() {
             return AppBlockerResult(isBlocked = false)
         }
 
-        val allPackageRules = scheduleRules.filter { it.packageName.equals(packageName, ignoreCase = true) }
+        val allPackageRules = scheduleRules.filter {
+            it.blockerType == BlockerType.APP &&
+            (it.packageName.equals(packageName, ignoreCase = true) || it.targets.any { target -> target.equals(packageName, ignoreCase = true) })
+        }
         val packageRules = allPackageRules.filter { it.isRuleEnabled }
 
         // If custom rules exist for this package, but ALL of them are disabled by user, DO NOT BLOCK

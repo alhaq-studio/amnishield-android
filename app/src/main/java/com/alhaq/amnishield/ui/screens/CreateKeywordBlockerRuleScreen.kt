@@ -110,9 +110,13 @@ fun CreateKeywordBlockerRuleScreen(
 
     // Keywords State
     val loader = remember { SavedPreferencesLoader(context) }
-    val blockedKeywords = remember {
+    val blockedKeywords = remember(editingRule) {
         mutableStateListOf<String>().apply {
-            addAll(loader.loadBlockedKeywords())
+            if (editingRule != null && editingRule.selectedKeywords.isNotEmpty()) {
+                addAll(editingRule.selectedKeywords)
+            } else if (editingRule != null) {
+                addAll(loader.loadBlockedKeywords())
+            }
         }
     }
     var newKeyword by remember { mutableStateOf("") }
@@ -207,7 +211,6 @@ fun CreateKeywordBlockerRuleScreen(
                         )
 
                         val performSave = {
-                            loader.saveBlockedKeywords(blockedKeywords.toSet())
                             loader.setKeywordBlockerFeatureEnabled(true, updateManual = true)
 
                             val refreshIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)

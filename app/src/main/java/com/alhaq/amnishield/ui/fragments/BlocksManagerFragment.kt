@@ -21,6 +21,8 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.alhaq.amnishield.R
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.BlockerType
+import com.alhaq.amnishield.data.blockers.UniversalScheduleRule
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
@@ -489,30 +491,38 @@ class BlocksManagerFragment : Fragment() {
                     val name = firstApp.groupTitle ?: firstApp.title
                     val isEnabled = firstApp.isRuleEnabled
 
-                    val targetBlocker = when {
-                        associatedApps.any { it.packageName == "keyword_blocker" } -> "Keyword Blocker"
-                        associatedApps.any { it.packageName == "website_blocker" } -> "Website Blocker"
-                        associatedApps.any { it.packageName == "reel_blocker" } -> "Reels Blocker"
-                        associatedApps.any { it.packageName == "FOCUS_MODE" || it.packageName == "focus_mode" } -> "Focus Mode"
-                        else -> "App Blocker"
+                    val blockerType = associatedApps.firstOrNull { it.blockerType != BlockerType.APP }?.blockerType
+                        ?: if (associatedApps.any { it.packageName == "keyword_blocker" }) BlockerType.KEYWORD
+                        else if (associatedApps.any { it.packageName == "website_blocker" }) BlockerType.WEBSITE
+                        else if (associatedApps.any { it.packageName == "reel_blocker" }) BlockerType.REELS
+                        else if (associatedApps.any { it.packageName.equals("FOCUS_MODE", ignoreCase = true) || it.packageName.equals("focus_mode", ignoreCase = true) }) BlockerType.FOCUS_MODE
+                        else BlockerType.APP
+
+                    val targetBlocker = when (blockerType) {
+                        BlockerType.KEYWORD -> "Keyword Blocker"
+                        BlockerType.WEBSITE -> "Website Blocker"
+                        BlockerType.REELS -> "Reels Blocker"
+                        BlockerType.FOCUS_MODE -> "Focus Mode"
+                        BlockerType.APP -> "App Blocker"
                     }
 
                     val apps = associatedApps.mapNotNull { it.packageName }.filter {
                         it != "keyword_blocker" && it != "website_blocker" && it != "reel_blocker" && it != "FOCUS_MODE" && it != "focus_mode"
                     }.distinct()
 
-                    val appOrCategory = when (targetBlocker) {
-                        "Keyword Blocker" -> {
-                            val kwCount = savedPreferencesLoader.loadBlockedKeywords().size
+                    val appOrCategory = when (blockerType) {
+                        BlockerType.KEYWORD -> {
+                            val ruleKeywords = associatedApps.flatMap { it.targets.ifEmpty { it.targetKeywords } }.distinct()
+                            val kwCount = if (ruleKeywords.isNotEmpty()) ruleKeywords.size else savedPreferencesLoader.loadBlockedKeywords().size
                             if (kwCount > 0) "$kwCount Keywords" else "Keywords Blocker"
                         }
-                        "Website Blocker" -> {
-                            val ruleWebsites = associatedApps.flatMap { it.targetWebsites }.distinct()
+                        BlockerType.WEBSITE -> {
+                            val ruleWebsites = associatedApps.flatMap { it.targets.ifEmpty { it.targetWebsites } }.distinct()
                             val siteCount = if (ruleWebsites.isNotEmpty()) ruleWebsites.size else savedPreferencesLoader.loadBlockedWebsites().size
                             if (siteCount > 0) "$siteCount Websites" else "Website Blocker"
                         }
-                        "Reels Blocker" -> "Reels Blocker"
-                        "Focus Mode" -> "Focus Mode Schedules"
+                        BlockerType.REELS -> "Reels Blocker"
+                        BlockerType.FOCUS_MODE -> "Focus Mode Schedules"
                         else -> {
                             if (apps.size == 1) {
                                 try {
@@ -616,9 +626,12 @@ class BlocksManagerFragment : Fragment() {
                             targetBlockerType = targetBlocker,
                             selectedApps = apps,
                             selectedBlockers = listOf(targetBlocker),
-                            selectedKeywords = if (targetBlocker == "Keyword Blocker") savedPreferencesLoader.loadBlockedKeywords().toList() else emptyList(),
+                            selectedKeywords = if (targetBlocker == "Keyword Blocker") {
+                                val ruleKeywords = associatedApps.flatMap { it.targets.ifEmpty { it.targetKeywords } }.distinct()
+                                if (ruleKeywords.isNotEmpty()) ruleKeywords else savedPreferencesLoader.loadBlockedKeywords().toList()
+                            } else emptyList(),
                             selectedWebsites = if (targetBlocker == "Website Blocker") {
-                                val ruleWebsites = associatedApps.flatMap { it.targetWebsites }.distinct()
+                                val ruleWebsites = associatedApps.flatMap { it.targets.ifEmpty { it.targetWebsites } }.distinct()
                                 if (ruleWebsites.isNotEmpty()) ruleWebsites else savedPreferencesLoader.loadBlockedWebsites().toList()
                             } else emptyList(),
                             
@@ -1005,13 +1018,21 @@ class BlocksManagerFragment : Fragment() {
         val groupId = rule.id
         val groupTitle = rule.name
 
+        val blockerType = BlockerType.fromTargetTypeString(rule.targetBlockerType)
+        val targets = when (blockerType) {
+            BlockerType.WEBSITE -> rule.selectedWebsites
+            BlockerType.KEYWORD -> rule.selectedKeywords
+            BlockerType.APP -> rule.selectedApps
+            else -> emptyList()
+        }
+
         // Determine target packages for database entries
-        val targetPackages = when (rule.targetBlockerType) {
-            "Keyword Blocker" -> listOf("keyword_blocker")
-            "Website Blocker" -> listOf("website_blocker")
-            "Reels Blocker" -> listOf("reel_blocker")
-            "Focus Mode" -> listOf("FOCUS_MODE")
-            else -> rule.selectedApps
+        val targetPackages = when (blockerType) {
+            BlockerType.KEYWORD -> listOf("keyword_blocker")
+            BlockerType.WEBSITE -> listOf("website_blocker")
+            BlockerType.REELS -> listOf("reel_blocker")
+            BlockerType.FOCUS_MODE -> listOf("FOCUS_MODE")
+            BlockerType.APP -> rule.selectedApps
         }
 
         // 1. Save Block Schedule Rules if enabled
@@ -1041,7 +1062,10 @@ class BlocksManagerFragment : Fragment() {
                     groupId = groupId,
                     groupTitle = groupTitle,
                     isEnabled = rule.isActive,
-                    targetWebsites = if (rule.targetBlockerType == "Website Blocker") rule.selectedWebsites else emptyList(),
+                    blockerType = blockerType,
+                    targets = targets,
+                    targetWebsites = if (blockerType == BlockerType.WEBSITE) targets else emptyList(),
+                    targetKeywords = if (blockerType == BlockerType.KEYWORD) targets else emptyList(),
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -1075,7 +1099,10 @@ class BlocksManagerFragment : Fragment() {
                     groupId = groupId,
                     groupTitle = groupTitle,
                     isEnabled = rule.isActive,
-                    targetWebsites = if (rule.targetBlockerType == "Website Blocker") rule.selectedWebsites else emptyList(),
+                    blockerType = blockerType,
+                    targets = targets,
+                    targetWebsites = if (blockerType == BlockerType.WEBSITE) targets else emptyList(),
+                    targetKeywords = if (blockerType == BlockerType.KEYWORD) targets else emptyList(),
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -1329,15 +1356,22 @@ class BlocksManagerFragment : Fragment() {
             savedPreferencesLoader.removeAppBlockerScheduleGroup(id)
             savedPreferencesLoader.removeAppBlockerScheduleRule(id)
 
-            // Deactivate and clear underlying blocker lists/states if rule is deleted
-            if (id == "keyword_blocker_default" || associatedApps.contains("keyword_blocker")) {
+            // Deactivate underlying blocker toggles only if no other rules remain for that blocker
+            val remainingRules = savedPreferencesLoader.loadAppBlockerScheduleRules().filter { (it.groupId ?: it.id) != id }
+            val hasOtherKeywordRules = remainingRules.any { it.blockerType == BlockerType.KEYWORD || it.packageName == "keyword_blocker" }
+            if (!hasOtherKeywordRules && (id == "keyword_blocker_default" || associatedApps.contains("keyword_blocker"))) {
                 savedPreferencesLoader.setKeywordBlockerFeatureEnabled(false, updateManual = true)
-                savedPreferencesLoader.saveBlockedKeywords(emptySet())
-                savedPreferencesLoader.setKeywordBlockerAdultPackEnabled(false)
+                if (id == "keyword_blocker_default") {
+                    savedPreferencesLoader.saveBlockedKeywords(emptySet())
+                    savedPreferencesLoader.setKeywordBlockerAdultPackEnabled(false)
+                }
             }
-            if (id == "website_blocker_default" || associatedApps.contains("website_blocker")) {
+            val hasOtherWebsiteRules = remainingRules.any { it.blockerType == BlockerType.WEBSITE || it.packageName == "website_blocker" }
+            if (!hasOtherWebsiteRules && (id == "website_blocker_default" || associatedApps.contains("website_blocker"))) {
                 savedPreferencesLoader.setWebsiteBlockerEnabled(false, updateManual = true)
-                savedPreferencesLoader.saveBlockedWebsites(emptySet())
+                if (id == "website_blocker_default") {
+                    savedPreferencesLoader.saveBlockedWebsites(emptySet())
+                }
             }
             if (id == "reel_blocker_default" || associatedApps.contains("reel_blocker")) {
                 savedPreferencesLoader.setReelBlockerEnabled(false, updateManual = true)
