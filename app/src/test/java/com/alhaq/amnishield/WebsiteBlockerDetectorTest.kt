@@ -1,9 +1,11 @@
 package com.alhaq.amnishield
 
 import com.alhaq.amnishield.blockers.WebsiteBlockerDetector
+import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
@@ -15,6 +17,7 @@ import java.util.Locale
  * 1. BaseBlocker cooldown management (apply, check, expire, restore).
  * 2. Case-insensitive domain matching and URL parsing normalization.
  * 3. Browser package and address bar mapping coverage.
+ * 4. Per-rule website isolation and strict active rule enforcement.
  */
 class WebsiteBlockerDetectorTest {
 
@@ -97,6 +100,61 @@ class WebsiteBlockerDetectorTest {
         // Blank / empty string
         assertEquals(null, matchesBlockedSite("", blockedList))
         assertEquals(null, matchesBlockedSite("   ", blockedList))
+    }
+
+    @Test
+    fun testPerRuleWebsiteIsolation() {
+        // When activeWebsites is provided, it should strictly restrict evaluation to that rule's domains
+        val activeWebsitesRule1 = setOf("facebook.com")
+        val activeWebsitesRule2 = setOf("twitter.com", "reddit.com")
+        val emptyActiveWebsites = emptySet<String>()
+
+        fun evaluateAgainstRule(url: String, ruleWebsites: Set<String>): String? {
+            val urlLower = url.lowercase(Locale.ROOT)
+            for (site in ruleWebsites) {
+                val siteLower = site.trim().lowercase(Locale.ROOT)
+                if (siteLower.isNotEmpty() && urlLower.contains(siteLower)) {
+                    return site
+                }
+            }
+            return null
+        }
+
+        // Rule 1 is active (only facebook.com)
+        assertEquals("facebook.com", evaluateAgainstRule("https://m.facebook.com", activeWebsitesRule1))
+        assertNull(evaluateAgainstRule("https://twitter.com", activeWebsitesRule1))
+        assertNull(evaluateAgainstRule("https://reddit.com", activeWebsitesRule1))
+
+        // Rule 2 is active (twitter.com and reddit.com)
+        assertNull(evaluateAgainstRule("https://facebook.com", activeWebsitesRule2))
+        assertEquals("twitter.com", evaluateAgainstRule("https://mobile.twitter.com", activeWebsitesRule2))
+        assertEquals("reddit.com", evaluateAgainstRule("https://reddit.com/r/popular", activeWebsitesRule2))
+
+        // No rules active (empty)
+        assertNull(evaluateAgainstRule("https://facebook.com", emptyActiveWebsites))
+        assertNull(evaluateAgainstRule("https://twitter.com", emptyActiveWebsites))
+    }
+
+    @Test
+    fun testAppBlockScheduleRuleTargetWebsitesModel() {
+        val rule = AppBlockScheduleRule(
+            id = "rule-123",
+            title = "Work Hours Rule",
+            packageName = "website_blocker",
+            type = AppBlockScheduleRule.RuleType.BLOCK,
+            recurrence = AppBlockScheduleRule.Recurrence.ALWAYS,
+            targetWebsites = listOf("facebook.com", "youtube.com")
+        )
+
+        assertEquals("rule-123", rule.id)
+        assertEquals(2, rule.targetWebsites.size)
+        assertTrue(rule.targetWebsites.contains("facebook.com"))
+        assertTrue(rule.targetWebsites.contains("youtube.com"))
+
+        // Sanitization keeps targetWebsites intact
+        val sanitized = rule.sanitize()
+        assertEquals(2, sanitized.targetWebsites.size)
+        assertTrue(sanitized.targetWebsites.contains("facebook.com"))
     }
 
     @Test

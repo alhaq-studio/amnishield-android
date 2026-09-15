@@ -114,13 +114,10 @@ fun CreateWebsiteBlockerRuleScreen(
     val loader = remember { SavedPreferencesLoader(context) }
     val blockedWebsites = remember {
         mutableStateListOf<String>().apply {
-            if (!prefillWebsite.isNullOrBlank()) {
+            if (editingRule != null && editingRule.selectedWebsites.isNotEmpty()) {
+                addAll(editingRule.selectedWebsites)
+            } else if (!prefillWebsite.isNullOrBlank()) {
                 add(prefillWebsite.trim().lowercase())
-            }
-            loader.loadBlockedWebsites().forEach {
-                if (!contains(it)) {
-                    add(it)
-                }
             }
         }
     }
@@ -223,7 +220,6 @@ fun CreateWebsiteBlockerRuleScreen(
                         )
 
                         val performSave = {
-                            loader.saveBlockedWebsites(blockedWebsites.toSet())
                             loader.setWebsiteBlockerEnabled(true, updateManual = true)
 
                             val refreshIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
@@ -345,10 +341,6 @@ fun CreateWebsiteBlockerRuleScreen(
                                 site = site.removePrefix("http://").removePrefix("https://").removePrefix("www.")
                                 if (site.isNotEmpty() && !blockedWebsites.contains(site)) {
                                     blockedWebsites.add(site)
-                                    loader.saveBlockedWebsites(blockedWebsites.toSet())
-                                    val intent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
-                                    intent.setPackage(context.packageName)
-                                    context.sendBroadcast(intent)
                                     newWebsite = ""
                                 }
                             },
@@ -439,10 +431,6 @@ fun CreateWebsiteBlockerRuleScreen(
                                                     }
                                                 }
                                             }
-                                            loader.saveBlockedWebsites(blockedWebsites.toSet())
-                                            val intent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
-                                            intent.setPackage(context.packageName)
-                                            context.sendBroadcast(intent)
                                         },
                                         shape = RoundedCornerShape(20.dp),
                                         colors = ButtonDefaults.buttonColors(
@@ -500,10 +488,6 @@ fun CreateWebsiteBlockerRuleScreen(
                                                 .size(16.dp)
                                                 .clickable {
                                                     blockedWebsites.remove(website)
-                                                    loader.saveBlockedWebsites(blockedWebsites.toSet())
-                                                    val intent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
-                                                    intent.setPackage(context.packageName)
-                                                    context.sendBroadcast(intent)
                                                 }
                                         )
                                     }
@@ -887,7 +871,6 @@ fun CreateWebsiteBlockerRuleScreen(
                     rulePasswordHash = hash,
                     rulePasswordSalt = salt
                 )
-                loader.saveBlockedWebsites(blockedWebsites.toSet())
                 loader.setWebsiteBlockerEnabled(true, updateManual = true)
 
                 val refreshIntent = Intent(com.alhaq.amnishield.services.AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)

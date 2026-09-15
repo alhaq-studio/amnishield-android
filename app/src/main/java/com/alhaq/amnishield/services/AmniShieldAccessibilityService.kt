@@ -324,63 +324,66 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             }
 
             if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
-                val blockedSocialApps = savedPreferencesLoader.loadBlockedWebsitesApps()
-                if (blockedSocialApps.contains(packageName)) {
-                    blockingStatsManager.recordAppBlock(packageName, "Blocked by Website Blocker")
-                    val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
-                    if (webStyle == Constants.BLOCKER_WARNING_STYLE_AMNISPACE) {
-                        val intent = Intent(this, AmniSpaceActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Blocked Social App: $packageName")
-                            putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
-                            putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
-                        }
-                        startActivity(intent)
-                        return
-                    } else if (webStyle == Constants.BLOCKER_WARNING_STYLE_SILENT) {
-                        pressHome()
-                        return
-                    } else {
-                        val intent = Intent(this, WarningActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
-                            putExtra("result_id", packageName)
-                            putExtra("blocked_by_feature", "Website Blocker")
-                        }
-                        startActivity(intent)
-                        return
-                    }
-                } else if (rootNode != null) {
-                    val blockedSite = websiteBlockerDetector.findBlockedWebsite(rootNode, packageName)
-                    if (blockedSite != null) {
-                        blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $blockedSite")
+                val activeWebsites = getActiveBlockedWebsites()
+                if (activeWebsites.isNotEmpty()) {
+                    val blockedSocialApps = savedPreferencesLoader.loadBlockedWebsitesApps()
+                    if (blockedSocialApps.contains(packageName)) {
+                        blockingStatsManager.recordAppBlock(packageName, "Blocked by Website Blocker")
                         val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
-                        when (webStyle) {
-                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> {
-                                val intent = Intent(this, AmniSpaceActivity::class.java).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain: $blockedSite")
-                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, blockedSite)
-                                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
-                                }
-                                startActivity(intent)
-                                return
+                        if (webStyle == Constants.BLOCKER_WARNING_STYLE_AMNISPACE) {
+                            val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Blocked Social App: $packageName")
+                                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
+                                putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
                             }
-                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> {
-                                val intent = Intent(this, WarningActivity::class.java).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
-                                    putExtra("result_id", blockedSite)
-                                    putExtra("blocked_by_feature", "Website Blocker")
-                                }
-                                startActivity(intent)
-                                return
+                            startActivity(intent)
+                            return
+                        } else if (webStyle == Constants.BLOCKER_WARNING_STYLE_SILENT) {
+                            pressHome()
+                            return
+                        } else {
+                            val intent = Intent(this, WarningActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
+                                putExtra("result_id", packageName)
+                                putExtra("blocked_by_feature", "Website Blocker")
                             }
-                            else -> { // Constants.BLOCKER_WARNING_STYLE_SILENT (Default)
-                                pressHome()
-                                return
+                            startActivity(intent)
+                            return
+                        }
+                    } else if (rootNode != null) {
+                        val blockedSite = websiteBlockerDetector.findBlockedWebsite(rootNode, packageName, activeWebsites)
+                        if (blockedSite != null) {
+                            blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $blockedSite")
+                            val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
+                            when (webStyle) {
+                                Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> {
+                                    val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                        putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain: $blockedSite")
+                                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, blockedSite)
+                                        putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                                    }
+                                    startActivity(intent)
+                                    return
+                                }
+                                Constants.BLOCKER_WARNING_STYLE_DIALOG -> {
+                                    val intent = Intent(this, WarningActivity::class.java).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
+                                        putExtra("result_id", blockedSite)
+                                        putExtra("blocked_by_feature", "Website Blocker")
+                                    }
+                                    startActivity(intent)
+                                    return
+                                }
+                                else -> { // Constants.BLOCKER_WARNING_STYLE_SILENT (Default)
+                                    pressHome()
+                                    return
+                                }
                             }
                         }
                     }
@@ -681,10 +684,6 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
 
         if (featureRules.isEmpty()) {
-            if (featureKey.equals("website_blocker", ignoreCase = true)) {
-                return savedPreferencesLoader.loadBlockedWebsites().isNotEmpty() ||
-                        savedPreferencesLoader.loadBlockedWebsitesApps().isNotEmpty()
-            }
             // Strict Opt-In Architecture: No rules configured means feature is INACTIVE.
             return false
         }
@@ -725,6 +724,58 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
 
         return true
+    }
+
+    private fun isRuleCurrentlyActive(rule: AppBlockScheduleRule, nowMillis: Long): Boolean {
+        if (!rule.isRuleEnabled) return false
+        val recurrence = rule.recurrence ?: AppBlockScheduleRule.Recurrence.DAILY
+        return when (recurrence) {
+            AppBlockScheduleRule.Recurrence.ALWAYS -> true
+            AppBlockScheduleRule.Recurrence.HOURLY -> rule.activeUntilMillis > nowMillis
+            AppBlockScheduleRule.Recurrence.DAILY -> ScheduleUtils.isDailyWindowActive(rule.startMinute, rule.endMinute, nowMillis)
+            AppBlockScheduleRule.Recurrence.WEEKLY -> ScheduleUtils.isWeeklyWindowActive(rule.startMinute, rule.endMinute, rule.selectedDays ?: emptySet(), nowMillis)
+        }
+    }
+
+    private fun getActiveBlockedWebsites(): Set<String> {
+        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val websiteRules = rawRules.filter {
+            it.packageName.equals("website_blocker", ignoreCase = true) ||
+            it.groupTitle?.equals("website_blocker", ignoreCase = true) == true ||
+            it.title.contains("Website Blocker", ignoreCase = true)
+        }
+
+        if (websiteRules.isEmpty()) return emptySet()
+
+        val enabledRules = websiteRules.filter { it.isRuleEnabled }
+        if (enabledRules.isEmpty()) return emptySet()
+
+        // Check cheat hours (cheat window bypasses blocking)
+        val cheatRules = enabledRules.filter { it.type == AppBlockScheduleRule.RuleType.CHEAT }
+        val activeCheatEnd = getActiveRuleEndTimeLocal(cheatRules)
+        if (activeCheatEnd != null) {
+            return emptySet() // Bypassed during active cheat window
+        }
+
+        // Check block schedules
+        val blockRules = enabledRules.filter { it.type == AppBlockScheduleRule.RuleType.BLOCK }
+        if (blockRules.isEmpty()) return emptySet()
+
+        val activeWebsites = mutableSetOf<String>()
+        val nowMillis = System.currentTimeMillis()
+
+        for (rule in blockRules) {
+            if (isRuleCurrentlyActive(rule, nowMillis)) {
+                if (rule.targetWebsites.isNotEmpty()) {
+                    activeWebsites.addAll(rule.targetWebsites)
+                } else {
+                    // Fallback for legacy rules created before per-rule websites were introduced
+                    activeWebsites.addAll(savedPreferencesLoader.loadBlockedWebsites())
+                }
+            }
+        }
+
+        return activeWebsites
     }
 
     private fun getActiveRuleEndTimeLocal(rules: List<AppBlockScheduleRule>): Long? {

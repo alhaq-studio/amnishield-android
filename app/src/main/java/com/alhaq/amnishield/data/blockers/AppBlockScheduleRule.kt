@@ -18,6 +18,7 @@ data class AppBlockScheduleRule(
     val groupId: String? = null,
     val groupTitle: String? = null,
     val isEnabled: Boolean? = true,
+    val targetWebsites: List<String> = emptyList(),
     override val authType: AuthType = AuthType.NONE,
     override val rulePasswordHash: String? = null,
     override val rulePasswordSalt: String? = null
@@ -46,6 +47,7 @@ data class AppBlockScheduleRule(
             groupId = groupId,
             groupTitle = groupTitle,
             isEnabled = isEnabled ?: true,
+            targetWebsites = targetWebsites ?: emptyList(),
             authType = authType ?: AuthType.NONE,
             rulePasswordHash = rulePasswordHash,
             rulePasswordSalt = rulePasswordSalt

@@ -507,7 +507,8 @@ class BlocksManagerFragment : Fragment() {
                             if (kwCount > 0) "$kwCount Keywords" else "Keywords Blocker"
                         }
                         "Website Blocker" -> {
-                            val siteCount = savedPreferencesLoader.loadBlockedWebsites().size
+                            val ruleWebsites = associatedApps.flatMap { it.targetWebsites }.distinct()
+                            val siteCount = if (ruleWebsites.isNotEmpty()) ruleWebsites.size else savedPreferencesLoader.loadBlockedWebsites().size
                             if (siteCount > 0) "$siteCount Websites" else "Website Blocker"
                         }
                         "Reels Blocker" -> "Reels Blocker"
@@ -616,7 +617,10 @@ class BlocksManagerFragment : Fragment() {
                             selectedApps = apps,
                             selectedBlockers = listOf(targetBlocker),
                             selectedKeywords = if (targetBlocker == "Keyword Blocker") savedPreferencesLoader.loadBlockedKeywords().toList() else emptyList(),
-                            selectedWebsites = if (targetBlocker == "Website Blocker") savedPreferencesLoader.loadBlockedWebsites().toList() else emptyList(),
+                            selectedWebsites = if (targetBlocker == "Website Blocker") {
+                                val ruleWebsites = associatedApps.flatMap { it.targetWebsites }.distinct()
+                                if (ruleWebsites.isNotEmpty()) ruleWebsites else savedPreferencesLoader.loadBlockedWebsites().toList()
+                            } else emptyList(),
                             
                             isAlwaysBlockEnabled = isAlwaysBlockEnabled,
                             isScheduleEnabled = isScheduleEnabled,
@@ -1037,6 +1041,7 @@ class BlocksManagerFragment : Fragment() {
                     groupId = groupId,
                     groupTitle = groupTitle,
                     isEnabled = rule.isActive,
+                    targetWebsites = if (rule.targetBlockerType == "Website Blocker") rule.selectedWebsites else emptyList(),
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -1070,6 +1075,7 @@ class BlocksManagerFragment : Fragment() {
                     groupId = groupId,
                     groupTitle = groupTitle,
                     isEnabled = rule.isActive,
+                    targetWebsites = if (rule.targetBlockerType == "Website Blocker") rule.selectedWebsites else emptyList(),
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -1148,9 +1154,6 @@ class BlocksManagerFragment : Fragment() {
 
         // 3d. Website Blocker Specific Saving
         if (rule.targetBlockerType == "Website Blocker") {
-            if (rule.selectedWebsites.isNotEmpty()) {
-                savedPreferencesLoader.saveBlockedWebsites(rule.selectedWebsites.toSet())
-            }
             savedPreferencesLoader.setWebsiteBlockerEnabled(rule.isActive, updateManual = true)
         }
 

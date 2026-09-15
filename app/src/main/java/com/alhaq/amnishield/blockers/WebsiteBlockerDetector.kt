@@ -58,23 +58,33 @@ open class WebsiteBlockerDetector(
      * Inspects the browser URL bar node to verify if the visited site matches blocked domains.
      * Respects cooldowns and Node Lifecycle Invariant (NEVER recycles rootNode).
      */
-    fun checkBlockedWebsites(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
-        return findBlockedWebsite(rootNode, packageName) != null
+    fun checkBlockedWebsites(
+        rootNode: AccessibilityNodeInfo,
+        packageName: String,
+        activeWebsites: Set<String>? = null
+    ): Boolean {
+        return findBlockedWebsite(rootNode, packageName, activeWebsites) != null
     }
 
     /**
      * Returns the matched blocked domain if present in the address bar and not under cooldown.
+     * If [activeWebsites] is provided, matches ONLY against those active websites.
      */
-    fun findBlockedWebsite(rootNode: AccessibilityNodeInfo, packageName: String): String? {
+    fun findBlockedWebsite(
+        rootNode: AccessibilityNodeInfo,
+        packageName: String,
+        activeWebsites: Set<String>? = null
+    ): String? {
         val urlNode = getUrlBarNode(rootNode, packageName) ?: return null
         return try {
             val rawText = urlNode.text?.toString() ?: urlNode.contentDescription?.toString()
             val urlText = rawText.orEmpty().lowercase(Locale.ROOT).trim()
             if (urlText.isNotBlank()) {
-                val manualWebsites = blockedWebsitesProvider?.invoke()
+                val candidateWebsites = activeWebsites
+                    ?: blockedWebsitesProvider?.invoke()
                     ?: savedPreferencesLoader?.loadBlockedWebsites()
                     ?: emptySet()
-                for (site in manualWebsites) {
+                for (site in candidateWebsites) {
                     val siteLower = site.trim().lowercase(Locale.ROOT)
                     if (siteLower.isNotEmpty() && urlText.contains(siteLower) && !isUnderCooldown(siteLower)) {
                         return site
