@@ -1403,7 +1403,7 @@ open class SavedPreferencesLoader(
 
 
 
-    fun loadBlockedWebsitesApps(): Set<String> {
+    open fun loadBlockedWebsitesApps(): Set<String> {
         val sharedPreferences = context.getSharedPreferences("website_blocker", Context.MODE_PRIVATE)
         val legacyPreferences = context.getSharedPreferences("social_media_blocker", Context.MODE_PRIVATE)
         val activePrefs = if (sharedPreferences.contains("blocked_apps")) sharedPreferences else legacyPreferences
@@ -1422,7 +1422,7 @@ open class SavedPreferencesLoader(
         legacyPreferences.edit().putStringSet("blocked_apps", apps).apply()
     }
 
-    fun loadBlockedWebsites(): Set<String> {
+    open fun loadBlockedWebsites(): Set<String> {
         val sharedPreferences = context.getSharedPreferences("website_blocker", Context.MODE_PRIVATE)
         val legacyPreferences = context.getSharedPreferences("social_media_blocker", Context.MODE_PRIVATE)
         val activePrefs = if (sharedPreferences.contains("blocked_websites")) sharedPreferences else legacyPreferences

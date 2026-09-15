@@ -103,7 +103,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
-        droppedEvent.recycle()
+        try {
+            @Suppress("DEPRECATION")
+            droppedEvent.recycle()
+        } catch (_: Throwable) {}
     }
 
     override fun onServiceConnected() {
@@ -163,6 +166,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                         val endTime = System.currentTimeMillis() + duration
                         reelBlocker.applyCooldown(resultId ?: "xxxxxxxxxxxxxx", endTime)
                         savedPreferencesLoader.saveReelBlockerCooldownData(reelBlocker.getCooldownSnapshot())
+                        resultId?.let { websiteBlockerDetector.applyCooldown(it.trim().lowercase(java.util.Locale.ROOT), endTime) }
                     }
                     override fun onRefreshReelBlocker() = setupReelBlocker()
                     override fun onRefreshReelBlockerCooldown(resultId: String?, interval: Int) {
@@ -347,6 +351,39 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                         startActivity(intent)
                         return
                     }
+                } else if (rootNode != null) {
+                    val blockedSite = websiteBlockerDetector.findBlockedWebsite(rootNode, packageName)
+                    if (blockedSite != null) {
+                        blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $blockedSite")
+                        val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
+                        when (webStyle) {
+                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> {
+                                val intent = Intent(this, AmniSpaceActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
+                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain: $blockedSite")
+                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, blockedSite)
+                                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
+                                }
+                                startActivity(intent)
+                                return
+                            }
+                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> {
+                                val intent = Intent(this, WarningActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
+                                    putExtra("result_id", blockedSite)
+                                    putExtra("blocked_by_feature", "Website Blocker")
+                                }
+                                startActivity(intent)
+                                return
+                            }
+                            else -> { // Constants.BLOCKER_WARNING_STYLE_SILENT (Default)
+                                pressHome()
+                                return
+                            }
+                        }
+                    }
                 }
             }
 
@@ -391,7 +428,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             }
             val sendResult = eventChannel.trySend(eventCopy)
             if (sendResult.isFailure) {
-                eventCopy.recycle()
+                try {
+                    @Suppress("DEPRECATION")
+                    eventCopy.recycle()
+                } catch (_: Throwable) {}
             }
         } catch (t: Throwable) {
             android.util.Log.e("AmniShield", "Accessibility pipeline error", t)
@@ -411,7 +451,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     android.util.Log.e("AmniShield", "Deferred blocker worker error", t)
                     crashLogger.logNonFatalError("AccessibilityService", "Deferred blocker error", Exception(t))
                 } finally {
-                    event.recycle()
+                    try {
+                        @Suppress("DEPRECATION")
+                        event.recycle()
+                    } catch (_: Throwable) {}
                 }
             }
         }
@@ -458,52 +501,6 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     } catch (e: Exception) {
                         android.util.Log.e("AmniShield", "Core Keyword blocker error", e)
                     }
-                }
-            }
-
-            if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
-                try {
-                    val blockedSite = websiteBlockerDetector.findBlockedWebsite(rootNode, packageName)
-                    if (blockedSite != null) {
-                        blockingStatsManager.recordAppBlock(packageName, "Website Blocked: $blockedSite")
-                        val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
-                        when (webStyle) {
-                            Constants.BLOCKER_WARNING_STYLE_SILENT -> {
-                                val cleared = websiteBlockerDetector.clearBlockedUrl(rootNode, packageName)
-                                if (!cleared) {
-                                    pressBack()
-                                }
-                            }
-                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> {
-                                val intent = Intent(this, AmniSpaceActivity::class.java).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Restricted Web Domain: $blockedSite")
-                                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, blockedSite)
-                                    putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
-                                }
-                                startActivity(intent)
-                            }
-                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> {
-                                val intent = Intent(this, WarningActivity::class.java).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
-                                    putExtra("result_id", blockedSite)
-                                    putExtra("blocked_by_feature", "Website Blocker")
-                                }
-                                startActivity(intent)
-                            }
-                            else -> {
-                                val cleared = websiteBlockerDetector.clearBlockedUrl(rootNode, packageName)
-                                if (!cleared) {
-                                    pressBack()
-                                }
-                            }
-                        }
-                        return
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("AmniShield", "Website blocker error", e)
                 }
             }
 
@@ -684,6 +681,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
 
         if (featureRules.isEmpty()) {
+            if (featureKey.equals("website_blocker", ignoreCase = true)) {
+                return savedPreferencesLoader.loadBlockedWebsites().isNotEmpty() ||
+                        savedPreferencesLoader.loadBlockedWebsitesApps().isNotEmpty()
+            }
             // Strict Opt-In Architecture: No rules configured means feature is INACTIVE.
             return false
         }

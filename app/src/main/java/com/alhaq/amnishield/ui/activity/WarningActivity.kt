@@ -66,6 +66,7 @@ class WarningActivity : AppCompatActivity() {
             binding.warningTitle.text = when {
                 isAppBlockerMode -> getString(R.string.warning_title_app_blocker)
                 isKeywordBlockerMode -> "Keyword Blocked"
+                mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER && intent.getStringExtra("blocked_by_feature") == "Website Blocker" -> "Website Blocked"
                 else -> getString(R.string.warning_title_reels_blocker)
             }
 
@@ -98,6 +99,13 @@ class WarningActivity : AppCompatActivity() {
             .setView(binding.root)
             .setCancelable(isDialogCancelable)
             .setOnCancelListener {
+                if (mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER || isAppBlockerMode || isFocusMode) {
+                    val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(homeIntent)
+                }
                 finish()
             }
             .show()
@@ -106,6 +114,7 @@ class WarningActivity : AppCompatActivity() {
             isFocusMode -> "This app is restricted during your active Focus Session."
             isAppBlockerMode -> getString(R.string.warning_default_message_app)
             isKeywordBlockerMode -> "Content containing a blocked keyword was detected."
+            mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER && intent.getStringExtra("blocked_by_feature") == "Website Blocker" -> "Access to this website is restricted."
             else -> getString(R.string.warning_default_message_reels)
         }
         val configuredMessage = warningScreenConfig.message.trim()
@@ -118,7 +127,7 @@ class WarningActivity : AppCompatActivity() {
         } else {
             binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
             binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
-            binding.btnCancel.text = if (isAppBlockerMode || isHomePressRequested) {
+            binding.btnCancel.text = if (isAppBlockerMode || isHomePressRequested || mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER) {
                 getString(R.string.warning_cancel_go_home)
             } else {
                 getString(R.string.warning_cancel_stay_safe)
@@ -126,7 +135,7 @@ class WarningActivity : AppCompatActivity() {
         }
 
         binding.btnCancel.setOnClickListener {
-            if (isSimpleMode || isAppBlockerMode || isHomePressRequested || isFocusMode) {
+            if (isSimpleMode || isAppBlockerMode || isHomePressRequested || isFocusMode || mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER) {
                 val intent = Intent(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_HOME)
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
