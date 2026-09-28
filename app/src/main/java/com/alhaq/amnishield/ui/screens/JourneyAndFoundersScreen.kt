@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.ui.components.FounderClaimBottomSheet
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
@@ -44,6 +45,8 @@ fun JourneyAndFoundersScreen(
     val premiumManager = remember { PremiumManager.getInstance(context.applicationContext) }
 
     var isFounderActive by remember { mutableStateOf(preferencesLoader.isFounderPassActive()) }
+    var isFounderBadgeUnlocked by remember { mutableStateOf(preferencesLoader.isFounderBadgeUnlocked()) }
+    var isEligible by remember { mutableStateOf(preferencesLoader.isFounderEligible()) }
     var supporterName by remember { mutableStateOf(preferencesLoader.getFounderSupporterName()) }
     var showClaimSheet by remember { mutableStateOf(false) }
 
@@ -82,20 +85,36 @@ fun JourneyAndFoundersScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                JourneyHeroCard()
+                JourneyHeroCard(
+                    onDevToggleEligible = {
+                        val newEligible = !isEligible
+                        preferencesLoader.setFounderEligible(newEligible)
+                        isEligible = newEligible
+                        android.widget.Toast.makeText(
+                            context,
+                            if (newEligible) "Developer test: Pre-registration reward unlocked" else "Developer test: Pre-registration reward locked",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
             }
 
-            // User's Founder Status Card
+            // User's Personal Founder Status Card:
+            // 1. If already claimed: show PersonalFounderCard with active/lifetime status
+            // 2. If eligible pre-registerer: show ClaimFounderInvitationCard to opt-in & claim
+            // 3. If regular user: show milestone informational card (no claim button)
             item {
-                if (isFounderActive) {
+                if (isFounderActive || isFounderBadgeUnlocked) {
                     PersonalFounderCard(
                         supporterName = supporterName.ifBlank { "Anonymous Supporter" },
                         expiryTimeMs = preferencesLoader.getFounderPassExpiry()
                     )
-                } else {
+                } else if (isEligible) {
                     ClaimFounderInvitationCard(
                         onClaimClick = { showClaimSheet = true }
                     )
+                } else {
+                    FoundersProgramInfoCard()
                 }
             }
 
@@ -134,7 +153,7 @@ fun JourneyAndFoundersScreen(
                 )
             }
 
-            // Hall of Fame Header
+            // Hall of Fame Header - Displayed to Everyone
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -157,7 +176,7 @@ fun JourneyAndFoundersScreen(
                 }
             }
 
-            // Hall of Fame Items
+            // Hall of Fame Items - Displayed to Everyone
             items(supporters) { supporter ->
                 SupporterWallItem(supporter = supporter)
             }
@@ -177,6 +196,8 @@ fun JourneyAndFoundersScreen(
                     durationDays = 90
                 )
                 isFounderActive = true
+                isFounderBadgeUnlocked = true
+                isEligible = false
                 supporterName = handle
                 showClaimSheet = false
             },
@@ -186,12 +207,24 @@ fun JourneyAndFoundersScreen(
 }
 
 @Composable
-private fun JourneyHeroCard() {
+private fun JourneyHeroCard(
+    onDevToggleEligible: () -> Unit = {}
+) {
+    var tapCount by remember { mutableStateOf(0) }
+
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                tapCount++
+                if (tapCount >= 5) {
+                    tapCount = 0
+                    onDevToggleEligible()
+                }
+            }
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -241,6 +274,14 @@ private fun PersonalFounderCard(
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val expiryText = if (expiryTimeMs > 0) dateFormat.format(Date(expiryTimeMs)) else "90 Days"
+    val now = remember { System.currentTimeMillis() }
+    val isStillInTrial = expiryTimeMs > now
+    val statusText = if (isStillInTrial) "ACTIVE" else "FOUNDER"
+    val description = if (isStillInTrial) {
+        "Thank you for supporting AmniShield. Your Founder Pass unlocks all PIN barriers, strict anti-uninstall protection, and the exclusive Founder Obsidian Gold theme until $expiryText."
+    } else {
+        "Thank you for being an early pioneer of AmniShield. Your Founder Obsidian Gold theme and verified supporter badge remain permanently active."
+    }
 
     Surface(
         shape = RoundedCornerShape(18.dp),
@@ -275,7 +316,7 @@ private fun PersonalFounderCard(
                     color = Color(0xFFE5B842).copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = "ACTIVE",
+                        text = statusText,
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFE5B842),
                         fontWeight = FontWeight.Bold,
@@ -294,10 +335,44 @@ private fun PersonalFounderCard(
             )
 
             Text(
-                text = "Thank you for supporting AmniShield. Your Founder Pass unlocks all PIN barriers, strict anti-uninstall protection, and the exclusive Founder Obsidian Gold theme until $expiryText.",
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FoundersProgramInfoCard() {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.MilitaryTech,
+                    contentDescription = null,
+                    tint = Color(0xFFE5B842),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Pre-Registration Milestone",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "The Founder Pass, security suite trial, and supporter badges were awarded as an exclusive pre-registration reward to our early pioneers who joined AmniShield before official launch. The Founding Supporters Wall below permanently commemorates their dedication to our mission.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -323,7 +398,7 @@ private fun ClaimFounderInvitationCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Early Supporter Privilege",
+                    text = "Pre-Registration Reward Available",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -331,7 +406,7 @@ private fun ClaimFounderInvitationCard(
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Pre-registered users and early adopters can claim 3 months of Full Premium protection and an exclusive Founder badge.",
+                text = "You are recognized as an early pre-registered supporter. Claim your complimentary 3 months of Full Premium protection, Founder Obsidian theme, and verified Founder badge.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -423,12 +498,21 @@ private fun SupporterWallItem(supporter: FoundingSupporter) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(
-                        text = supporter.handle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = supporter.handle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.WorkspacePremium,
+                            contentDescription = "Founder Badge",
+                            tint = Color(0xFFE5B842),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                     Text(
                         text = "Joined ${supporter.joinedDate}",
                         style = MaterialTheme.typography.labelSmall,
@@ -439,12 +523,14 @@ private fun SupporterWallItem(supporter: FoundingSupporter) {
 
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = Color(0xFFE5B842).copy(alpha = 0.12f),
+                border = BorderStroke(0.5.dp, Color(0xFFE5B842).copy(alpha = 0.3f))
             ) {
                 Text(
                     text = supporter.tier,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFFE5B842),
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }

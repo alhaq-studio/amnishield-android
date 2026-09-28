@@ -868,6 +868,16 @@ open class SavedPreferencesLoader(
         return injectedFounderPassPrefs ?: context.getSharedPreferences("founder_pass_state", Context.MODE_PRIVATE)
     }
 
+    fun isFounderEligible(): Boolean {
+        return getFounderPassPrefs().getBoolean("is_eligible", false)
+    }
+
+    fun setFounderEligible(eligible: Boolean) {
+        getFounderPassPrefs().edit()
+            .putBoolean("is_eligible", eligible)
+            .apply()
+    }
+
     fun isFounderPassClaimed(): Boolean {
         return getFounderPassPrefs().getBoolean("is_claimed", false)
     }

@@ -1676,6 +1676,7 @@ class MainActivity : AppCompatActivity() {
             billingWrapper.queryPurchases { purchases: List<String> ->
                 // Check Founder Pass pre-registration reward first
                 if (purchases.contains(com.alhaq.amnishield.premium.PremiumProducts.PRODUCT_FOUNDER_PASS)) {
+                    savedPreferencesLoader.setFounderEligible(true)
                     if (!savedPreferencesLoader.isFounderPassClaimed()) {
                         runOnUiThread {
                             showFounderClaimDialog(billingWrapper)

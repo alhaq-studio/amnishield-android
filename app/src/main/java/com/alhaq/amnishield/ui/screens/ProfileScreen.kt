@@ -440,6 +440,67 @@ fun ProfileScreen(
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
+
+                            if (isFounderActive || preferencesLoader.isFounderBadgeUnlocked()) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFE5B842).copy(alpha = 0.15f),
+                                    border = BorderStroke(1.dp, Color(0xFFE5B842).copy(alpha = 0.35f)),
+                                    modifier = Modifier.padding(top = 6.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.WorkspacePremium,
+                                            contentDescription = "Verified Founder Badge",
+                                            tint = Color(0xFFE5B842),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Verified Pre-Registration Founder",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFE5B842)
+                                        )
+                                    }
+                                }
+                            } else if (preferencesLoader.isFounderEligible()) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                                    modifier = Modifier
+                                        .padding(top = 6.dp)
+                                        .clickable {
+                                            val intent = android.content.Intent(context, com.alhaq.amnishield.ui.activity.FragmentActivity::class.java).apply {
+                                                putExtra("feature_type", "journey")
+                                            }
+                                            context.startActivity(intent)
+                                        }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.WorkspacePremium,
+                                            contentDescription = "Claim Founder Pass",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Pre-Registration Reward • Claim Founder Pass",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
