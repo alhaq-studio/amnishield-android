@@ -1,0 +1,5 @@
+- Added Our Journey & Founding Supporters Wall screen displaying early pioneers and badges.
+- Added offline cryptographic licensing and entitlement status verification.
+- Added hardware monotonic uptime check against system clock manipulation.
+- Enhanced accessibility node recycling and memory performance.
+- 16 KB page size support for Android 15+.
