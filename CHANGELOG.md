@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-09-29 (versionCode 144)
+
+### Added
+- **Pre-Registration Founder Pass & Entitlements**:
+  - Integrated Google Play Billing pre-registration entitlement check for `amnishield_founder_pass`.
+  - Gated Founder Pass claim and public directory opt-in exclusively to verified pre-registered supporters.
+  - Automatic 90-day Full Security Suite grant (triple-PIN barrier, anti-uninstall defense, anti-tamper).
+  - Hardware monotonic clock protection (`verifyFounderPassMonotonicExpiry`) preventing system clock manipulation.
+  - Permanent Founder Obsidian Gold theme and lifetime verified founder badge unlock.
+- **Our Journey & Founding Supporters Wall**:
+  - Dedicated "Our Journey & Founders" screen accessible to all users via Settings and Navigation.
+  - Public Founding Supporters Wall displaying all early pioneers, pioneer IDs, joined dates, and verified gold badges.
+  - Informational "Pre-Registration Milestone" card displayed for regular users explaining the founding milestone.
+  - Contextual "Verified Pre-Registration Founder" badge chip displayed in user Profile.
+- **Privacy & Legal Infrastructure**:
+  - Zero-knowledge opt-in architecture supporting pseudonyms and anonymous handles with 0 personal telemetry.
+  - Published comprehensive Founder Pass Terms & Conditions at `/legal/founder-pass/` with zero auto-billing guarantees.
+
+### Security & Build Verification
+- Verified release packaging across all distribution channels:
+  - Production Play Store App Bundle (`.aab`) signed with production keystore.
+  - Direct Universal Release APK (`.apk`) verified on live device.
+  - Pure F-Droid FOSS Release APK (`.apk`) strictly free of proprietary dependencies.
+- Full R8 minification, native debug symbols, and `lintVital` pass with zero warnings or errors.
+- Strict Universal Zero Emoji compliance across UI, strings, and code.
+
+---
+
 ## [0.2.1] - 2026-09-03 (versionCode 143)
 
 ### Added
