@@ -24,7 +24,12 @@ import androidx.compose.foundation.clickable
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.ui.components.FounderClaimBottomSheet
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,7 +55,18 @@ fun JourneyAndFoundersScreen(
     var supporterName by remember { mutableStateOf(preferencesLoader.getFounderSupporterName()) }
     var showClaimSheet by remember { mutableStateOf(false) }
 
-    val supporters = remember { loadFoundingSupportersFromAssets(context) }
+    var supporters by remember { mutableStateOf(loadFoundingSupporters(context)) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val remoteList = fetchFoundersFromNetwork(context)
+            if (remoteList.isNotEmpty()) {
+                withContext(Dispatchers.Main) {
+                    supporters = remoteList
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -200,6 +216,18 @@ fun JourneyAndFoundersScreen(
                 isEligible = false
                 supporterName = handle
                 showClaimSheet = false
+
+                if (optIn && handle.isNotBlank()) {
+                    val nextId = (supporters.maxOfOrNull { it.id } ?: 0) + 1
+                    val newPioneer = FoundingSupporter(
+                        id = nextId,
+                        handle = handle,
+                        joinedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                        tier = "Supporter"
+                    )
+                    supporters = supporters + newPioneer
+                    syncFounderOptInToCloud(handle)
+                }
             },
             onDismiss = { showClaimSheet = false }
         )
@@ -538,9 +566,31 @@ private fun SupporterWallItem(supporter: FoundingSupporter) {
     }
 }
 
-private fun loadFoundingSupportersFromAssets(context: Context): List<FoundingSupporter> {
+private fun loadFoundingSupporters(context: Context): List<FoundingSupporter> {
+    // 1. Try to load from cached file in app internal storage (offline synced copy)
+    try {
+        val cacheFile = File(context.filesDir, "founders_cache.json")
+        if (cacheFile.exists() && cacheFile.length() > 0) {
+            val jsonString = cacheFile.readText()
+            val list = parseFoundersJson(jsonString)
+            if (list.isNotEmpty()) return list
+        }
+    } catch (_: Exception) {}
+
+    // 2. Fall back to bundled immutable assets/founders.json
     return try {
         val jsonString = context.assets.open("founders.json").bufferedReader().use { it.readText() }
+        parseFoundersJson(jsonString)
+    } catch (_: Exception) {
+        listOf(
+            FoundingSupporter(1, "Al-Haq Team", "2026-08-01", "Founder"),
+            FoundingSupporter(2, "Habibur Rahman", "2026-08-10", "Core Architect")
+        )
+    }
+}
+
+private fun parseFoundersJson(jsonString: String): List<FoundingSupporter> {
+    return try {
         val jsonArray = JSONArray(jsonString)
         val list = mutableListOf<FoundingSupporter>()
         for (i in 0 until jsonArray.length()) {
@@ -556,9 +606,56 @@ private fun loadFoundingSupportersFromAssets(context: Context): List<FoundingSup
         }
         list
     } catch (e: Exception) {
-        listOf(
-            FoundingSupporter(1, "Al-Haq Team", "2026-08-01", "Founder"),
-            FoundingSupporter(2, "Habibur Rahman", "2026-08-10", "Core Architect")
-        )
+        emptyList()
+    }
+}
+
+private suspend fun fetchFoundersFromNetwork(context: Context): List<FoundingSupporter> {
+    return try {
+        val url = java.net.URL("https://jrgpmcomvibgklmvnxud.supabase.co/rest/v1/founding_supporters?select=id,handle,joined_date,tier&order=id.asc")
+        val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 6000
+            readTimeout = 6000
+            setRequestProperty("apikey", com.alhaq.amnishield.data.sync.SupabaseRest.ANON_KEY)
+            setRequestProperty("Accept", "application/json")
+        }
+        if (conn.responseCode == 200) {
+            val jsonString = conn.inputStream.bufferedReader().use { it.readText() }
+            val list = parseFoundersJson(jsonString)
+            if (list.isNotEmpty()) {
+                File(context.filesDir, "founders_cache.json").writeText(jsonString)
+                return list
+            }
+        }
+        emptyList()
+    } catch (_: Exception) {
+        emptyList()
+    }
+}
+
+private fun syncFounderOptInToCloud(handle: String) {
+    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val url = java.net.URL("https://jrgpmcomvibgklmvnxud.supabase.co/rest/v1/founding_supporters")
+            val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 8000
+                readTimeout = 8000
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("apikey", com.alhaq.amnishield.data.sync.SupabaseRest.ANON_KEY)
+                setRequestProperty("Prefer", "return=minimal")
+            }
+            val payload = JSONObject().apply {
+                put("handle", handle)
+                put("joined_date", SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
+                put("tier", "Supporter")
+            }
+            conn.outputStream.use { it.write(payload.toString().toByteArray()) }
+            conn.responseCode
+        } catch (e: Exception) {
+            android.util.Log.d("FoundersSync", "Offline queueing founder opt-in: ${e.message}")
+        }
     }
 }
