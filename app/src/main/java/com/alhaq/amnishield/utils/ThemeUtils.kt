@@ -14,6 +14,7 @@ object ThemeUtils {
     const val THEME_EMERALD = "emerald"
     const val THEME_PURPLE = "purple"
     const val THEME_SUNSET = "sunset"
+    const val THEME_FOUNDER = "founder"
 
     fun isSystemInDarkMode(context: Context): Boolean {
         val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
@@ -41,6 +42,7 @@ object ThemeUtils {
             .getString(KEY_THEME_STYLE, THEME_SYSTEM) ?: THEME_SYSTEM
 
         return when (themeStyle) {
+            THEME_FOUNDER, "founder_obsidian" -> R.style.Theme_AmniShield_Purple
             THEME_PURPLE, "cosmic" -> R.style.Theme_AmniShield_Purple
             THEME_EMERALD -> R.style.Theme_AmniShield_Emerald
             THEME_SUNSET -> R.style.Theme_AmniShield_Sunset
@@ -68,6 +70,7 @@ object ThemeUtils {
             .getString(KEY_THEME_STYLE, THEME_SYSTEM) ?: THEME_SYSTEM
 
         return when (themeStyle) {
+            THEME_FOUNDER, "founder_obsidian" -> AppTheme.FOUNDER_OBSIDIAN
             THEME_SUNSET -> AppTheme.SUNSET_GLOW
             THEME_EMERALD -> AppTheme.EMERALD_CALM
             THEME_PURPLE, "cosmic" -> AppTheme.COSMIC_NIGHT

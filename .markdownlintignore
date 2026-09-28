@@ -1,0 +1,4 @@
+# Exclude standard plain-text license and build directories from markdownlint
+LICENSE
+build/
+.gradle/

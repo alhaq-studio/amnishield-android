@@ -8,7 +8,8 @@ enum class AppTheme {
     SYSTEM_DEFAULT,
     SUNSET_GLOW,
     EMERALD_CALM,
-    COSMIC_NIGHT
+    COSMIC_NIGHT,
+    FOUNDER_OBSIDIAN
 }
 
 data class SchedulePeriod(
@@ -139,6 +140,10 @@ data class AmniShieldState(
     // System Status
     val isMainServiceEnabled: Boolean = false,
     val isPremiumUser: Boolean = false,
+    val isFounderPassActive: Boolean = false,
+    val isFounderBadgeUnlocked: Boolean = false,
+    val isFounderThemeUnlocked: Boolean = false,
+    val founderSupporterName: String = "",
     val isUsageTrackerEnabled: Boolean = false,
     val isAntiUninstallEnabled: Boolean = false,
 
@@ -212,8 +217,8 @@ data class AmniShieldState(
 
     // Profile settings
     val scheduleRules: List<ScheduleRule> = emptyList(),
-    val userName: String = "Alhaq DST",
-    val userEmail: String = "alhaq.dst@gmail.com",
+    val userName: String = "[USERNAME]",
+    val userEmail: String = "[EMAIL_ADDRESS]",
     val userBio: String = "Digital Wellbeing Guardian • Staying mindful & focused.",
     val profileImageUri: String? = null,
     val profileAvatarId: String = "avatar_shield",

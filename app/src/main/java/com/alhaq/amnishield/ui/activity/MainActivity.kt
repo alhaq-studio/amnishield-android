@@ -1671,21 +1671,62 @@ class MainActivity : AppCompatActivity() {
      * Works for both real purchases and test purchases (License Test accounts)
      */
     private fun restorePremiumPurchases() {
-        // Don't query if already premium
-        if (premiumManager.isPremium()) {
-            return
-        }
-        
         val billingWrapper = BillingClientWrapper(this)
         billingWrapper.startConnection {
             billingWrapper.queryPurchases { purchases: List<String> ->
-                if (purchases.isNotEmpty()) {
-                    // User has active purchases - restore premium status
-                    premiumManager.updatePremiumStatus(true)
-                    android.util.Log.d("MainActivity", "Premium status restored from purchases")
+                // Check Founder Pass pre-registration reward first
+                if (purchases.contains(com.alhaq.amnishield.premium.PremiumProducts.PRODUCT_FOUNDER_PASS)) {
+                    if (!savedPreferencesLoader.isFounderPassClaimed()) {
+                        runOnUiThread {
+                            showFounderClaimDialog(billingWrapper)
+                        }
+                    }
+                }
+
+                // If not currently premium, restore regular subscriptions or lifetime pass
+                if (!premiumManager.isPremium()) {
+                    val regularPurchases = purchases.filter { it != com.alhaq.amnishield.premium.PremiumProducts.PRODUCT_FOUNDER_PASS }
+                    if (regularPurchases.isNotEmpty()) {
+                        // User has active purchases - restore premium status
+                        premiumManager.updatePremiumStatus(true)
+                        android.util.Log.d("MainActivity", "Premium status restored from purchases")
+                    }
                 }
             }
         }
+    }
+
+    private fun showFounderClaimDialog(billingWrapper: BillingClientWrapper? = null) {
+        if (isFinishing || isDestroyed) return
+        if (savedPreferencesLoader.isFounderPassClaimed()) return
+
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val composeView = androidx.compose.ui.platform.ComposeView(this).apply {
+            setContent {
+                val activeTheme = com.alhaq.amnishield.utils.ThemeUtils.resolveAppTheme(this@MainActivity)
+                com.alhaq.amnishield.ui.theme.AmniShieldTheme(appTheme = activeTheme) {
+                    com.alhaq.amnishield.ui.components.FounderClaimBottomSheet(
+                        onConfirm = { handle, optIn ->
+                            savedPreferencesLoader.grantFounderPass(
+                                supporterName = handle,
+                                optInPublic = optIn,
+                                durationDays = 90
+                            )
+                            billingWrapper?.acknowledgeFounderPass { success ->
+                                android.util.Log.d("MainActivity", "Founder pass acknowledged: $success")
+                            }
+                            dialog.dismiss()
+                            recreate()
+                        },
+                        onDismiss = {
+                            dialog.dismiss()
+                        }
+                    )
+                }
+            }
+        }
+        dialog.setContentView(composeView)
+        dialog.show()
     }
 
     private fun maybeShowPremiumReminder() {

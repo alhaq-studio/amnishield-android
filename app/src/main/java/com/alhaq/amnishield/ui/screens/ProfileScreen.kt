@@ -91,8 +91,11 @@ fun ProfileScreen(
     var profilePin by remember(state.profilePin) { mutableStateOf(state.profilePin) }
 
     // Premium & Offline Licensing State
+    val preferencesLoader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context.applicationContext) }
     val premiumManager = remember { PremiumManager.getInstance(context) }
     var isPremiumActive by remember { mutableStateOf(premiumManager.isPremium()) }
+    var isFounderActive by remember { mutableStateOf(premiumManager.isFounderPassActive()) }
+    var founderName by remember { mutableStateOf(preferencesLoader.getFounderSupporterName()) }
     var showLicenseDialog by remember { mutableStateOf(false) }
     var licenseInput by remember { mutableStateOf("") }
     var licenseErrorMsg by remember { mutableStateOf<String?>(null) }
@@ -588,27 +591,46 @@ fun ProfileScreen(
                                             .size(40.dp)
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(
-                                                if (isPremiumActive) Color(0xFF059669).copy(alpha = 0.15f)
-                                                else MaterialTheme.colorScheme.primaryContainer
+                                                when {
+                                                    isFounderActive -> Color(0xFFE5B842).copy(alpha = 0.15f)
+                                                    isPremiumActive -> Color(0xFF059669).copy(alpha = 0.15f)
+                                                    else -> MaterialTheme.colorScheme.primaryContainer
+                                                }
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = if (isPremiumActive) Icons.Default.Verified else Icons.Default.Shield,
+                                            imageVector = when {
+                                                isFounderActive -> Icons.Outlined.WorkspacePremium
+                                                isPremiumActive -> Icons.Default.Verified
+                                                else -> Icons.Default.Shield
+                                            },
                                             contentDescription = null,
-                                            tint = if (isPremiumActive) Color(0xFF059669) else MaterialTheme.colorScheme.primary,
+                                            tint = when {
+                                                isFounderActive -> Color(0xFFE5B842)
+                                                isPremiumActive -> Color(0xFF059669)
+                                                else -> MaterialTheme.colorScheme.primary
+                                            },
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
                                     Column {
                                         Text(
-                                            text = if (isPremiumActive) "Supporter Pass Active" else "Community Edition",
+                                            text = when {
+                                                isFounderActive -> "Founder Pass Active"
+                                                isPremiumActive -> "Supporter Pass Active"
+                                                else -> "Community Edition"
+                                            },
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = if (isPremiumActive) "Cryptographic ECDSA Verified" else "100% Free & Open Source",
+                                            text = when {
+                                                isFounderActive -> "Early Supporter • ${founderName.ifBlank { "Founder" }}"
+                                                isPremiumActive -> "Cryptographic ECDSA Verified"
+                                                else -> "100% Free & Open Source"
+                                            },
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -617,11 +639,23 @@ fun ProfileScreen(
 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isPremiumActive) Color(0xFF059669).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                                    color = when {
+                                        isFounderActive -> Color(0xFFE5B842).copy(alpha = 0.2f)
+                                        isPremiumActive -> Color(0xFF059669).copy(alpha = 0.15f)
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    }
                                 ) {
                                     Text(
-                                        text = if (isPremiumActive) "PRO" else "FREE",
-                                        color = if (isPremiumActive) Color(0xFF059669) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        text = when {
+                                            isFounderActive -> "FOUNDER"
+                                            isPremiumActive -> "PRO"
+                                            else -> "FREE"
+                                        },
+                                        color = when {
+                                            isFounderActive -> Color(0xFFE5B842)
+                                            isPremiumActive -> Color(0xFF059669)
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                     )
@@ -629,10 +663,11 @@ fun ProfileScreen(
                             }
 
                             Text(
-                                text = if (isPremiumActive)
-                                    "Your supporter pass is verified offline on-device using ECDSA NIST P-256 signatures. Cloud sync and advanced multi-device management are enabled."
-                                else
-                                    "AmniShield is free and open-source forever. Optional Supporter Passes fund independent privacy engineering and enable cross-device cloud sync.",
+                                text = when {
+                                    isFounderActive -> "Your 3-Month Founder Pass is active, granting full PIN defense, anti-uninstall protection, and the exclusive Founder Obsidian theme. Thank you for supporting our journey."
+                                    isPremiumActive -> "Your supporter pass is verified offline on-device using ECDSA NIST P-256 signatures. Cloud sync and advanced multi-device management are enabled."
+                                    else -> "AmniShield is free and open-source forever. Optional Supporter Passes fund independent privacy engineering and enable cross-device cloud sync."
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

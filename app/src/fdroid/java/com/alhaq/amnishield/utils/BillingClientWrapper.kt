@@ -39,6 +39,18 @@ class BillingClientWrapper(private val context: Context) {
         onPurchasesQueried(emptyList())
     }
 
+    fun checkPendingFounderReward(onRewardAvailable: () -> Unit = {}) {
+        // No Google Play pre-registration rewards in F-Droid FOSS version
+    }
+
+    fun acknowledgePurchaseToken(purchaseToken: String, onComplete: (Boolean) -> Unit = {}) {
+        onComplete(true)
+    }
+
+    fun acknowledgeFounderPass(onComplete: (Boolean) -> Unit = {}) {
+        onComplete(true)
+    }
+
     fun endConnection() {
         // No-op in F-Droid stub
     }

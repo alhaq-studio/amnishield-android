@@ -87,6 +87,7 @@ class FragmentActivity : AppCompatActivity() {
                 "additional_features" -> PremiumFeaturesFragment()
                 "premium_features" -> PremiumFeaturesFragment()
                 "roadmap" -> com.alhaq.amnishield.ui.fragments.features.RoadmapFragment()
+                "journey", "our_journey" -> com.alhaq.amnishield.ui.fragments.features.OurJourneyFragment()
                 "diagnostics", "system_logs", "crash_logs" -> com.alhaq.amnishield.ui.fragments.DiagnosticsFragment()
                 else -> null
             }

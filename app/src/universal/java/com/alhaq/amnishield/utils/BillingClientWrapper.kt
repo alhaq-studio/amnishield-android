@@ -253,6 +253,97 @@ class BillingClientWrapper(context: Context) : PurchasesUpdatedListener {
         }
     }
 
+    fun checkPendingFounderReward(onRewardAvailable: (Purchase) -> Unit) {
+        if (!billingClient.isReady) {
+            billingClient.startConnection(object : BillingClientStateListener {
+                override fun onBillingSetupFinished(billingResult: BillingResult) {
+                    if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                        queryFounderPurchases(onRewardAvailable)
+                    }
+                }
+                override fun onBillingServiceDisconnected() {}
+            })
+            return
+        }
+        queryFounderPurchases(onRewardAvailable)
+    }
+
+    private fun queryFounderPurchases(onRewardAvailable: (Purchase) -> Unit) {
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        ) { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                val founderPurchase = purchases.find { purchase ->
+                    purchase.products.contains(PremiumProducts.PRODUCT_FOUNDER_PASS) &&
+                    purchase.purchaseState == Purchase.PurchaseState.PURCHASED
+                }
+                if (founderPurchase != null) {
+                    mainHandler.post { onRewardAvailable(founderPurchase) }
+                }
+            }
+        }
+    }
+
+    fun acknowledgePurchaseToken(purchaseToken: String, onComplete: (Boolean) -> Unit = {}) {
+        val params = AcknowledgePurchaseParams.newBuilder()
+            .setPurchaseToken(purchaseToken)
+            .build()
+        billingClient.acknowledgePurchase(params) { billingResult ->
+            val isSuccess = billingResult.responseCode == BillingClient.BillingResponseCode.OK
+            mainHandler.post { onComplete(isSuccess) }
+        }
+    }
+
+    fun acknowledgeFounderPass(onComplete: (Boolean) -> Unit = {}) {
+        if (!billingClient.isReady) {
+            billingClient.startConnection(object : BillingClientStateListener {
+                override fun onBillingSetupFinished(billingResult: BillingResult) {
+                    if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                        acknowledgeFounderPassInternal(onComplete)
+                    } else {
+                        mainHandler.post { onComplete(false) }
+                    }
+                }
+                override fun onBillingServiceDisconnected() {
+                    mainHandler.post { onComplete(false) }
+                }
+            })
+            return
+        }
+        acknowledgeFounderPassInternal(onComplete)
+    }
+
+    private fun acknowledgeFounderPassInternal(onComplete: (Boolean) -> Unit) {
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        ) { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                val founderPurchase = purchases.find { purchase ->
+                    purchase.products.contains(PremiumProducts.PRODUCT_FOUNDER_PASS) &&
+                    purchase.purchaseState == Purchase.PurchaseState.PURCHASED
+                }
+                if (founderPurchase != null && !founderPurchase.isAcknowledged) {
+                    val params = AcknowledgePurchaseParams.newBuilder()
+                        .setPurchaseToken(founderPurchase.purchaseToken)
+                        .build()
+                    billingClient.acknowledgePurchase(params) { ackResult ->
+                        val isSuccess = ackResult.responseCode == BillingClient.BillingResponseCode.OK
+                        Log.d(TAG, "Founder pass acknowledged: $isSuccess")
+                        mainHandler.post { onComplete(isSuccess) }
+                    }
+                } else {
+                    mainHandler.post { onComplete(true) }
+                }
+            } else {
+                mainHandler.post { onComplete(false) }
+            }
+        }
+    }
+
     fun endConnection() {
         try {
             if (billingClient.isReady) {

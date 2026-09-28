@@ -349,6 +349,11 @@
     <string name="roadmap_item_cloud_sync_title">Multi-Platform Cloud Policy Sync</string>
     <string name="roadmap_item_cloud_sync_desc">Optional end-to-end encrypted rule synchronization across Android, Windows Desktop, and Web Console.</string>
 
+    <!-- Our Journey & Founding Supporters -->
+    <string name="journey_title">Our Journey &amp; Founders</string>
+    <string name="roadmap_view_journey_btn">Our Journey &amp; Founding Supporters Wall</string>
+    <string name="founder_pass_title">Founder Pass</string>
+
     <!-- Strict Premium Scope & Boundaries -->
     <string name="premium_required_title">AmniShield Pro Security</string>
     <string name="premium_required_message">Anti-Uninstall Protection, Triple-Layer PIN Security, Rule Backup &amp; Restore, and Bulk List Import/Export are Pro features.</string>

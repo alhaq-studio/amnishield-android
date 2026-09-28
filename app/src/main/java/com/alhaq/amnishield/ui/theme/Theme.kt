@@ -103,6 +103,39 @@ private val CosmicColorScheme = darkColorScheme(
     outlineVariant = CosmicOutlineVariant
 )
 
+// 4. FOUNDER OBSIDIAN GOLD (Prestige Dark Theme - Founder Early Adopters)
+private val FounderColorScheme = darkColorScheme(
+    primary = FounderPrimary,
+    onPrimary = FounderOnPrimary,
+    primaryContainer = FounderPrimaryContainer,
+    onPrimaryContainer = FounderOnPrimaryContainer,
+    secondary = FounderSecondary,
+    onSecondary = FounderOnSecondary,
+    secondaryContainer = FounderSecondaryContainer,
+    onSecondaryContainer = FounderOnSecondaryContainer,
+    tertiary = FounderTertiary,
+    onTertiary = FounderOnTertiary,
+    tertiaryContainer = FounderTertiaryContainer,
+    onTertiaryContainer = FounderOnTertiaryContainer,
+    error = FounderError,
+    onError = FounderOnError,
+    errorContainer = FounderErrorContainer,
+    onErrorContainer = FounderOnErrorContainer,
+    background = FounderBg,
+    onBackground = FounderOnSurface,
+    surface = FounderSurface,
+    onSurface = FounderOnSurface,
+    surfaceVariant = FounderSurfaceVariant,
+    onSurfaceVariant = FounderTextMuted,
+    surfaceContainerLowest = FounderSurfaceContainerLowest,
+    surfaceContainerLow = FounderSurfaceContainerLow,
+    surfaceContainer = FounderSurfaceContainer,
+    surfaceContainerHigh = FounderSurfaceContainerHigh,
+    surfaceContainerHighest = FounderSurfaceContainerHighest,
+    outline = FounderOutline,
+    outlineVariant = FounderOutlineVariant
+)
+
 @Composable
 fun AmniShieldTheme(
     appTheme: AppTheme = AppTheme.SYSTEM_DEFAULT,
@@ -118,6 +151,7 @@ fun AmniShieldTheme(
         AppTheme.EMERALD_CALM -> EmeraldColorScheme
         AppTheme.SUNSET_GLOW -> SunsetColorScheme
         AppTheme.COSMIC_NIGHT -> CosmicColorScheme
+        AppTheme.FOUNDER_OBSIDIAN -> FounderColorScheme
         AppTheme.SYSTEM_DEFAULT -> if (isSystemDark) CosmicColorScheme else EmeraldColorScheme
     }
 
@@ -127,7 +161,7 @@ fun AmniShieldTheme(
             val window = (view.context as? Activity)?.window
             if (window != null) {
                 val insetsController = WindowCompat.getInsetsController(window, view)
-                val isDarkTheme = effectiveTheme == AppTheme.COSMIC_NIGHT
+                val isDarkTheme = effectiveTheme == AppTheme.COSMIC_NIGHT || effectiveTheme == AppTheme.FOUNDER_OBSIDIAN
                 insetsController.isAppearanceLightStatusBars = !isDarkTheme
                 insetsController.isAppearanceLightNavigationBars = !isDarkTheme
             }

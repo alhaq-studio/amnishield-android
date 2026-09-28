@@ -32,6 +32,13 @@ class RoadmapFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        view.findViewById<MaterialButton>(R.id.btnViewFoundingSupporters)?.setOnClickListener {
+            val intent = Intent(requireContext(), com.alhaq.amnishield.ui.activity.FragmentActivity::class.java).apply {
+                putExtra("feature_type", "journey")
+            }
+            startActivity(intent)
+        }
+
         view.findViewById<MaterialButton>(R.id.btnSupportInitiative)?.setOnClickListener {
             showSupportHubDialog()
         }

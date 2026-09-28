@@ -29,6 +29,7 @@ class PremiumManagerTest {
 
     private lateinit var fakeCompassionatePrefs: InMemorySharedPreferences
     private lateinit var fakePremiumPrefs: InMemorySharedPreferences
+    private lateinit var fakeFounderPrefs: InMemorySharedPreferences
     private lateinit var loader: SavedPreferencesLoader
     private lateinit var premiumManager: PremiumManager
 
@@ -42,6 +43,7 @@ class PremiumManagerTest {
     fun setup() {
         fakeCompassionatePrefs = InMemorySharedPreferences()
         fakePremiumPrefs = InMemorySharedPreferences()
+        fakeFounderPrefs = InMemorySharedPreferences()
         simulatedWallClock = 1_700_000_000_000L
         simulatedElapsedRealtime = 100_000L
 
@@ -50,6 +52,7 @@ class PremiumManagerTest {
             context = dummyContext,
             injectedCompassionatePrefs = fakeCompassionatePrefs,
             injectedPremiumPrefs = fakePremiumPrefs,
+            injectedFounderPassPrefs = fakeFounderPrefs,
             elapsedRealtimeProvider = { simulatedElapsedRealtime },
             wallClockProvider = { simulatedWallClock }
         )
@@ -285,6 +288,55 @@ class PremiumManagerTest {
         assertFalse(
             "Tampered ECDSA key must fail signature verification",
             premiumManager.isCompassionateAccessActive()
+        )
+    }
+
+    @Test
+    fun testFounderPassGrantAndMonotonicExpiry() {
+        assertFalse(loader.isFounderPassClaimed())
+        assertFalse(premiumManager.isFounderPassActive())
+        assertFalse(premiumManager.isPremium())
+
+        loader.grantFounderPass(
+            supporterName = "Pioneer #1",
+            optInPublic = true,
+            durationDays = 90
+        )
+
+        assertTrue("Founder Pass must be claimed", loader.isFounderPassClaimed())
+        assertTrue("Founder Pass must be active", premiumManager.isFounderPassActive())
+        assertTrue("User must be recognized as premium", premiumManager.isPremium())
+        assertEquals(PremiumManager.UserType.FOUNDER, premiumManager.getUserType())
+        assertEquals("Founder Pass (3-Month Early Supporter)", premiumManager.getUserTypeLabel())
+        assertEquals("Pioneer #1", loader.getFounderSupporterName())
+        assertTrue(loader.isFounderBadgeUnlocked())
+        assertTrue(loader.isFounderThemeUnlocked())
+
+        // Advance 30 days
+        simulatedElapsedRealtime += 30L * 24 * 60 * 60 * 1000L
+        simulatedWallClock += 30L * 24 * 60 * 60 * 1000L
+        assertTrue("Pass must remain active after 30 days", premiumManager.isFounderPassActive())
+
+        // Advance past 90 days total (e.g. 61 more days)
+        simulatedElapsedRealtime += 61L * 24 * 60 * 60 * 1000L
+        simulatedWallClock += 61L * 24 * 60 * 60 * 1000L
+        assertFalse("Pass must expire after 90 days", premiumManager.isFounderPassActive())
+    }
+
+    @Test
+    fun testFounderPassBackwardClockTampering() {
+        loader.grantFounderPass(
+            supporterName = "Tamper Test",
+            optInPublic = false,
+            durationDays = 90
+        )
+        assertTrue(premiumManager.isFounderPassActive())
+
+        // Simulate user rolling device clock back by 10 minutes
+        simulatedWallClock -= 600_000L
+        assertFalse(
+            "Clock rollback must invalidate active Founder Pass check",
+            premiumManager.isFounderPassActive()
         )
     }
 }

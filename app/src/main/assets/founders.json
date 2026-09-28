@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "handle": "Al-Haq Team",
+    "joined_date": "2026-08-01",
+    "tier": "Founder"
+  },
+  {
+    "id": 2,
+    "handle": "Habibur Rahman",
+    "joined_date": "2026-08-10",
+    "tier": "Core Architect"
+  },
+  {
+    "id": 3,
+    "handle": "Early Adopter Pioneer #1",
+    "joined_date": "2026-08-15",
+    "tier": "Supporter"
+  },
+  {
+    "id": 4,
+    "handle": "Digital Wellbeing Champion",
+    "joined_date": "2026-08-20",
+    "tier": "Supporter"
+  },
+  {
+    "id": 5,
+    "handle": "Zero-Distraction Guardian",
+    "joined_date": "2026-08-25",
+    "tier": "Supporter"
+  }
+]

@@ -21,6 +21,7 @@ open class SavedPreferencesLoader(
     val context: Context,
     private val injectedCompassionatePrefs: SharedPreferences? = null,
     private val injectedPremiumPrefs: SharedPreferences? = null,
+    private val injectedFounderPassPrefs: SharedPreferences? = null,
     private val elapsedRealtimeProvider: () -> Long = { SystemClock.elapsedRealtime() },
     private val wallClockProvider: () -> Long = { System.currentTimeMillis() }
 ) {
@@ -862,6 +863,107 @@ open class SavedPreferencesLoader(
         getPremiumPrefs().edit().putLong("last_premium_reminder", timestamp).apply()
     }
 
+
+    protected open fun getFounderPassPrefs(): android.content.SharedPreferences {
+        return injectedFounderPassPrefs ?: context.getSharedPreferences("founder_pass_state", Context.MODE_PRIVATE)
+    }
+
+    fun isFounderPassClaimed(): Boolean {
+        return getFounderPassPrefs().getBoolean("is_claimed", false)
+    }
+
+    fun isFounderPassActive(): Boolean {
+        val prefs = getFounderPassPrefs()
+        if (!prefs.getBoolean("is_claimed", false)) return false
+        val expiresAt = prefs.getLong("expires_at", 0L)
+        if (expiresAt <= 0L) return false
+        return verifyFounderPassMonotonicExpiry()
+    }
+
+    fun grantFounderPass(
+        supporterName: String?,
+        optInPublic: Boolean,
+        durationDays: Int = 90
+    ) {
+        val nowWall = wallClockProvider()
+        val nowElapsed = elapsedRealtimeProvider()
+        val expiryWall = nowWall + (durationDays.toLong() * 24L * 60L * 60L * 1000L)
+        val cleanName = supporterName?.trim()?.takeIf { it.isNotEmpty() } ?: "Anonymous Supporter"
+
+        getFounderPassPrefs().edit()
+            .putBoolean("is_claimed", true)
+            .putLong("granted_at", nowWall)
+            .putLong("expires_at", expiryWall)
+            .putLong("last_observed_elapsed_realtime", nowElapsed)
+            .putLong("last_observed_wall_clock", nowWall)
+            .putLong("accumulated_uptime_ms", 0L)
+            .putString("supporter_name", cleanName)
+            .putBoolean("opted_in_public", optInPublic)
+            .putBoolean("badge_unlocked", true)
+            .putBoolean("theme_unlocked", true)
+            .apply()
+    }
+
+    fun verifyFounderPassMonotonicExpiry(): Boolean {
+        val prefs = getFounderPassPrefs()
+        if (!prefs.getBoolean("is_claimed", false)) return false
+        val grantedAt = prefs.getLong("granted_at", 0L)
+        val expiresAt = prefs.getLong("expires_at", 0L)
+        if (grantedAt <= 0L || expiresAt <= 0L) return false
+
+        val currentWall = wallClockProvider()
+        val currentElapsed = elapsedRealtimeProvider()
+        val lastObservedWall = prefs.getLong("last_observed_wall_clock", grantedAt)
+        val lastObservedElapsed = prefs.getLong("last_observed_elapsed_realtime", currentElapsed)
+        var accumulatedUptime = prefs.getLong("accumulated_uptime_ms", 0L)
+
+        // Monotonic hardware uptime progression check
+        if (currentElapsed >= lastObservedElapsed) {
+            accumulatedUptime += (currentElapsed - lastObservedElapsed)
+        } else {
+            // Device rebooted: elapsedRealtime reset to 0
+            accumulatedUptime += currentElapsed
+        }
+
+        // Clock tampering check: if currentWall was moved backwards significantly (>5 min)
+        if (currentWall < lastObservedWall - 300_000L) {
+            return false
+        }
+
+        val totalGrantDuration = expiresAt - grantedAt
+        if (accumulatedUptime > totalGrantDuration || currentWall > expiresAt) {
+            return false
+        }
+
+        // Update tracking state
+        prefs.edit()
+            .putLong("last_observed_elapsed_realtime", currentElapsed)
+            .putLong("last_observed_wall_clock", currentWall)
+            .putLong("accumulated_uptime_ms", accumulatedUptime)
+            .apply()
+
+        return true
+    }
+
+    fun getFounderSupporterName(): String {
+        return getFounderPassPrefs().getString("supporter_name", "") ?: ""
+    }
+
+    fun isFounderBadgeUnlocked(): Boolean {
+        return getFounderPassPrefs().getBoolean("badge_unlocked", false)
+    }
+
+    fun isFounderThemeUnlocked(): Boolean {
+        return getFounderPassPrefs().getBoolean("theme_unlocked", false)
+    }
+
+    fun isFounderOptedInPublic(): Boolean {
+        return getFounderPassPrefs().getBoolean("opted_in_public", false)
+    }
+
+    fun getFounderPassExpiry(): Long {
+        return getFounderPassPrefs().getLong("expires_at", 0L)
+    }
 
     protected open fun getCompassionateAccessPrefs(): android.content.SharedPreferences {
         return injectedCompassionatePrefs ?: context.getSharedPreferences("compassionate_access", Context.MODE_PRIVATE)

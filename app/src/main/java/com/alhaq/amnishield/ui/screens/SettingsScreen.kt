@@ -62,6 +62,8 @@ fun SettingsScreen(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val preferencesLoader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context.applicationContext) }
+    val isFounderThemeUnlocked = remember { preferencesLoader.isFounderThemeUnlocked() }
     var showPinCooldownDialog by remember { mutableStateOf(false) }
     var showEmergencyCooldownDialog by remember { mutableStateOf(false) }
 
@@ -302,6 +304,7 @@ fun SettingsScreen(
                                     val isSystemDark = com.alhaq.amnishield.utils.ThemeUtils.isSystemInDarkMode(context)
                                     Text(
                                         text = when (themePref) {
+                                            com.alhaq.amnishield.utils.ThemeUtils.THEME_FOUNDER, "founder_obsidian" -> "Founder Obsidian (Champagne Gold • Prestige)"
                                             com.alhaq.amnishield.utils.ThemeUtils.THEME_PURPLE -> "Cosmic Night (Deep Violet • Dark)"
                                             com.alhaq.amnishield.utils.ThemeUtils.THEME_EMERALD -> "Emerald Calm (Pearl Teal • Light)"
                                             com.alhaq.amnishield.utils.ThemeUtils.THEME_SUNSET -> "Sunset Glow (Warm Sand • Light)"
@@ -363,6 +366,34 @@ fun SettingsScreen(
                                             prefs.edit().putString("theme_style", com.alhaq.amnishield.utils.ThemeUtils.THEME_SUNSET).apply()
                                             expandedThemeMenu = false
                                             (context as? android.app.Activity)?.recreate()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text("Founder Obsidian (Gold • Prestige)")
+                                                if (!isFounderThemeUnlocked) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Icon(
+                                                        imageVector = Icons.Default.Lock,
+                                                        contentDescription = "Locked",
+                                                        modifier = Modifier.size(14.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            if (isFounderThemeUnlocked) {
+                                                viewModel.updateTheme(AppTheme.FOUNDER_OBSIDIAN)
+                                                val prefs = context.getSharedPreferences("theme_prefs", android.content.Context.MODE_PRIVATE)
+                                                prefs.edit().putString("theme_style", com.alhaq.amnishield.utils.ThemeUtils.THEME_FOUNDER).apply()
+                                                expandedThemeMenu = false
+                                                (context as? android.app.Activity)?.recreate()
+                                            } else {
+                                                expandedThemeMenu = false
+                                                android.widget.Toast.makeText(context, "Founder Obsidian is exclusive to Founding Supporters.", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     )
                                 }
@@ -839,6 +870,21 @@ fun SettingsScreen(
                             title = "Diagnostics & Logs",
                             subtitle = "View and inspect real-time system logs",
                             onClick = onDiagnostics
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                        SettingsNavigationRow(
+                            icon = Icons.Outlined.WorkspacePremium,
+                            title = "Our Journey & Founders",
+                            subtitle = "Mission narrative and Founding Supporters Wall",
+                            onClick = {
+                                val intent = android.content.Intent(context, com.alhaq.amnishield.ui.activity.FragmentActivity::class.java).apply {
+                                    putExtra("feature_type", "journey")
+                                }
+                                context.startActivity(intent)
+                            }
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),

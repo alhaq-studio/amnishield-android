@@ -229,6 +229,19 @@ open class PremiumFeaturesFragment : Fragment() {
 
         val activeMessage = when (userType) {
             PremiumManager.UserType.PREMIUM -> getString(R.string.premium_active_message)
+            PremiumManager.UserType.FOUNDER -> {
+                val expiry = preferencesLoader.getFounderPassExpiry()
+                val formattedDate = if (expiry > 0L) {
+                    DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(expiry))
+                } else {
+                    ""
+                }
+                if (formattedDate.isNotEmpty()) {
+                    "Founder Pass Active until $formattedDate - All PIN & Tamper Features Unlocked"
+                } else {
+                    "Founder Pass Active (3-Month Early Supporter)"
+                }
+            }
             PremiumManager.UserType.COMPASSIONATE -> {
                 val expiry = preferencesLoader.getCompassionateAccessExpiry()
                 val status = preferencesLoader.getCompassionateAccessStatus()

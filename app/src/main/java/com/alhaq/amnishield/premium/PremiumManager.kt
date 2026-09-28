@@ -12,6 +12,7 @@ class PremiumManager internal constructor(
     enum class UserType {
         FREE,
         COMPASSIONATE,
+        FOUNDER,
         PREMIUM
     }
 
@@ -24,7 +25,11 @@ class PremiumManager internal constructor(
         } else {
             isLicenseKeyValid()
         }
-        return hasLocalPremium || isCompassionateAccessActive()
+        return hasLocalPremium || isCompassionateAccessActive() || isFounderPassActive()
+    }
+
+    fun isFounderPassActive(): Boolean {
+        return preferencesLoader.isFounderPassActive()
     }
 
     fun isCompassionateAccessActive(): Boolean {
@@ -62,6 +67,7 @@ class PremiumManager internal constructor(
     fun getUserType(): UserType {
         val isPremiumActive = preferencesLoader.isPremiumUser() || isLicenseKeyValid()
         return when {
+            isFounderPassActive() -> UserType.FOUNDER
             isCompassionateAccessActive() -> UserType.COMPASSIONATE
             isPremiumActive -> UserType.PREMIUM
             else -> UserType.FREE
@@ -82,6 +88,7 @@ class PremiumManager internal constructor(
                     "Community Access (Review)"
                 }
             }
+            UserType.FOUNDER -> "Founder Pass (3-Month Early Supporter)"
             UserType.PREMIUM -> "Premium"
         }
     }

@@ -439,13 +439,25 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Action Button: Our Journey & Founding Supporters -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnViewFoundingSupporters"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="24dp"
+                android:text="@string/roadmap_view_journey_btn"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/baseline_star_24"
+                app:iconGravity="textStart" />
+
             <!-- Action Button: Support Development -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSupportInitiative"
                 style="@style/Widget.Material3.Button"
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="12dp"
                 android:text="Support Al-Haq Initiative Development"
                 app:cornerRadius="12dp"
                 app:icon="@drawable/baseline_volunteer_activism_24"
