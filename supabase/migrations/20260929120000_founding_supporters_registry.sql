@@ -46,10 +46,7 @@ CREATE POLICY "Allow anonymous client opt-in insert"
 INSERT INTO public.founding_supporters (id, handle, joined_date, tier, is_verified)
 VALUES
     (1, 'Al-Haq Team', '2026-08-01', 'Founder', TRUE),
-    (2, 'Habibur Rahman', '2026-08-10', 'Core Architect', TRUE),
-    (3, 'Early Adopter Pioneer #1', '2026-08-15', 'Supporter', TRUE),
-    (4, 'Digital Wellbeing Champion', '2026-08-20', 'Supporter', TRUE),
-    (5, 'Zero-Distraction Guardian', '2026-08-25', 'Supporter', TRUE)
+    (2, 'Habibur Rahman', '2026-08-10', 'Core Architect', TRUE)
 ON CONFLICT (id) DO NOTHING;
 
 -- Reset sequence to continue from max id

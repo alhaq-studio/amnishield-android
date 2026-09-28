@@ -34,9 +34,6 @@ The following early adopters supported the AmniShield initiative during pre-regi
 | :--- | :--- | :--- | :--- |
 | #001 | Al-Haq Team | Core Founder | 2026-08-01 |
 | #002 | Habibur Rahman | Lead System Architect | 2026-08-10 |
-| #003 | Early Adopter Pioneer #1 | Supporter | 2026-08-15 |
-| #004 | Digital Wellbeing Champion | Supporter | 2026-08-20 |
-| #005 | Zero-Distraction Guardian | Supporter | 2026-08-25 |
 
 ---
 
