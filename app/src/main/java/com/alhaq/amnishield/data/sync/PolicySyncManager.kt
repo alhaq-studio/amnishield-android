@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import com.google.gson.Gson
@@ -151,6 +152,8 @@ object PolicySyncManager {
                     id = "cloud_sync_schedule",
                     title = "Cloud Sync Schedule",
                     packageName = "all",
+                    blockerType = BlockerType.APP,
+                    targets = listOf("all"),
                     type = AppBlockScheduleRule.RuleType.BLOCK,
                     recurrence = AppBlockScheduleRule.Recurrence.WEEKLY,
                     startMinute = startHour * 60 + startMin,
@@ -158,7 +161,7 @@ object PolicySyncManager {
                     selectedDays = setOf(1, 2, 3, 4, 5),
                     isEnabled = true
                 )
-                savedPrefs.saveAppBlockerScheduleRules(mutableListOf(rule))
+                savedPrefs.upsertAppBlockerScheduleRule(rule)
                 context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES).setPackage(context.packageName))
             }
         }

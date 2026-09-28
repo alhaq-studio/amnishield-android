@@ -131,4 +131,15 @@ class SystemExclusionManagerTest {
         assertTrue("AmniShield must never block itself", SystemExclusionManager.isExempt("com.alhaq.amnishield", context))
         assertTrue("Sister package com.alhaq.deenshield must be exempt", SystemExclusionManager.isExempt("com.alhaq.deenshield", context))
     }
+
+    @Test
+    fun testPackageManagementAppRecognition() {
+        assertTrue("Google Play Store must be recognized as package management app", SystemExclusionManager.isPackageManagementApp("com.android.vending"))
+        assertTrue("Google Package Installer must be recognized as package management app", SystemExclusionManager.isPackageManagementApp("com.google.android.packageinstaller"))
+        assertTrue("AOSP Package Installer must be recognized as package management app", SystemExclusionManager.isPackageManagementApp("com.android.packageinstaller"))
+        assertTrue("Permission Controller must be recognized as package management app", SystemExclusionManager.isPackageManagementApp("com.google.android.permissioncontroller"))
+        assertTrue("F-Droid must be recognized as package management app", SystemExclusionManager.isPackageManagementApp("org.fdroid.fdroid"))
+        assertFalse("Instagram must NOT be recognized as package management app", SystemExclusionManager.isPackageManagementApp("com.instagram.android"))
+        assertFalse("Spotify must NOT be recognized as package management app", SystemExclusionManager.isPackageManagementApp("com.spotify.music"))
+    }
 }

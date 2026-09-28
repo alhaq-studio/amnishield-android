@@ -447,6 +447,10 @@ open class SavedPreferencesLoader(
 
         editor.putString("focus_mode", json)
         editor.apply()
+
+        if (focusModeData.selectedApps.isNotEmpty()) {
+            saveFocusModeSelectedApps(focusModeData.selectedApps.toList())
+        }
     }
 
 

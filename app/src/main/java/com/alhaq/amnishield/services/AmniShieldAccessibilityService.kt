@@ -254,8 +254,8 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
             // 1. Authoritative safety fast-path: Never block emergency services, dialers, keyboards, or launcher
             if (SystemExclusionManager.isExempt(rootPackage, this, savedPreferencesLoader = savedPreferencesLoader, cachedDefaultLauncher = cachedDefaultLauncher)) {
-                // If it is the settings app, allow AntiUninstallDetector to inspect sensitive sub-pages (if anti-uninstall enabled)
-                if (SystemExclusionManager.isSettingsApp(rootPackage)) {
+                // If it is settings, package installer, or app store, allow AntiUninstallDetector to inspect sensitive sub-pages (if anti-uninstall enabled)
+                if (SystemExclusionManager.isSettingsApp(rootPackage) || SystemExclusionManager.isPackageManagementApp(rootPackage)) {
                     antiUninstallDetector.inspect(event, rootNode)
                 }
                 return
@@ -287,7 +287,13 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             val isFocusBlockAllExSelectedActive = isFocusModeActive && activeFocusModeType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED
 
             if (isFocusModeActive) {
-                val focusModeResult = focusModeBlocker.doesAppNeedToBeBlocked(this, packageName, savedPreferencesLoader, cachedDefaultLauncher)
+                val focusModeResult = focusModeBlocker.doesAppNeedToBeBlocked(
+                    this,
+                    packageName,
+                    savedPreferencesLoader,
+                    cachedDefaultLauncher,
+                    isScheduleActive = isAutoFocusScheduleActive
+                )
                 if (focusModeResult.isRequestingToUpdateSPData) {
                     savedPreferencesLoader.completeFocusSession()
                     savedPreferencesLoader.saveFocusModeData(focusModeBlocker.focusModeData)

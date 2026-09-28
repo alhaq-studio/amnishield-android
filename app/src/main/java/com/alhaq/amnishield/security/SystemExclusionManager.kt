@@ -118,6 +118,15 @@ object SystemExclusionManager {
     }
 
     /**
+     * Determines whether the given package is a Package Installer or App Store manager.
+     */
+    fun isPackageManagementApp(packageName: String): Boolean {
+        return PACKAGE_MANAGEMENT_PACKAGES.contains(packageName) ||
+               packageName.contains("packageinstaller", ignoreCase = true) ||
+               packageName.contains("permissioncontroller", ignoreCase = true)
+    }
+
+    /**
      * Checks whether an application is an Emergency service, SOS package, or Dialer.
      */
     fun isEmergencyOrDialer(packageName: String, context: Context): Boolean {

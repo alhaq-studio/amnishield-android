@@ -125,9 +125,14 @@ class FocusModeBlocker : BaseBlocker() {
         context: Context,
         packageName: String,
         savedPreferencesLoader: SavedPreferencesLoader,
-        defaultLauncher: String? = null
+        defaultLauncher: String? = null,
+        isScheduleActive: Boolean = false
     ): FocusModeResult {
-        val isBlockAll = focusModeData.isTurnedOn && focusModeData.modeType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED
+        val isManualActive = focusModeData.isTurnedOn
+        val isSessionActive = isManualActive || isScheduleActive
+
+        val modeType = if (isManualActive) focusModeData.modeType else savedPreferencesLoader.getFocusModeData().modeType
+        val isBlockAll = isSessionActive && modeType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED
 
         // 1. Authoritative check: NEVER block emergency dialers, SOS, keyboards, launcher, or exempt system apps
         if (SystemExclusionManager.isExempt(
@@ -154,13 +159,15 @@ class FocusModeBlocker : BaseBlocker() {
 
         val isStrict = savedPreferencesLoader.getFocusModeStrictness() == STRICTNESS_HARD_LOCK
 
-        // 3. Check active Quick Focus session
-        if (focusModeData.isTurnedOn) {
-            if (focusModeData.endTime > 0 && System.currentTimeMillis() >= focusModeData.endTime) {
+        // 3. Check active Focus session (Manual Quick Focus or Auto Schedule)
+        if (isSessionActive) {
+            if (isManualActive && focusModeData.endTime > 0 && System.currentTimeMillis() >= focusModeData.endTime) {
                 focusModeData.isTurnedOn = false
                 return FocusModeResult(isBlocked = false, isRequestingToUpdateSPData = true)
             }
-            return evaluateBlocking(packageName, focusModeData.modeType, focusModeData.selectedApps, focusModeData.endTime, isStrict)
+            val selectedApps = if (isManualActive) focusModeData.selectedApps else savedPreferencesLoader.getFocusModeData().selectedApps
+            val endTime = if (isManualActive) focusModeData.endTime else 0L
+            return evaluateBlocking(packageName, modeType, selectedApps, endTime, isStrict)
         }
 
         return FocusModeResult(isBlocked = false)

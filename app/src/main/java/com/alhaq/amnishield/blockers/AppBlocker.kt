@@ -75,9 +75,13 @@ class AppBlocker : BaseBlocker() {
             return AppBlockerResult(isBlocked = false)
         }
 
-        val allPackageRules = scheduleRules.filter {
+        val activeRules = if (scheduleRules.isNotEmpty()) scheduleRules else (savedPrefs?.loadAppBlockerScheduleRules() ?: emptyList())
+        val allPackageRules = activeRules.filter {
             it.blockerType == BlockerType.APP &&
-            (it.packageName.equals(packageName, ignoreCase = true) || it.targets.any { target -> target.equals(packageName, ignoreCase = true) })
+            (it.packageName.equals("all", ignoreCase = true) ||
+             it.targets.any { target -> target.equals("all", ignoreCase = true) } ||
+             it.packageName.equals(packageName, ignoreCase = true) ||
+             it.targets.any { target -> target.equals(packageName, ignoreCase = true) })
         }
         val packageRules = allPackageRules.filter { it.isRuleEnabled }
 

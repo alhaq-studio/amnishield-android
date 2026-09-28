@@ -52,4 +52,63 @@ class FocusModeBlockerTest {
         assertFalse(result.isRequestingToUpdateSPData)
         assertTrue(result.isStrict)
     }
+
+    @Test
+    fun testScheduledFocusModeBlocksWhenManualQuickFocusIsOff() {
+        val fakePrefs = InMemorySharedPreferences()
+        val context = object : android.content.ContextWrapper(null) {
+            override fun getPackageName(): String = "com.alhaq.amnishield"
+            override fun getApplicationContext(): android.content.Context = this
+            override fun getSharedPreferences(name: String?, mode: Int): android.content.SharedPreferences = fakePrefs
+            override fun getSystemService(name: String): Any? = null
+        }
+        val loader = com.alhaq.amnishield.utils.SavedPreferencesLoader(
+            context = context,
+            injectedCompassionatePrefs = fakePrefs,
+            injectedPremiumPrefs = fakePrefs
+        )
+
+        // User configured Focus Mode to Block All Except Selected ("com.allowed.work")
+        loader.saveFocusModeSelectedApps(listOf("com.allowed.work"))
+        loader.saveFocusModeData(
+            FocusModeBlocker.FocusModeData(
+                isTurnedOn = false,
+                modeType = Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED,
+                selectedApps = hashSetOf("com.allowed.work")
+            )
+        )
+
+        val blocker = FocusModeBlocker()
+        blocker.focusModeData.isTurnedOn = false
+
+        // 1. Without active schedule, no blocking occurs
+        val inactiveResult = blocker.doesAppNeedToBeBlocked(
+            context = context,
+            packageName = "com.instagram.android",
+            savedPreferencesLoader = loader,
+            defaultLauncher = "com.android.launcher",
+            isScheduleActive = false
+        )
+        assertFalse("Without active schedule or manual session, app must NOT be blocked", inactiveResult.isBlocked)
+
+        // 2. With active schedule, non-whitelisted app MUST be blocked
+        val scheduledBlockResult = blocker.doesAppNeedToBeBlocked(
+            context = context,
+            packageName = "com.instagram.android",
+            savedPreferencesLoader = loader,
+            defaultLauncher = "com.android.launcher",
+            isScheduleActive = true
+        )
+        assertTrue("During scheduled focus session, non-whitelisted app MUST be blocked", scheduledBlockResult.isBlocked)
+
+        // 3. With active schedule, whitelisted app must NOT be blocked
+        val whitelistedResult = blocker.doesAppNeedToBeBlocked(
+            context = context,
+            packageName = "com.allowed.work",
+            savedPreferencesLoader = loader,
+            defaultLauncher = "com.android.launcher",
+            isScheduleActive = true
+        )
+        assertFalse("During scheduled focus session, whitelisted app must NOT be blocked", whitelistedResult.isBlocked)
+    }
 }

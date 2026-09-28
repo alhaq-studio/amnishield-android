@@ -4,7 +4,12 @@ import java.io.FileInputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")
+}
+
+// Conditionally apply Google Services plugin for Play Store builds
+val isFdroidBuild = gradle.startParameter.taskNames.any { it.contains("fdroid", ignoreCase = true) }
+if (!isFdroidBuild && (file("src/playstore/google-services.json").exists() || file("google-services.json").exists())) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 // Keystore properties
@@ -149,7 +154,7 @@ dependencies {
     implementation(libs.gson)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
+    add("playstoreImplementation", "com.google.firebase:firebase-messaging-ktx:24.1.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -184,5 +189,11 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+tasks.configureEach {
+    if (name.contains("Fdroid", ignoreCase = true) && name.contains("GoogleServices", ignoreCase = true)) {
+        enabled = false
+    }
 }
 
