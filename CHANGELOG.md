@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2026-10-05 (versionCode 145)
+
+### Added
+- **Continuous Cross-App & Cross-Session Shortform Tracking**:
+  - Daily cumulative accumulation for Reels and Shorts counts (todayScrolled) and watch duration (todayWatchSeconds) preserved across app launches, foreground swaps, and device reboots.
+  - Multi-app daily tracking supporting YouTube Shorts, Instagram Reels, TikTok, Facebook Reels, and popular community clients (ReVanced, Morphe, MyInsta, Instagram Lite, Facebook Lite).
+  - Midnight date-rollover automation resetting active comparator caches at 00:00 without losing persistence.
+- **Deep Fallback Node Comparator & ViewPager2 Recognition**:
+  - Dynamic fallback scanning in ReelDetectionEngine traversing child view trees up to depth 8 to capture video titles, creators, and audio tags when platform container resource IDs change dynamically.
+  - Interception of AccessibilityEvent.TYPE_VIEW_SELECTED for immediate capture of vertical page-swiping across ViewPager2 implementations.
+  - Fallback window node inspection (event.source fallback on rapid gestures).
+- **Floating Counter Pill Overlay Enhancements**:
+  - Synchronous main-thread UI binding via runOnMain eliminating race conditions during window attachment.
+  - Real-time display of accumulated daily count and total watch time immediately upon opening any candidate platform.
+  - Automatic time format adaptation to hh:mm:ss once watch duration exceeds 60 minutes.
+- **Website Domain Usage Tracking (BrowserSessionTracker)**:
+  - Low-overhead 2-second active window polling when browsers are in the foreground.
+  - Per-domain duration tracking and aggregation with broadcast receiver lifecycle managing screen on/off power saving.
+
+### Fixed
+- **Aggressive Session Reset Loop**:
+  - Replaced immediate 1-second session teardown with 3-consecutive-poll debounced confirmation, eliminating false resets during loading spinners, swipe gestures, and comment drawers.
+  - Retained seen reels cache on session switch via clearActiveDynamicText() so switching apps does not reset today's unique video tally.
+- **Scroll Rate Throttle**:
+  - Enforced 500ms time gate on rapid swipe increments to prevent double-counting inertial bounces.
+
+---
+
 ## [0.3.0] - 2026-09-29 (versionCode 144)
 
 ### Added

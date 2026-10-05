@@ -38,6 +38,7 @@ class ReelsSessionTracker(
     var lastReelScrollTime: Long = 0L
         private set
 
+    private var consecutiveMissedDetections = 0
     private var isScreenOn = true
     private var isTrackingRunning = false
 
@@ -102,7 +103,7 @@ class ReelsSessionTracker(
     }
 
     /**
-     * Handles TYPE_VIEW_SCROLLED and TYPE_WINDOW_STATE_CHANGED events for reel progression.
+     * Handles TYPE_VIEW_SCROLLED, TYPE_VIEW_SELECTED, and TYPE_WINDOW_STATE_CHANGED events for reel progression.
      * Note: Adheres strictly to the Node Lifecycle Invariant - NEVER recycles [rootNode].
      */
     fun onAccessibilityEvent(event: AccessibilityEvent, rootNode: AccessibilityNodeInfo?) {
@@ -114,15 +115,26 @@ class ReelsSessionTracker(
             val root = rootNode ?: return
             val detection = reelDetectionEngine.detectReelSurface(root, activePackage)
             if (detection != null && detection.isReelSurface) {
+                consecutiveMissedDetections = 0
+                if (currentReelsPackage != activePackage) {
+                    if (currentReelsPackage != null) {
+                        reelDetectionEngine.clearActiveDynamicText(currentReelsPackage)
+                    }
+                    currentReelsPackage = activePackage
+                    sessionReelsWatchSeconds = 0L
+                    sessionReelsScrolled = 0
+                }
                 val comparator = reelDetectionEngine.extractReelComparator(root, activePackage, event)
                 val isProgression = reelDetectionEngine.checkReelProgression(activePackage, comparator)
 
                 if (isProgression) {
                     val now = System.currentTimeMillis()
-                    lastReelScrollTime = now
-                    sessionReelsScrolled++
-                    savedPreferencesLoader.incrementReelsScrolled(activePackage)
-                    reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                    if (now - lastReelScrollTime >= 500L) {
+                        lastReelScrollTime = now
+                        sessionReelsScrolled++
+                        savedPreferencesLoader.incrementReelsScrolled(activePackage)
+                        reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                    }
                 }
 
                 updateOverlay(activePackage)
@@ -142,11 +154,14 @@ class ReelsSessionTracker(
             if (ReelDetectionEngine.isReelCandidatePackage(pkg)) {
                 val detection = reelDetectionEngine.detectReelSurface(root, pkg)
                 if (detection != null && detection.isReelSurface) {
+                    consecutiveMissedDetections = 0
                     if (currentReelsPackage != pkg) {
+                        if (currentReelsPackage != null) {
+                            reelDetectionEngine.clearActiveDynamicText(currentReelsPackage)
+                        }
                         currentReelsPackage = pkg
                         sessionReelsWatchSeconds = 0L
                         sessionReelsScrolled = 0
-                        reelDetectionEngine.resetSession(pkg)
                     }
                     sessionReelsWatchSeconds++
                     savedPreferencesLoader.addReelsWatchTime(1L, pkg)
@@ -155,17 +170,29 @@ class ReelsSessionTracker(
                     val comparator = reelDetectionEngine.extractReelComparator(root, pkg, null)
                     val isProgression = reelDetectionEngine.checkReelProgression(pkg, comparator)
                     if (isProgression) {
-                        sessionReelsScrolled++
-                        savedPreferencesLoader.incrementReelsScrolled(pkg)
-                        reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                        val now = System.currentTimeMillis()
+                        if (now - lastReelScrollTime >= 500L) {
+                            lastReelScrollTime = now
+                            sessionReelsScrolled++
+                            savedPreferencesLoader.incrementReelsScrolled(pkg)
+                            reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                        }
                     }
 
                     updateOverlay(pkg)
                 } else {
-                    resetCurrentSession()
+                    // Candidate app, but surface detection temporarily missed (e.g. gesture in-flight, comments drawer, loading)
+                    consecutiveMissedDetections++
+                    if (consecutiveMissedDetections >= 3) {
+                        resetCurrentSession()
+                    }
                 }
             } else {
-                resetCurrentSession()
+                // Out of candidate package (e.g. home launcher or non-candidate app)
+                consecutiveMissedDetections++
+                if (consecutiveMissedDetections >= 2) {
+                    resetCurrentSession()
+                }
             }
         } finally {
             try {
@@ -177,9 +204,10 @@ class ReelsSessionTracker(
 
     private fun resetCurrentSession() {
         if (currentReelsPackage != null) {
-            reelDetectionEngine.resetSession(currentReelsPackage)
+            reelDetectionEngine.clearActiveDynamicText(currentReelsPackage)
             currentReelsPackage = null
         }
+        consecutiveMissedDetections = 0
         if (usageStatOverlayManager?.isOverlayVisible == true) {
             usageStatOverlayManager?.removeOverlay()
         }
@@ -188,15 +216,24 @@ class ReelsSessionTracker(
     private fun updateOverlay(pkg: String) {
         val isOverlayEnabled = savedPreferencesLoader.isReelsOverlayCounterEnabled(true)
         val overlayApps = savedPreferencesLoader.getReelsOverlayApps()
-        if (isOverlayEnabled && (overlayApps.contains(pkg) || overlayApps.isEmpty())) {
+        val isCandidate = ReelDetectionEngine.isReelCandidatePackage(pkg)
+        if (isOverlayEnabled && (overlayApps.contains(pkg) || overlayApps.isEmpty() || isCandidate)) {
             val overlayMgr = usageStatOverlayManager ?: UsageStatOverlayManager(service).also {
                 usageStatOverlayManager = it
             }
-            if (!overlayMgr.isOverlayVisible) {
-                overlayMgr.startDisplaying()
-            }
             val mode = savedPreferencesLoader.getOverlayCounterDisplayMode()
-            overlayMgr.updateCounter(sessionReelsScrolled, sessionReelsWatchSeconds, mode)
+            val todayScrolled = savedPreferencesLoader.getReelsScrolledToday()
+            val todayWatchSeconds = savedPreferencesLoader.getReelsWatchTimeSeconds()
+
+            if (!overlayMgr.isOverlayVisible) {
+                overlayMgr.startDisplaying(
+                    initialCount = todayScrolled,
+                    initialWatchTimeSeconds = todayWatchSeconds,
+                    mode = mode
+                )
+            } else {
+                overlayMgr.updateCounter(todayScrolled, todayWatchSeconds, mode)
+            }
         }
     }
 }

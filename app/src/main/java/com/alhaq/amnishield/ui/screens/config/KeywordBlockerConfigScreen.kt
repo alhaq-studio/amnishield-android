@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.alhaq.amnishield.Constants
+import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.components.bounceClick
@@ -61,7 +62,7 @@ fun KeywordBlockerConfigScreen(
     val blockedKeywordsCount = remember { loader.loadBlockedKeywords().size }
     val keywordRulesCount = remember {
         loader.loadAppBlockerScheduleRules()
-            .filter { it.packageName == "keyword_blocker" }
+            .filter { it.blockerType == BlockerType.KEYWORD || it.packageName == "keyword_blocker" || it.title.contains("Keyword", ignoreCase = true) }
             .map { it.groupId ?: it.id }
             .distinct()
             .size
@@ -159,8 +160,14 @@ fun KeywordBlockerConfigScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        val dynamicSubtitle = when {
+                            !isServiceEnabled -> "Accessibility Service required"
+                            !isFeatureEnabled -> if (keywordRulesCount > 0) "Feature suspended • $keywordRulesCount rule${if (keywordRulesCount > 1) "s" else ""} preserved" else "Keyword blocker suspended"
+                            keywordRulesCount == 0 -> "Engine ready • No keyword rules active"
+                            else -> "Active • Enforcing $keywordRulesCount rule${if (keywordRulesCount > 1) "s" else ""}"
+                        }
                         Text(
-                            text = if (isFeatureEnabled) "Intercepting restricted keywords" else "Keyword blocker suspended",
+                            text = dynamicSubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

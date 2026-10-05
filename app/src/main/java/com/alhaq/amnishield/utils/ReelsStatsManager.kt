@@ -241,7 +241,7 @@ class ReelsStatsManager private constructor(private val context: Context) {
             avgWatchTimePerReelSeconds = avgSeconds,
             peakScrollDayLabel = peakDay?.dayLabel ?: "N/A",
             peakScrollCount = peakDay?.totalScrolled ?: 0,
-            topPlatformName = topPlatform?.displayName ?: "Instagram Reels",
+            topPlatformName = if (todayRecord.totalScrolled > 0) (topPlatform?.displayName ?: "Short Videos") else "None",
             dailyRecords = last7Days,
             platformBreakdownToday = defaultPlatforms
         )

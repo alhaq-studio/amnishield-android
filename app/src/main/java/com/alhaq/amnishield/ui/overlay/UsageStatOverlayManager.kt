@@ -42,14 +42,33 @@ class UsageStatOverlayManager(private val context: Context) {
     var reelsScrolledThisSession = 0
     var sessionWatchSeconds = 0L
 
+    private fun runOnMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            block()
+        } else {
+            mainHandler.post(block)
+        }
+    }
+
     /**
      * Attaches the floating wrap_content pill view to the WindowManager.
      * Tries TYPE_ACCESSIBILITY_OVERLAY first, falling back to TYPE_APPLICATION_OVERLAY if permitted.
      */
     @SuppressLint("InlinedApi")
-    fun startDisplaying(positionGravity: Int = Gravity.TOP or Gravity.END) {
-        mainHandler.post {
-            if (overlayView != null || isOverlayVisible) return@post
+    fun startDisplaying(
+        positionGravity: Int = Gravity.TOP or Gravity.END,
+        initialCount: Int = 0,
+        initialWatchTimeSeconds: Long = 0L,
+        mode: Int = SavedPreferencesLoader.OVERLAY_MODE_BOTH
+    ) {
+        reelsScrolledThisSession = initialCount
+        sessionWatchSeconds = initialWatchTimeSeconds
+
+        runOnMain {
+            if (overlayView != null || isOverlayVisible) {
+                binding?.let { applyCounterDisplay(it, reelsScrolledThisSession, sessionWatchSeconds, mode) }
+                return@runOnMain
+            }
 
             try {
                 binding = OverlayUsageStatBinding.inflate(LayoutInflater.from(context))
@@ -89,6 +108,7 @@ class UsageStatOverlayManager(private val context: Context) {
 
                 windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
                 windowManager?.addView(overlayView, layoutParams)
+                binding?.let { applyCounterDisplay(it, reelsScrolledThisSession, sessionWatchSeconds, mode) }
                 Log.d(TAG, "Floating doom-scrolling overlay attached successfully (type: $overlayType)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to attach floating doom-scrolling overlay", e)
@@ -110,68 +130,81 @@ class UsageStatOverlayManager(private val context: Context) {
         reelsScrolledThisSession = reelsCount
         sessionWatchSeconds = watchTimeSeconds
 
-        mainHandler.post {
-            val b = binding ?: return@post
-
-            // 1. Text badge formatting
-            val countText = when {
-                reelsCount == 1 -> "1 Reel"
-                reelsCount > 0 -> "$reelsCount Reels"
-                else -> "Doom Scroll"
-            }
-
-            val minutes = watchTimeSeconds / 60
-            val seconds = watchTimeSeconds % 60
-            val timeText = String.format("%02d:%02d", minutes, seconds)
-
-            when (mode) {
-                SavedPreferencesLoader.OVERLAY_MODE_COUNT -> {
-                    b.overlayCounterText.visibility = View.VISIBLE
-                    b.overlayCounterText.text = countText
-                    b.overlayDivider.visibility = View.GONE
-                    b.timeElapsedTxt.visibility = View.GONE
-                }
-                SavedPreferencesLoader.OVERLAY_MODE_TIME -> {
-                    b.overlayCounterText.visibility = View.GONE
-                    b.overlayDivider.visibility = View.GONE
-                    b.timeElapsedTxt.visibility = View.VISIBLE
-                    b.timeElapsedTxt.text = timeText
-                }
-                else -> {
-                    b.overlayCounterText.visibility = View.VISIBLE
-                    b.overlayCounterText.text = countText
-                    b.overlayDivider.visibility = View.VISIBLE
-                    b.timeElapsedTxt.visibility = View.VISIBLE
-                    b.timeElapsedTxt.text = timeText
-                }
-            }
-
-            // 2. Dynamic warning color scheme progression
-            val (accentColor, textColor) = when {
-                reelsCount >= 15 || watchTimeSeconds >= 600 -> {
-                    // Critical threshold (Red)
-                    Pair(Color.parseColor("#FF5252"), Color.parseColor("#FF8A80"))
-                }
-                reelsCount >= 6 || watchTimeSeconds >= 180 -> {
-                    // Warning threshold (Amber)
-                    Pair(Color.parseColor("#FFB300"), Color.parseColor("#FFE082"))
-                }
-                else -> {
-                    // Mild threshold (Cyan/White)
-                    Pair(Color.parseColor("#00E5FF"), Color.parseColor("#FFFFFF"))
-                }
-            }
-
-            b.overlayCounterText.setTextColor(textColor)
-            b.overlayIcon.setColorFilter(accentColor)
+        runOnMain {
+            val b = binding ?: return@runOnMain
+            applyCounterDisplay(b, reelsCount, watchTimeSeconds, mode)
         }
+    }
+
+    private fun applyCounterDisplay(
+        b: OverlayUsageStatBinding,
+        reelsCount: Int,
+        watchTimeSeconds: Long,
+        mode: Int
+    ) {
+        // 1. Text badge formatting
+        val countText = when {
+            reelsCount == 1 -> "1 Reel"
+            reelsCount > 0 -> "$reelsCount Reels"
+            else -> "0 Reels"
+        }
+
+        val hours = watchTimeSeconds / 3600
+        val minutes = (watchTimeSeconds % 3600) / 60
+        val seconds = watchTimeSeconds % 60
+        val timeText = if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%02d:%02d", minutes, seconds)
+        }
+
+        when (mode) {
+            SavedPreferencesLoader.OVERLAY_MODE_COUNT -> {
+                b.overlayCounterText.visibility = View.VISIBLE
+                b.overlayCounterText.text = countText
+                b.overlayDivider.visibility = View.GONE
+                b.timeElapsedTxt.visibility = View.GONE
+            }
+            SavedPreferencesLoader.OVERLAY_MODE_TIME -> {
+                b.overlayCounterText.visibility = View.GONE
+                b.overlayDivider.visibility = View.GONE
+                b.timeElapsedTxt.visibility = View.VISIBLE
+                b.timeElapsedTxt.text = timeText
+            }
+            else -> {
+                b.overlayCounterText.visibility = View.VISIBLE
+                b.overlayCounterText.text = countText
+                b.overlayDivider.visibility = View.VISIBLE
+                b.timeElapsedTxt.visibility = View.VISIBLE
+                b.timeElapsedTxt.text = timeText
+            }
+        }
+
+        // 2. Dynamic warning color scheme progression
+        val (accentColor, textColor) = when {
+            reelsCount >= 15 || watchTimeSeconds >= 600 -> {
+                // Critical threshold (Red)
+                Pair(Color.parseColor("#FF5252"), Color.parseColor("#FF8A80"))
+            }
+            reelsCount >= 6 || watchTimeSeconds >= 180 -> {
+                // Warning threshold (Amber)
+                Pair(Color.parseColor("#FFB300"), Color.parseColor("#FFE082"))
+            }
+            else -> {
+                // Mild threshold (Cyan/White)
+                Pair(Color.parseColor("#00E5FF"), Color.parseColor("#FFFFFF"))
+            }
+        }
+
+        b.overlayCounterText.setTextColor(textColor)
+        b.overlayIcon.setColorFilter(accentColor)
     }
 
     /**
      * Safely removes the overlay from the WindowManager.
      */
     fun removeOverlay() {
-        mainHandler.post {
+        runOnMain {
             try {
                 if (overlayView != null && windowManager != null) {
                     windowManager?.removeView(overlayView)

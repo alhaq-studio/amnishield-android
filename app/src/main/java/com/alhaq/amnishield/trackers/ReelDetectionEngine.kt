@@ -65,25 +65,46 @@ class ReelDetectionEngine {
             "com.instagram.android:id/clips_video_container" to PLATFORM_INSTAGRAM,
             "com.instagram.android:id/clips_ufi_component" to PLATFORM_INSTAGRAM,
             "com.instagram.android:id/clips_captions_component" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/root_clips_layout" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/clips_item_container" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/reel_viewer_title" to PLATFORM_INSTAGRAM,
             "com.myinsta.android:id/clips_viewer_view_pager" to PLATFORM_INSTAGRAM,
             "com.myinsta.android:id/clips_video_container" to PLATFORM_INSTAGRAM,
             "desc:Tap to show video controls" to PLATFORM_INSTAGRAM,
             "desc:Reels tab" to PLATFORM_INSTAGRAM,
+            "desc:Reels" to PLATFORM_INSTAGRAM,
+            "desc:Reel" to PLATFORM_INSTAGRAM,
+            "desc:Watch more Reels" to PLATFORM_INSTAGRAM,
 
             // YouTube Shorts Recycler / Page Container
             "com.google.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_player_page_container" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_player_page_content" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_view_pager" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/reel_watch_fragment" to PLATFORM_YOUTUBE,
             "app.revanced.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
             "app.revanced.android.youtube:id/reel_player_page_container" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/reel_player_page_content" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/reel_view_pager" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
             "app.morphe.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
+            "app.morphe.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
+            "app.morphe.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
+            "desc:Shorts" to PLATFORM_YOUTUBE,
+            "desc:Dislike this video" to PLATFORM_YOUTUBE,
+            "desc:Remix" to PLATFORM_YOUTUBE,
+            "desc:Sound used" to PLATFORM_YOUTUBE,
 
             // Facebook Reels
             "desc:Reels tab details" to PLATFORM_FACEBOOK,
             "desc:Reels viewer" to PLATFORM_FACEBOOK,
+            "desc:Reel" to PLATFORM_FACEBOOK,
             "com.facebook.katana:id/fb_shorts_container" to PLATFORM_FACEBOOK,
             "com.facebook.katana:id/fb_reels_viewer_root" to PLATFORM_FACEBOOK,
+            "com.facebook.lite:id/fb_shorts_container" to PLATFORM_FACEBOOK,
 
             // Snapchat Spotlight
             "com.snapchat.android:id/spotlight_container" to PLATFORM_SNAPCHAT,
@@ -132,6 +153,16 @@ class ReelDetectionEngine {
 
     private val lastDynamicText = mutableMapOf<String, String>()
     private val seenReelsCache = mutableMapOf<String, LruMemoryCache<String, Boolean>>()
+    private var currentDateStr = java.time.LocalDate.now().toString()
+
+    private fun checkDailyRollover() {
+        val today = java.time.LocalDate.now().toString()
+        if (today != currentDateStr) {
+            currentDateStr = today
+            lastDynamicText.clear()
+            seenReelsCache.clear()
+        }
+    }
 
     /**
      * Inspects the active window root node to detect if a short-form video surface is currently visible.
@@ -139,6 +170,7 @@ class ReelDetectionEngine {
      */
     fun detectReelSurface(rootNode: AccessibilityNodeInfo?, packageName: String): DetectionResult? {
         if (rootNode == null || packageName.isBlank()) return null
+        checkDailyRollover()
 
         // 1. TikTok dedicated package detection
         if (TIKTOK_PACKAGES.contains(packageName)) {
@@ -160,7 +192,26 @@ class ReelDetectionEngine {
             }
         }
 
-        // 3. Browser short-form URL detection (Chrome, Firefox, Samsung Internet, etc.)
+        // 3. Fallback targeted node inspection for supported candidate apps
+        if (SUPPORTED_REEL_PACKAGES.contains(packageName)) {
+            val fallbackMatch = findReelSurfaceFallback(rootNode, packageName)
+            if (fallbackMatch != null) {
+                val platform = when {
+                    packageName.contains("youtube") -> PLATFORM_YOUTUBE
+                    packageName.contains("instagram") || packageName.contains("myinsta") -> PLATFORM_INSTAGRAM
+                    packageName.contains("facebook") -> PLATFORM_FACEBOOK
+                    packageName.contains("snapchat") -> PLATFORM_SNAPCHAT
+                    else -> "other"
+                }
+                return DetectionResult(
+                    surfaceId = fallbackMatch,
+                    platform = platform,
+                    isReelSurface = true
+                )
+            }
+        }
+
+        // 4. Browser short-form URL detection (Chrome, Firefox, Samsung Internet, etc.)
         if (isBrowserPackage(packageName)) {
             val browserSurface = detectBrowserShortsSurface(rootNode, packageName)
             if (browserSurface != null) {
@@ -175,6 +226,44 @@ class ReelDetectionEngine {
         return null
     }
 
+    private fun findReelSurfaceFallback(rootNode: AccessibilityNodeInfo, packageName: String): String? {
+        val isYt = packageName.contains("youtube")
+        val isIg = packageName.contains("instagram") || packageName.contains("myinsta")
+        val isFb = packageName.contains("facebook")
+
+        fun checkNode(node: AccessibilityNodeInfo?, depth: Int): String? {
+            if (node == null || depth <= 0) return null
+            val viewId = node.viewIdResourceName?.lowercase() ?: ""
+            val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+            val text = node.text?.toString()?.lowercase() ?: ""
+
+            if (isYt) {
+                if (viewId.contains("reel_") || viewId.contains("shorts_") || desc == "shorts" || text == "shorts" || desc.contains("dislike this video")) {
+                    return if (viewId.isNotEmpty()) viewId else "desc:$desc"
+                }
+            } else if (isIg) {
+                if (viewId.contains("clips_") || desc == "reels" || desc == "reel") {
+                    return if (viewId.isNotEmpty()) viewId else "desc:$desc"
+                }
+            } else if (isFb) {
+                if (viewId.contains("fb_shorts") || desc.contains("reels")) {
+                    return if (viewId.isNotEmpty()) viewId else "desc:$desc"
+                }
+            }
+
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i) ?: continue
+                val match = checkNode(child, depth - 1)
+                @Suppress("DEPRECATION")
+                child.recycle()
+                if (match != null) return match
+            }
+            return null
+        }
+
+        return checkNode(rootNode, depth = 6)
+    }
+
     /**
      * Extracts a content comparator text for the current reel on screen.
      * Extracts captions, authors, titles, or page index.
@@ -182,7 +271,7 @@ class ReelDetectionEngine {
     fun extractReelComparator(rootNode: AccessibilityNodeInfo?, packageName: String, event: AccessibilityEvent?): String? {
         if (rootNode == null) return null
 
-        // 1. Instagram: extract caption and author
+        // 1. Instagram: extract caption, author, UFI
         if (packageName == "com.instagram.android" || packageName == "com.myinsta.android") {
             val caption = readNodeSubtreeText(rootNode, "$packageName:id/clips_captions_component")
             val author = readNodeSubtreeText(rootNode, "$packageName:id/clips_author_username")
@@ -191,6 +280,9 @@ class ReelDetectionEngine {
 
             val ufi = readNodeSubtreeText(rootNode, "$packageName:id/clips_ufi_component")
             if (!ufi.isNullOrBlank()) return ufi
+
+            val itemContainer = readNodeSubtreeText(rootNode, "$packageName:id/clips_item_container")
+            if (!itemContainer.isNullOrBlank()) return itemContainer
         }
 
         // 2. Instagram Lite: check position index
@@ -200,7 +292,7 @@ class ReelDetectionEngine {
             }
         }
 
-        // 3. YouTube Shorts: extract player page content or container
+        // 3. YouTube Shorts: extract player page content, container, titles
         if (packageName == "com.google.android.youtube" ||
             packageName == "app.revanced.android.youtube" ||
             packageName == "app.morphe.android.youtube"
@@ -210,6 +302,14 @@ class ReelDetectionEngine {
 
             val container = readNodeSubtreeText(rootNode, "$packageName:id/reel_player_page_container")
             if (!container.isNullOrBlank()) return container
+
+            val title = readNodeSubtreeText(rootNode, "$packageName:id/title")
+            val channel = readNodeSubtreeText(rootNode, "$packageName:id/channel_name")
+            val combinedYt = (title.orEmpty() + " " + channel.orEmpty()).trim()
+            if (combinedYt.isNotEmpty()) return combinedYt
+
+            val videoTitle = readNodeSubtreeText(rootNode, "$packageName:id/video_title")
+            if (!videoTitle.isNullOrBlank()) return videoTitle
         }
 
         // 4. Facebook Reels
@@ -248,6 +348,53 @@ class ReelDetectionEngine {
             }
         }
 
+        // 8. Resilient Fallback: Inspect visible prominent text/descriptions
+        val fallback = extractFallbackComparator(rootNode, packageName)
+        if (!fallback.isNullOrBlank()) {
+            return fallback
+        }
+
+        return null
+    }
+
+    private fun extractFallbackComparator(rootNode: AccessibilityNodeInfo, packageName: String): String? {
+        val collected = mutableListOf<String>()
+        val ignoredTokens = hashSetOf(
+            "back", "navigate up", "more options", "search", "settings",
+            "share", "home", "shorts", "subscriptions", "library", "camera",
+            "close", "send", "like", "dislike", "comments", "remix", "sound",
+            "reels", "reel", "profile", "audio", "direct", "notifications"
+        )
+
+        fun collectText(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth <= 0 || collected.size >= 10) return
+
+            val text = node.text?.toString()?.trim()
+            if (!text.isNullOrEmpty() && text.length > 2 && !ignoredTokens.contains(text.lowercase())) {
+                collected.add(text)
+            }
+            val desc = node.contentDescription?.toString()?.trim()
+            if (!desc.isNullOrEmpty() && desc.length > 2 && desc != text && !ignoredTokens.contains(desc.lowercase())) {
+                val lowerDesc = desc.lowercase()
+                if (!lowerDesc.startsWith("like ") && !lowerDesc.startsWith("dislike ") && !lowerDesc.startsWith("subscribe")) {
+                    collected.add(desc)
+                }
+            }
+
+            for (i in 0 until node.childCount) {
+                if (collected.size >= 10) break
+                val child = node.getChild(i) ?: continue
+                collectText(child, depth - 1)
+                @Suppress("DEPRECATION")
+                child.recycle()
+            }
+        }
+
+        collectText(rootNode, depth = 8)
+
+        if (collected.isNotEmpty()) {
+            return collected.joinToString(" ").take(200)
+        }
         return null
     }
 
@@ -257,8 +404,9 @@ class ReelDetectionEngine {
      */
     fun checkReelProgression(packageName: String, currentComparator: String?): Boolean {
         if (currentComparator.isNullOrBlank()) return false
+        checkDailyRollover()
 
-        val cache = seenReelsCache.getOrPut(packageName) { LruMemoryCache(50) }
+        val cache = seenReelsCache.getOrPut(packageName) { LruMemoryCache(100) }
         val previousText = lastDynamicText[packageName] ?: ""
 
         if (previousText.isEmpty()) {
@@ -348,6 +496,14 @@ class ReelDetectionEngine {
         return overlapRatio < 0.85f
     }
 
+    fun clearActiveDynamicText(packageName: String?) {
+        if (packageName != null) {
+            lastDynamicText.remove(packageName)
+        } else {
+            lastDynamicText.clear()
+        }
+    }
+
     fun resetSession(packageName: String? = null) {
         if (packageName != null) {
             lastDynamicText.remove(packageName)
@@ -409,7 +565,8 @@ class ReelDetectionEngine {
 
     private fun findElementByDescription(node: AccessibilityNodeInfo?, desc: String): AccessibilityNodeInfo? {
         if (node == null) return null
-        if (node.contentDescription?.toString().equals(desc, ignoreCase = true)) {
+        val nodeDesc = node.contentDescription?.toString()
+        if (nodeDesc != null && (nodeDesc.equals(desc, ignoreCase = true) || nodeDesc.startsWith(desc, ignoreCase = true))) {
             @Suppress("DEPRECATION")
             return AccessibilityNodeInfo.obtain(node)
         }

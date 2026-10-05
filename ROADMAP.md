@@ -1,10 +1,10 @@
 # AmniShield Roadmap & Technical Milestone Tracker
 
-Last updated: August 2026
+Last updated: October 2026
 
 ---
 
-## 🏛️ Strategic Architectural Decisions (August 2026)
+## Strategic Architectural Decisions (October 2026)
 
 - **Unified AmniShield Architecture & Direct Stripe Gateway:**
   - **Decision:** Deprecated third-party merchant billing layers in favor of **Stripe Direct** (Checkout + Subscriptions) for non-Google builds (`fdroid`, `universal`, Windows Desktop, Web Portal) paired with offline ECDSA NIST P-256 license verification. Google Play builds utilize Google Play `BillingClient`.
@@ -13,10 +13,17 @@ Last updated: August 2026
 
 ---
 
-## 🗺️ V1.0 - V2.0 Roadmap
+## V1.0 - V2.0 Roadmap
 
-### ✅ Completed Milestones (V1.0 Baseline)
+### Completed Milestones (Current Baseline - v0.3.1 / Code 145)
 
+- [x] **Continuous Cross-App & Cross-Session Reels Engine:** Daily accumulation across app launches and multiple shortform platforms (YouTube Shorts, Instagram Reels, TikTok, Facebook Reels, ReVanced, MyInsta, Lite editions) with midnight cache invalidation.
+- [x] **Resilient Fallback Node Comparator:** Dynamic view-tree traversal (depth up to 8) extracting title, creator, and audio elements to detect reel progression when native platform resource IDs change.
+- [x] **ViewPager2 Swipe Interception:** Integrated `AccessibilityEvent.TYPE_VIEW_SELECTED` for instantaneous vertical swipe progression detection.
+- [x] **Synchronous Floating Pill Overlay:** Main-thread `runOnMain` view inflation and real-time counter binding with hour-formatted duration (`hh:mm:ss`).
+- [x] **Browser Website Engagement Tracker (`BrowserSessionTracker`):** 2-second background active window domain engagement tracking with screen power-saving lifecycle handling.
+- [x] **Pre-Registration Founder Pass & Entitlements:** Google Play Billing pre-registration entitlement check, 90-day security suite grant, and Founding Supporters Wall.
+- [x] **Hardware Monotonic Clock Verification:** Defense against local system time manipulation for license and pass verification.
 - [x] **Multi-Platform Cloud Policy Sync:** Supabase Realtime + REST policy syncing across Android, Windows, and Web.
 - [x] **Ephemeral 6-Digit PIN & In-App ZXing Camera QR Pairing:** Secure, frictionless cross-device pairing.
 - [x] **Unified AmniShield Console:** Unified device management eliminating confusing dual-mode personas.
@@ -29,7 +36,7 @@ Last updated: August 2026
 
 ---
 
-### 🚧 Active / Upcoming Milestones (V1.1 - V2.0)
+### Active / Upcoming Milestones (V1.1 - V2.0)
 
 - [ ] **Windows Elevated Background Service:** Background Windows service managing UAC-free network `hosts` resolution and system-level firewall rules.
 - [ ] **Opt-in DNS Sinkhole Engine:** Local VPN-based DNS sinkhole filter powered by the `AmniGuard-FireWall` packet filtering engine for network-wide tracking and ad/adult domain mitigation.
@@ -38,9 +45,10 @@ Last updated: August 2026
 
 ---
 
-## 📜 Architectural Standards & Development Invariants
+## Architectural Standards & Development Invariants
 
 1. **Accessibility Node Lifecycle Invariant:** `AmniShieldAccessibilityService` exclusively owns the lifecycle of `rootNode`. Sub-interceptors and detectors must **never** call `rootNode.recycle()`.
 2. **Deterministic Priority (Fail-Safe First):** Security and Anti-Uninstall evaluation runs first at Priority 0.
 3. **Zero External Telemetry:** All diagnostic logs, crash reports, and usage metrics remain 100% on-device in app-private storage.
 4. **PII Sanitization Rule:** Sensitive tokens, passwords, PINs, auth headers, and emails are stripped by regex filters before being written to disk.
+5. **Zero Emoji Policy:** Strict universal rule prohibiting unicode emojis across all code, UI layouts, strings, commit messages, and documentation.

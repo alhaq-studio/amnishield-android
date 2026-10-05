@@ -1,6 +1,7 @@
 package com.alhaq.amnishield.ui.screens.config
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -25,6 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alhaq.amnishield.ui.components.bounceClick
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
+import com.alhaq.amnishield.utils.ScreenTimeCalculator
+import com.alhaq.amnishield.utils.UsageStatsHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TAG = "UsageTrackerConfigScreen"
 
@@ -57,6 +62,83 @@ fun UsageTrackerConfigScreen(
     var isAppUsageTrackingEnabled by remember { mutableStateOf(loader.isAppUsageTrackingEnabled()) }
     var isWebsiteUsageTrackingEnabled by remember { mutableStateOf(loader.isWebsiteUsageTrackingEnabled()) }
     var isAmniSpaceFrictionEnabled by remember { mutableStateOf(loader.isAmniSpaceUsageLimitFrictionEnabled()) }
+
+    var todayScreenTimeMillis by remember { mutableLongStateOf(0L) }
+    var topAppsSummaryText by remember { mutableStateOf("Loading usage data...") }
+
+    LaunchedEffect(isAppUsageTrackingEnabled) {
+        if (!isAppUsageTrackingEnabled) {
+            topAppsSummaryText = "App usage tracking paused"
+            return@LaunchedEffect
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val screenTime = ScreenTimeCalculator.getTodayScreenTime(context)
+                val startTime = ScreenTimeCalculator.getStartOfDayMillis(0)
+                val endTime = System.currentTimeMillis()
+                val helper = UsageStatsHelper(context)
+                val statsList = helper.getForegroundStatsByTimestamps(startTime, endTime)
+                val systemPackages = setOf(
+                    "android", "com.android.systemui", "com.android.settings",
+                    "com.google.android.gms", context.packageName
+                )
+                val launcherIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+                val launcherPackages = context.packageManager.queryIntentActivities(launcherIntent, 0)
+                    .map { it.activityInfo.packageName }.toSet()
+
+                val filtered = statsList.filter { stat ->
+                    !systemPackages.contains(stat.packageName) &&
+                    !launcherPackages.contains(stat.packageName) &&
+                    stat.packageName.isNotBlank() &&
+                    context.packageManager.getLaunchIntentForPackage(stat.packageName) != null
+                }.sortedByDescending { it.totalTime }.take(3)
+
+                val summary = if (filtered.isNotEmpty()) {
+                    filtered.joinToString("\n") { stat ->
+                        val label = try {
+                            val info = context.packageManager.getApplicationInfo(stat.packageName, 0)
+                            context.packageManager.getApplicationLabel(info).toString()
+                        } catch (_: Exception) {
+                            stat.packageName
+                        }
+                        val mins = stat.totalTime / (1000 * 60)
+                        val timeStr = if (mins >= 60) "${mins / 60}h ${mins % 60}m" else "${mins}m"
+                        "• $label: $timeStr"
+                    }
+                } else {
+                    "No app usage recorded today"
+                }
+
+                withContext(Dispatchers.Main) {
+                    todayScreenTimeMillis = screenTime
+                    topAppsSummaryText = summary
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    topAppsSummaryText = "No app usage recorded today"
+                }
+            }
+        }
+    }
+
+    val domainStats = remember(isWebsiteUsageTrackingEnabled) { loader.loadWebsiteUsageStats() }
+    val totalWebMillis = domainStats.values.sum()
+    val totalWebHours = totalWebMillis / (1000 * 60 * 60)
+    val totalWebMins = (totalWebMillis % (1000 * 60 * 60)) / (1000 * 60)
+    val webTimeText = if (totalWebHours > 0) "${totalWebHours}h ${totalWebMins}m" else "${totalWebMins}m"
+    val webProgress = if (totalWebMillis > 0) (totalWebMillis.toFloat() / (2 * 60 * 60 * 1000f)).coerceIn(0.05f, 1f) else 0f
+    val topWebsitesText = remember(domainStats) {
+        val topEntries = domainStats.entries.sortedByDescending { it.value }.take(3)
+        if (topEntries.isNotEmpty()) {
+            topEntries.joinToString("\n") { entry ->
+                val mins = entry.value / (1000 * 60)
+                val timeStr = if (mins >= 60) "${mins / 60}h ${mins % 60}m" else "${mins}m"
+                "• ${entry.key}: $timeStr"
+            }
+        } else {
+            "No website activity logged today"
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -391,6 +473,11 @@ fun UsageTrackerConfigScreen(
                                 .padding(16.dp)
                                 .then(if (!isAppUsageTrackingEnabled) Modifier.blur(14.dp) else Modifier)
                         ) {
+                            val screenTimeHours = todayScreenTimeMillis / (1000 * 60 * 60)
+                            val screenTimeMins = (todayScreenTimeMillis % (1000 * 60 * 60)) / (1000 * 60)
+                            val screenTimeText = if (screenTimeHours > 0) "${screenTimeHours}h ${screenTimeMins}m" else "${screenTimeMins}m"
+                            val screenTimeProgress = if (todayScreenTimeMillis > 0) (todayScreenTimeMillis.toFloat() / (4 * 60 * 60 * 1000f)).coerceIn(0.05f, 1f) else 0f
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -403,14 +490,14 @@ fun UsageTrackerConfigScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = "3h 42m",
+                                    text = screenTimeText,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Spacer(modifier = Modifier.height(10.dp))
                             LinearProgressIndicator(
-                                progress = { 0.65f },
+                                progress = { screenTimeProgress },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
@@ -420,7 +507,7 @@ fun UsageTrackerConfigScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "• YouTube: 1h 15m\n• Instagram: 48m\n• Chrome: 35m",
+                                text = topAppsSummaryText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -545,14 +632,14 @@ fun UsageTrackerConfigScreen(
                                     color = MaterialTheme.colorScheme.tertiary
                                 )
                                 Text(
-                                    text = "1h 24m",
+                                    text = webTimeText,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Spacer(modifier = Modifier.height(10.dp))
                             LinearProgressIndicator(
-                                progress = { 0.45f },
+                                progress = { webProgress },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
@@ -562,7 +649,7 @@ fun UsageTrackerConfigScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "• youtube.com: 42m\n• reddit.com: 24m\n• github.com: 12m",
+                                text = topWebsitesText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

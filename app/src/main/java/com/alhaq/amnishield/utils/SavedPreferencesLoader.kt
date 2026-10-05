@@ -15,6 +15,7 @@ import com.alhaq.amnishield.ui.activity.MainActivity
 import java.util.Calendar
 import java.util.UUID
 import java.util.ArrayList
+import java.time.LocalDate
 import android.os.SystemClock
 
 open class SavedPreferencesLoader(
@@ -735,7 +736,20 @@ open class SavedPreferencesLoader(
         val type = object : TypeToken<MutableList<AppBlockScheduleRule>>() {}.type
         return runCatching {
             val rawList = Gson().fromJson<MutableList<AppBlockScheduleRule>>(json, type) ?: mutableListOf()
-            rawList.map { it.sanitize() }.toMutableList()
+            val legacyDummyIds = setOf(
+                "reel_blocker_default",
+                "website_blocker_default",
+                "keyword_blocker_default",
+                "focus_mode_default",
+                "app_blocker_direct_default"
+            )
+            rawList.map { it.sanitize() }
+                .filterNot { rule ->
+                    legacyDummyIds.contains(rule.id) ||
+                    legacyDummyIds.contains(rule.groupId) ||
+                    (rule.title.startsWith("Block Always • ") && rule.targets.isEmpty() && rule.targetWebsites.isEmpty() && rule.targetKeywords.isEmpty())
+                }
+                .toMutableList()
         }.getOrElse {
             Log.e("SavedPreferencesLoader", "Failed to load app blocker schedule rules", it)
             mutableListOf()
@@ -1174,12 +1188,20 @@ open class SavedPreferencesLoader(
 
         val DEFAULT_REELS_OVERLAY_APPS = setOf(
             "com.instagram.android",
+            "com.myinsta.android",
+            "com.instagram.lite",
             "com.google.android.youtube",
-            "com.zhiliaoapp.musically",
+            "app.revanced.android.youtube",
+            "app.morphe.android.youtube",
             "com.facebook.katana",
+            "com.facebook.lite",
+            "com.snapchat.android",
+            "com.zhiliaoapp.musically",
+            "com.ss.android.ugc.trill",
+            "com.ss.android.ugc.aweme",
+            "com.zhiliao.musically.go",
             "com.reddit.frontpage",
-            "com.twitter.android",
-            "com.snapchat.android"
+            "com.twitter.android"
         )
 
         // PIN Security, Cooldown & Reset Engine
@@ -1239,29 +1261,52 @@ open class SavedPreferencesLoader(
 
     fun loadWebsiteUsageStats(): Map<String, Long> {
         val sharedPreferences = context.getSharedPreferences("website_usage_tracker", Context.MODE_PRIVATE)
+        val today = LocalDate.now().toString()
+        val savedDate = sharedPreferences.getString("domain_stats_date", "")
+        if (savedDate != today) {
+            sharedPreferences.edit()
+                .putString("domain_stats_date", today)
+                .remove("domain_stats_today")
+                .apply()
+            return emptyMap()
+        }
+
         val json = sharedPreferences.getString("domain_stats_today", null)
         if (json.isNullOrEmpty()) {
-            return mapOf(
-                "youtube.com" to 2550000L,
-                "reddit.com" to 1455000L,
-                "github.com" to 700000L,
-                "wikipedia.org" to 360000L
-            )
+            return emptyMap()
         }
         return try {
             val type = object : TypeToken<Map<String, Long>>() {}.type
-            Gson().fromJson(json, type) ?: emptyMap()
+            val map: Map<String, Long>? = Gson().fromJson(json, type)
+            // Defensive cleanup: purge any legacy placeholder map if present
+            if (map != null && map.size == 4 && map["youtube.com"] == 2550000L && map["reddit.com"] == 1455000L) {
+                sharedPreferences.edit().remove("domain_stats_today").apply()
+                emptyMap()
+            } else {
+                map ?: emptyMap()
+            }
         } catch (e: Exception) {
             emptyMap()
         }
     }
 
     fun recordWebsiteUsage(domain: String, durationMillis: Long) {
+        if (durationMillis <= 0) return
         if (!isWebsiteUsageTrackingEnabled()) return
         if (loadIgnoredWebDomains().contains(domain)) return
+
+        val sharedPreferences = context.getSharedPreferences("website_usage_tracker", Context.MODE_PRIVATE)
+        val today = LocalDate.now().toString()
+        val savedDate = sharedPreferences.getString("domain_stats_date", "")
+        if (savedDate != today) {
+            sharedPreferences.edit()
+                .putString("domain_stats_date", today)
+                .remove("domain_stats_today")
+                .apply()
+        }
+
         val current = loadWebsiteUsageStats().toMutableMap()
         current[domain] = (current[domain] ?: 0L) + durationMillis
-        val sharedPreferences = context.getSharedPreferences("website_usage_tracker", Context.MODE_PRIVATE)
         sharedPreferences.edit().putString("domain_stats_today", Gson().toJson(current)).apply()
     }
 
@@ -1567,7 +1612,7 @@ open class SavedPreferencesLoader(
     )
 
     private fun checkAndResetReelsStatsDaily(sharedPreferences: SharedPreferences) {
-        val today = TimeTools.getCurrentDate()
+        val today = LocalDate.now().toString()
         val savedDate = sharedPreferences.getString("reels_stats_date", "")
         if (savedDate != today) {
             val editor = sharedPreferences.edit()
@@ -1579,7 +1624,7 @@ open class SavedPreferencesLoader(
     }
 
     fun getReelsScrolledToday(): Int {
-        return ReelsStatsManager.getInstance(context).loadDailyRecord(TimeTools.getCurrentDate()).totalScrolled
+        return ReelsStatsManager.getInstance(context).loadDailyRecord(LocalDate.now().toString()).totalScrolled
     }
 
     fun incrementReelsScrolled(packageName: String? = null) {
@@ -1587,7 +1632,7 @@ open class SavedPreferencesLoader(
     }
 
     fun getReelsWatchTimeSeconds(): Long {
-        return ReelsStatsManager.getInstance(context).loadDailyRecord(TimeTools.getCurrentDate()).totalWatchTimeSeconds
+        return ReelsStatsManager.getInstance(context).loadDailyRecord(LocalDate.now().toString()).totalWatchTimeSeconds
     }
 
     fun addReelsWatchTime(seconds: Long, packageName: String? = null) {

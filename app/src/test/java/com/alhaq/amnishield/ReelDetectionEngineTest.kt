@@ -144,5 +144,60 @@ class ReelDetectionEngineTest {
         assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(99))
         assertEquals(com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT, com.alhaq.amnishield.blockers.ReelBlocker.BlockResponseMode.fromInt(-1))
     }
+
+    @Test
+    fun testClearActiveDynamicTextPreservesCacheAcrossSessions() {
+        val engine = ReelDetectionEngine()
+        val pkg = "com.google.android.youtube"
+
+        val reel1 = "First YouTube Short - Tech Review"
+        val reel2 = "Second YouTube Short - Coding Tutorial"
+        val reel3 = "Third YouTube Short - Science Fact"
+
+        // Session 1:
+        assertFalse(engine.checkReelProgression(pkg, reel1)) // baseline
+        assertTrue(engine.checkReelProgression(pkg, reel2))  // scrolled to reel 2
+
+        // User leaves app (Session ends) -> clear active dynamic text
+        engine.clearActiveDynamicText(pkg)
+
+        // Session 2: User comes back to app, reel2 is still on screen
+        assertFalse(engine.checkReelProgression(pkg, reel2)) // baseline for new session
+
+        // User scrolls to reel 3 -> counted!
+        assertTrue(engine.checkReelProgression(pkg, reel3))
+
+        // User scrolls back to reel 1 -> already seen in Session 1, deduplicated!
+        assertFalse(engine.checkReelProgression(pkg, reel1))
+    }
+
+    @Test
+    fun testCrossAppIndependentTracking() {
+        val engine = ReelDetectionEngine()
+        val yt = "com.google.android.youtube"
+        val ig = "com.instagram.android"
+
+        val ytReel1 = "YouTube Shorts Creator A"
+        val ytReel2 = "YouTube Shorts Creator B"
+        val igReel1 = "Instagram Reel Photographer X"
+        val igReel2 = "Instagram Reel Photographer Y"
+
+        // YouTube session
+        assertFalse(engine.checkReelProgression(yt, ytReel1))
+        assertTrue(engine.checkReelProgression(yt, ytReel2))
+
+        // Switch to Instagram
+        engine.clearActiveDynamicText(yt)
+        assertFalse(engine.checkReelProgression(ig, igReel1))
+        assertTrue(engine.checkReelProgression(ig, igReel2))
+
+        // Switch back to YouTube
+        engine.clearActiveDynamicText(ig)
+        // Reel 2 on YouTube is still baseline
+        assertFalse(engine.checkReelProgression(yt, ytReel2))
+        // New Reel 3 on YouTube
+        val ytReel3 = "YouTube Shorts Creator C"
+        assertTrue(engine.checkReelProgression(yt, ytReel3))
+    }
 }
 

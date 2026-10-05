@@ -40,6 +40,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
+import com.alhaq.amnishield.R
 import com.alhaq.amnishield.ui.components.bounceClick
 import com.alhaq.amnishield.ui.state.ScreenTimeDay
 import com.alhaq.amnishield.utils.TimeTools
@@ -63,12 +65,14 @@ fun StatsScreen(
     totalReelsWatched: Int,
     averageWatchSeconds: Int,
     totalReelsWatchTimeFormatted: String = "0m",
+    reelsWeeklyTrend: List<Int> = emptyList(),
     topApps: List<AppUsageItem>,
     isAppUsageTrackingEnabled: Boolean = true,
     totalWebBrowsingTime: String = "0m",
     topWebDomain: String? = null,
     topWebDomainTime: String? = null,
     activeWebDomainsCount: Int = 0,
+    webDomainProportions: List<Pair<String, Float>> = emptyList(),
     isWebsiteUsageTrackingEnabled: Boolean = true,
     onEnableAppUsageTracking: () -> Unit = {},
     onEnableWebsiteUsageTracking: () -> Unit = {},
@@ -304,18 +308,37 @@ fun StatsScreen(
 
                         if (isWebsiteUsageTrackingEnabled && activeWebDomainsCount > 0) {
                             Spacer(modifier = Modifier.height(14.dp))
-                            // Proportional segment progress bar
+                            // Dynamic proportional segment progress bar
+                            val colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary,
+                                MaterialTheme.colorScheme.secondary
+                            )
+                            val displayProportions = if (webDomainProportions.isNotEmpty()) {
+                                webDomainProportions.take(3)
+                            } else {
+                                listOf("Top Sites" to 1f)
+                            }
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp))
                             ) {
-                                Box(modifier = Modifier.weight(0.55f).fillMaxHeight().background(Color(0xFF38BDF8)))
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Box(modifier = Modifier.weight(0.30f).fillMaxHeight().background(Color(0xFFFF7675)))
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Box(modifier = Modifier.weight(0.15f).fillMaxHeight().background(Color(0xFF34D399)))
+                                displayProportions.forEachIndexed { index, prop ->
+                                    val segWeight = prop.second.coerceAtLeast(0.05f)
+                                    val segColor = colors.getOrElse(index) { MaterialTheme.colorScheme.primaryContainer }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(segWeight)
+                                            .fillMaxHeight()
+                                            .background(segColor)
+                                    )
+                                    if (index < displayProportions.lastIndex) {
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                    }
+                                }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
@@ -328,11 +351,45 @@ fun StatsScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "View Breakdown",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        } else if (isWebsiteUsageTrackingEnabled && activeWebDomainsCount == 0) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "View Breakdown →",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    text = "No web activity recorded today",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -407,39 +464,132 @@ fun StatsScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Hourly Reels Heatmap Distribution Bar
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(28.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            val hoursDistribution = listOf(
-                                "Night" to 0.1f,
-                                "Morning" to 0.45f,
-                                "Afternoon" to 0.85f,
-                                "Evening" to 0.3f
-                            )
-                            hoursDistribution.forEach { (period, weight) ->
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                        if (totalReelsWatched == 0) {
+                            // Encouraging Zero-State Card with Reels Blocker Icon
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height((20 * weight).dp.coerceAtLeast(4.dp))
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(
-                                                if (weight > 0.6f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-                                            )
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_reels_blocker),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = period.take(3),
-                                        fontSize = 9.sp,
+                                        text = "Clean Focus Day",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "0 short-form video scrolls recorded today",
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "View Scroll Metrics",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        } else {
+                            // Real 7-day scroll trend distribution
+                            val trendList = if (reelsWeeklyTrend.isNotEmpty()) reelsWeeklyTrend.takeLast(7) else listOf(totalReelsWatched)
+                            val maxScroll = trendList.maxOrNull()?.coerceAtLeast(1) ?: 1
+                            val dayLetters = listOf("M", "T", "W", "T", "F", "S", "S")
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                trendList.forEachIndexed { index, scrolls ->
+                                    val ratio = (scrolls.toFloat() / maxScroll.toFloat()).coerceIn(0.12f, 1f)
+                                    val dayLabel = dayLetters.getOrElse(index) { "D" }
+                                    val isToday = index == trendList.lastIndex
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height((20 * ratio).dp.coerceAtLeast(4.dp))
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(
+                                                    if (isToday) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.primaryContainer
+                                                )
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = dayLabel,
+                                            fontSize = 9.sp,
+                                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "7-day scroll trend",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "View Scroll Metrics",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
                                     )
                                 }
                             }
@@ -613,7 +763,7 @@ fun InteractiveOverviewCard(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header: Title + Segmented Control Toggle
@@ -883,7 +1033,7 @@ fun InteractiveWeeklyBarChart(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(130.dp),
+            .height(140.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom
     ) {
@@ -896,11 +1046,12 @@ fun InteractiveWeeklyBarChart(
                 verticalArrangement = Arrangement.Bottom,
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxHeight()
                     .bounceClick { onDayClick(index) }
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight(0.85f)
+                        .weight(1f)
                         .width(if (isSelected) 14.dp else 10.dp)
                         .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
                         .background(
@@ -932,7 +1083,7 @@ fun InteractiveWeeklyBarChart(
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }

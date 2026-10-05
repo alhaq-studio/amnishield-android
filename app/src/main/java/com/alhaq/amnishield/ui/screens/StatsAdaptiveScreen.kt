@@ -148,6 +148,12 @@ fun StatsAdaptiveScreen(
         detailPane = {
             AnimatedPane {
                 val currentPane = selectedPane ?: StatsDetailPaneType.OVERVIEW
+                val watchSec = reelsSummary.totalWatchTimeTodaySeconds
+                val watchM = (watchSec / 60).toInt()
+                val watchS = (watchSec % 60).toInt()
+                val formattedWatchTime = if (watchM > 0) "${watchM}m ${watchS}s" else "${watchS}s"
+                val reelsTrend = reelsSummary.dailyRecords.map { it.totalScrolled }
+
                 when (currentPane) {
                     StatsDetailPaneType.OVERVIEW -> {
                         StatsScreen(
@@ -157,6 +163,8 @@ fun StatsAdaptiveScreen(
                             focusTime = "${state.focusTimeMinutes / 60}h ${state.focusTimeMinutes % 60}m",
                             totalReelsWatched = state.totalReelsWatched,
                             averageWatchSeconds = state.averageWatchSeconds,
+                            totalReelsWatchTimeFormatted = formattedWatchTime,
+                            reelsWeeklyTrend = reelsTrend,
                             topApps = emptyList(),
                             isAppUsageTrackingEnabled = state.isAppUsageTrackingEnabled,
                             isWebsiteUsageTrackingEnabled = state.isWebsiteUsageTrackingEnabled,
@@ -189,6 +197,8 @@ fun StatsAdaptiveScreen(
                             focusTime = "${state.focusTimeMinutes / 60}h ${state.focusTimeMinutes % 60}m",
                             totalReelsWatched = state.totalReelsWatched,
                             averageWatchSeconds = state.averageWatchSeconds,
+                            totalReelsWatchTimeFormatted = formattedWatchTime,
+                            reelsWeeklyTrend = reelsTrend,
                             topApps = emptyList(),
                             isAppUsageTrackingEnabled = state.isAppUsageTrackingEnabled,
                             isWebsiteUsageTrackingEnabled = state.isWebsiteUsageTrackingEnabled,

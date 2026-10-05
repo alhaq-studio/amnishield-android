@@ -43,27 +43,45 @@ class ReelBlocker : BaseBlocker() {
         val REEL_TARGET_PACKAGES = hashSetOf(
             "com.instagram.android",
             "com.myinsta.android",
+            "com.instagram.lite",
             "com.google.android.youtube",
             "app.revanced.android.youtube",
             "app.morphe.android.youtube",
             "com.snapchat.android",
             "com.facebook.katana",
+            "com.facebook.lite",
             "com.ss.android.ugc.trill",
             "com.zhiliaoapp.musically",
-            "com.ss.android.ugc.aweme"
+            "com.ss.android.ugc.aweme",
+            "com.zhiliao.musically.go"
         )
 
         // Map of native (non-browser) reel surface view IDs to their platform.
         private val NATIVE_SURFACE_PLATFORM = linkedMapOf(
             "com.instagram.android:id/clips_viewer_view_pager" to PLATFORM_INSTAGRAM,
             "com.instagram.android:id/clips_video_container" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/clips_ufi_component" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/clips_captions_component" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/root_clips_layout" to PLATFORM_INSTAGRAM,
+            "com.instagram.android:id/clips_item_container" to PLATFORM_INSTAGRAM,
             "com.myinsta.android:id/clips_viewer_view_pager" to PLATFORM_INSTAGRAM,
+            "com.myinsta.android:id/clips_video_container" to PLATFORM_INSTAGRAM,
             "com.google.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_player_page_container" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/reel_player_page_content" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_view_pager" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
             "app.revanced.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/reel_player_page_container" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
+            "app.revanced.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
             "app.morphe.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
-            "desc:Tap to show video controls" to PLATFORM_INSTAGRAM
+            "app.morphe.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
+            "app.morphe.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
+            "desc:Tap to show video controls" to PLATFORM_INSTAGRAM,
+            "desc:Shorts" to PLATFORM_YOUTUBE,
+            "desc:Dislike this video" to PLATFORM_YOUTUBE
         )
 
         // Backwards-compat alias kept for older code paths.

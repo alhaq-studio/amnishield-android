@@ -32,7 +32,7 @@ into a single accessibility-service–based guardian.
 
 ## Building the App
 
-> **⚠️ Important — Product Flavors**: AmniShield uses three **product flavors**
+> **[IMPORTANT] Product Flavors**: AmniShield uses three **product flavors**
 > (`playstore`, `fdroid`, `universal`). The plain `assembleDebug` Gradle task is
 > **no longer valid**. Always use a flavor-qualified task. Running bare `assembleDebug`
 > will silently serve a stale cached APK with old UI and themes.
@@ -63,9 +63,9 @@ APK output paths:
 
 | Flavor | Description | Google Services | Billing |
 | --- | --- | --- | --- |
-| `playstore` | Google Play Store distribution | ✅ Firebase, Play Billing | Play Billing |
-| `universal` | Sideload / alternative stores | ✅ Firebase | Play Billing |
-| `fdroid` | F-Droid / fully open source | ❌ No Google dependencies | Offline ECDSA license |
+| `playstore` | Google Play Store distribution | Included: Firebase, Play Billing | Play Billing |
+| `universal` | Sideload / alternative stores | Included: Firebase | Play Billing |
+| `fdroid` | F-Droid / fully open source | None: Pure FOSS | Offline ECDSA license |
 
 Each flavor has its own source set under `app/src/<flavor>/java/` for swapping
 billing and sign-in implementations without `#ifdef`-style hacks.
@@ -75,15 +75,15 @@ billing and sign-in implementations without `#ifdef`-style hacks.
 ## Android Studio Setup
 
 1. Open the project root in Android Studio.
-2. Open the **Build Variants** panel (`View → Tool Windows → Build Variants`).
+2. Open the **Build Variants** panel (`View -> Tool Windows -> Build Variants`).
 3. Set the **Active Build Variant** for `:app` to one of:
    - `playstoreDebug`
    - `fdroidDebug`
    - `universalDebug`
-4. Hit **Run ▶** as normal.
+4. Hit **Run** as normal.
 
 > If the Build Variants panel shows just `debug` (no flavor prefix), the IDE has not yet
-> synced the new flavor configuration. Run **File → Sync Project with Gradle Files** to fix it.
+> synced the new flavor configuration. Run **File -> Sync Project with Gradle Files** to fix it.
 
 ---
 
@@ -101,7 +101,7 @@ a stale APK. Fix it by doing a clean build:
 .\gradlew assemblePlaystoreDebug assembleFdroidDebug assembleUniversalDebug --no-daemon
 ```
 
-The `--no-daemon` flag is the key — without it, Gradle may reuse an old daemon process
+The `--no-daemon` flag is the key - without it, Gradle may reuse an old daemon process
 pinned to a previous Gradle version that has incorrect cached fingerprints.
 
 ---
@@ -112,9 +112,9 @@ pinned to a previous Gradle version that has incorrect cached fingerprints.
 
 | Flavor | Published to | Audience |
 | --- | --- | --- |
-| `universal` | ✅ **GitHub Releases** | Standard Android — sideloading with Google Play Services |
-| `fdroid` | ✅ **GitHub Releases** | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) |
-| `playstore` | ✅ **Play Console only** | Google Play Store users — never published to GitHub |
+| `universal` | **GitHub Releases** | Standard Android - sideloading with Google Play Services |
+| `fdroid` | **GitHub Releases** | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) |
+| `playstore` | **Play Console only** | Google Play Store users - never published to GitHub |
 
 > `universal` and `fdroid` are **not interchangeable**. The `universal` flavor depends on
 > Google Play Services for billing and sign-in. Users on de-Googled ROMs must use the

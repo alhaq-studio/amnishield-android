@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.alhaq.amnishield.blockers.ReelBlocker
+import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.components.bounceClick
@@ -62,7 +63,7 @@ fun ReelBlockerConfigScreen(
 
     val reelsRulesCount = remember {
         loader.loadAppBlockerScheduleRules()
-            .filter { it.packageName == "reel_blocker" }
+            .filter { it.blockerType == BlockerType.REELS || it.packageName == "reel_blocker" || it.title.contains("Reel", ignoreCase = true) }
             .map { it.groupId ?: it.id }
             .distinct()
             .size
@@ -160,8 +161,14 @@ fun ReelBlockerConfigScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        val dynamicSubtitle = when {
+                            !isServiceEnabled -> "Accessibility Service required"
+                            !isFeatureEnabled -> if (reelsRulesCount > 0) "Feature suspended • $reelsRulesCount rule${if (reelsRulesCount > 1) "s" else ""} preserved" else "Reels blocker suspended"
+                            reelsRulesCount == 0 -> "Engine ready • No reels rules active"
+                            else -> "Active • Enforcing $reelsRulesCount rule${if (reelsRulesCount > 1) "s" else ""}"
+                        }
                         Text(
-                            text = if (isFeatureEnabled) "Intercepting short-form videos" else "Reels blocker suspended",
+                            text = dynamicSubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

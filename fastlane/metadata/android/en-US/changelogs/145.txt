@@ -1,0 +1,5 @@
+- Continuous cross-app and cross-session Reels and Shorts counter persistence per day.
+- Resilient scroll detection with deep fallback node comparator and ViewPager2 swipe tracking.
+- Real-time floating counter overlay with synchronous UI binding and hour-formatted duration.
+- Enhanced website domain usage tracker with power-saving screen lifecycle management.
+- Expanded platform support including modern YouTube Shorts, Instagram Reels, TikTok, and community clients.

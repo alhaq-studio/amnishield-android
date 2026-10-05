@@ -522,6 +522,7 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             icon = Icons.Default.FilterAlt,
                             title = "Web Filter & Protection",
+                            subtitle = if (state.isWebFilterEnabled) "Active • Web filtering engine running" else "Suspended • Web filtering paused",
                             checked = state.isWebFilterEnabled,
                             onCheckedChange = { onToggleWebFilter(it) }
                         )
@@ -912,6 +913,7 @@ fun SettingsToggleRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     checked: Boolean,
+    subtitle: String? = null,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -921,7 +923,10 @@ fun SettingsToggleRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -939,12 +944,22 @@ fun SettingsToggleRow(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         AmniShieldToggleButton(checked = checked, onCheckedChange = onCheckedChange)

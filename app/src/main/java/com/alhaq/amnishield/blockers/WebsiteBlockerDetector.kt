@@ -118,4 +118,49 @@ open class WebsiteBlockerDetector(
         }
         return null
     }
+
+    /**
+     * Extracts the active domain from the browser's address bar.
+     * Adheres to Node Lifecycle Invariant: does NOT recycle [rootNode], recycles resolved child node in finally.
+     */
+    fun extractCurrentDomain(rootNode: AccessibilityNodeInfo, packageName: String): String? {
+        val urlNode = getUrlBarNode(rootNode, packageName) ?: return null
+        return try {
+            val rawText = urlNode.text?.toString() ?: urlNode.contentDescription?.toString()
+            cleanUrlToDomain(rawText)
+        } finally {
+            try {
+                @Suppress("DEPRECATION")
+                urlNode.recycle()
+            } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Cleans and validates a raw address bar string into a normalized domain name.
+     */
+    fun cleanUrlToDomain(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        var text = raw.trim().lowercase(Locale.ROOT)
+        // Strip protocols
+        if (text.startsWith("http://")) text = text.substring(7)
+        if (text.startsWith("https://")) text = text.substring(8)
+        // Strip common prefixes
+        if (text.startsWith("www.")) text = text.substring(4)
+        if (text.startsWith("m.")) text = text.substring(2)
+        if (text.startsWith("mobile.")) text = text.substring(7)
+        // Cut off path, query, port, fragment
+        val delimiters = charArrayOf('/', ':', '?', '#', '\\')
+        val firstDelim = text.indexOfAny(delimiters)
+        if (firstDelim != -1) {
+            text = text.substring(0, firstDelim)
+        }
+        text = text.trim()
+        // Domain validation: contains dot, no spaces, length >= 4, not starting/ending with dot
+        return if (text.contains(".") && !text.contains(" ") && text.length >= 4 && !text.startsWith(".") && !text.endsWith(".")) {
+            text
+        } else {
+            null
+        }
+    }
 }

@@ -95,6 +95,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
     private lateinit var antiUninstallDetector: com.alhaq.amnishield.security.AntiUninstallDetector
     private lateinit var reelsSessionTracker: com.alhaq.amnishield.trackers.ReelsSessionTracker
+    private lateinit var browserSessionTracker: com.alhaq.amnishield.trackers.BrowserSessionTracker
     private lateinit var serviceBroadcastManager: ServiceBroadcastManager
     private lateinit var keywordActionHandler: com.alhaq.amnishield.blockers.KeywordActionHandler
     private lateinit var reelActionHandler: com.alhaq.amnishield.blockers.ReelActionHandler
@@ -155,6 +156,14 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 isFeatureActive = { isFeatureCurrentlyActive(it) }
             )
             reelsSessionTracker.start()
+
+            browserSessionTracker = com.alhaq.amnishield.trackers.BrowserSessionTracker(
+                service = this,
+                savedPreferencesLoader = savedPreferencesLoader,
+                websiteBlockerDetector = websiteBlockerDetector,
+                crashLogger = crashLogger
+            )
+            browserSessionTracker.start()
 
             serviceBroadcastManager = ServiceBroadcastManager(
                 context = this,
@@ -244,10 +253,12 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 cachedDefaultLauncher = getDefaultLauncherPackage()
             }
 
-            rootNode = rootInActiveWindow
+            rootNode = rootInActiveWindow ?: runCatching { event.source }.getOrNull()
             if (rootNode != null && (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
                 event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) {
                 reelsSessionTracker.onAccessibilityEvent(event, rootNode)
+                browserSessionTracker.onAccessibilityEvent(event, rootNode)
             }
 
             val rootPackage = rootNode?.packageName?.toString() ?: packageName
@@ -858,6 +869,9 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         super.onDestroy()
         if (::reelsSessionTracker.isInitialized) {
             reelsSessionTracker.stop()
+        }
+        if (::browserSessionTracker.isInitialized) {
+            browserSessionTracker.stop()
         }
         if (::serviceBroadcastManager.isInitialized) {
             serviceBroadcastManager.unregister()

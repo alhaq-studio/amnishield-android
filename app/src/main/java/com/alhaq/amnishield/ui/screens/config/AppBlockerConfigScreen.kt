@@ -161,8 +161,14 @@ fun AppBlockerConfigScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        val dynamicSubtitle = when {
+                            !isServiceEnabled -> "Accessibility Service required"
+                            !isFeatureEnabled -> if (appRulesCount > 0) "Feature suspended • $appRulesCount rule${if (appRulesCount > 1) "s" else ""} preserved" else "App blocker suspended"
+                            appRulesCount == 0 -> "Engine ready • No app rules active"
+                            else -> "Active • Enforcing $appRulesCount rule${if (appRulesCount > 1) "s" else ""}"
+                        }
                         Text(
-                            text = if (isFeatureEnabled) "Blocking active rules" else "App blocker suspended",
+                            text = dynamicSubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

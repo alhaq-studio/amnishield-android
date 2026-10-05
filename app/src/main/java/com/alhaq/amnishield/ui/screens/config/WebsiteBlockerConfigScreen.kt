@@ -27,6 +27,7 @@ import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
+import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.ui.components.bounceClick
 
 private const val TAG = "WebsiteBlockerConfig"
@@ -53,7 +54,7 @@ fun WebsiteBlockerConfigScreen(
     val blockedWebsitesCount = remember { loader.loadBlockedWebsites().size }
     val websiteRulesCount = remember {
         loader.loadAppBlockerScheduleRules()
-            .filter { it.packageName == "website_blocker" }
+            .filter { it.blockerType == BlockerType.WEBSITE || it.packageName == "website_blocker" || it.title.contains("Website", ignoreCase = true) }
             .map { it.groupId ?: it.id }
             .distinct()
             .size
@@ -151,8 +152,14 @@ fun WebsiteBlockerConfigScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        val dynamicSubtitle = when {
+                            !isServiceEnabled -> "Accessibility Service required"
+                            !isFeatureEnabled -> if (websiteRulesCount > 0) "Feature suspended • $websiteRulesCount rule${if (websiteRulesCount > 1) "s" else ""} preserved" else "Website blocker suspended"
+                            websiteRulesCount == 0 -> "Engine ready • No website rules active"
+                            else -> "Active • Enforcing $websiteRulesCount rule${if (websiteRulesCount > 1) "s" else ""}"
+                        }
                         Text(
-                            text = if (isFeatureEnabled) "Intercepting restricted web domains" else "Website blocker suspended",
+                            text = dynamicSubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

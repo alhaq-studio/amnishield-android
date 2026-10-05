@@ -52,11 +52,13 @@ class StatsFragment : Fragment() {
     private val totalReelsWatchedState = mutableStateOf(0)
     private val averageWatchSecondsState = mutableStateOf(0)
     private val totalReelsWatchTimeFormattedState = mutableStateOf("0m")
+    private val reelsWeeklyTrendState = mutableStateListOf<Int>()
     private val isWebsiteUsageTrackingState = mutableStateOf(true)
     private val totalWebBrowsingTimeState = mutableStateOf("0m")
-    private val topWebDomainState = mutableStateOf<String?>("youtube.com")
-    private val topWebDomainTimeState = mutableStateOf<String?>("42m")
+    private val topWebDomainState = mutableStateOf<String?>(null)
+    private val topWebDomainTimeState = mutableStateOf<String?>(null)
     private val activeWebDomainsCountState = mutableStateOf(0)
+    private val webDomainProportionsState = mutableStateListOf<Pair<String, Float>>()
     private val topAppsState = mutableStateListOf<AppUsageItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,12 +85,14 @@ class StatsFragment : Fragment() {
                         totalReelsWatched = totalReelsWatchedState.value,
                         averageWatchSeconds = averageWatchSecondsState.value,
                         totalReelsWatchTimeFormatted = totalReelsWatchTimeFormattedState.value,
+                        reelsWeeklyTrend = reelsWeeklyTrendState,
                         topApps = topAppsState,
                         isAppUsageTrackingEnabled = isAppUsageTrackingState.value,
                         totalWebBrowsingTime = totalWebBrowsingTimeState.value,
                         topWebDomain = topWebDomainState.value,
                         topWebDomainTime = topWebDomainTimeState.value,
                         activeWebDomainsCount = activeWebDomainsCountState.value,
+                        webDomainProportions = webDomainProportionsState,
                         isWebsiteUsageTrackingEnabled = isWebsiteUsageTrackingState.value,
                         onEnableAppUsageTracking = {
                             savedPreferencesLoader.setAppUsageTrackingEnabled(true)
@@ -245,15 +249,19 @@ class StatsFragment : Fragment() {
                             focusTimeState.value = formatMinutes(blockStats.totalFocusMinutes)
 
                             // Update reels stats
-                            val reelsScrolled = savedPreferencesLoader.getReelsScrolledToday()
-                            val reelsWatchTime = savedPreferencesLoader.getReelsWatchTimeSeconds()
-                            val avgWatch = if (reelsScrolled > 0) (reelsWatchTime / reelsScrolled).toInt() else 0
+                            val reelsStatsManager = com.alhaq.amnishield.utils.ReelsStatsManager.getInstance(ctx)
+                            val reelsSummary = reelsStatsManager.getFullMetricsSummary()
+                            val reelsScrolled = reelsSummary.totalScrolledToday
+                            val reelsWatchTime = reelsSummary.totalWatchTimeTodaySeconds
+                            val avgWatch = reelsSummary.avgWatchTimePerReelSeconds
                             val reelsWatchMins = reelsWatchTime / 60
                             val reelsWatchSecRemainder = reelsWatchTime % 60
                             totalReelsWatchTimeFormattedState.value = if (reelsWatchMins > 0) "${reelsWatchMins}m ${reelsWatchSecRemainder}s" else "${reelsWatchSecRemainder}s"
 
                             totalReelsWatchedState.value = reelsScrolled
                             averageWatchSecondsState.value = avgWatch
+                            reelsWeeklyTrendState.clear()
+                            reelsWeeklyTrendState.addAll(reelsSummary.dailyRecords.map { it.totalScrolled })
 
                             // Update web browsing stats
                             isWebsiteUsageTrackingState.value = savedPreferencesLoader.isWebsiteUsageTrackingEnabled(true)
@@ -273,6 +281,15 @@ class StatsFragment : Fragment() {
                                 topWebDomainTimeState.value = null
                             }
                             activeWebDomainsCountState.value = domainStats.size
+
+                            webDomainProportionsState.clear()
+                            if (totalWebMillis > 0) {
+                                val proportions = domainStats.entries
+                                    .sortedByDescending { it.value }
+                                    .take(3)
+                                    .map { it.key to (it.value.toFloat() / totalWebMillis.toFloat()) }
+                                webDomainProportionsState.addAll(proportions)
+                            }
 
                             topAppsState.clear()
                             topAppsState.addAll(resolvedApps)
