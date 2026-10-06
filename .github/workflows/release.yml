@@ -39,9 +39,9 @@ jobs:
       - name: Run Unit Tests (all flavors)
         run: |
           chmod +x ./gradlew
-          ./gradlew testPlaystoreDebugUnitTest
-          ./gradlew testFdroidDebugUnitTest
-          ./gradlew testUniversalDebugUnitTest
+          ./gradlew testPlaystoreDebugUnitTest --stacktrace
+          ./gradlew testFdroidDebugUnitTest --stacktrace
+          ./gradlew testUniversalDebugUnitTest --stacktrace
 
       - name: Upload Test Results
         if: always()
@@ -49,6 +49,7 @@ jobs:
         with:
           name: test-results
           path: app/build/reports/tests/
+          if-no-files-found: ignore
 
   # ── Job 2: Build & Publish Release ─────────────────────────────────────────
   # Only runs automatically after Job 1 (tests) passes.
