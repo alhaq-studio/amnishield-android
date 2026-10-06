@@ -71,7 +71,10 @@ jobs:
           path: app/build/reports/tests/
 
       - name: Assemble Debug Artifacts (Compile Verification)
-        run: ./gradlew assemblePlaystoreDebug assembleFdroidDebug assembleUniversalDebug
+        run: |
+          ./gradlew assemblePlaystoreDebug
+          ./gradlew assembleFdroidDebug
+          ./gradlew assembleUniversalDebug
 
       - name: Upload PlayStore Debug APK
         uses: actions/upload-artifact@v4
