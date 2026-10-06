@@ -66,7 +66,7 @@ Builds:
     gradleTasks:
       - :app:assembleFdroidRelease
 
-  - versionName: '0.3.0'
+  - versionName: '0.3.0 (2026.09.29)'
     versionCode: 144
     commit: v0.3.0
     subdir: app
@@ -75,7 +75,7 @@ Builds:
     gradleTasks:
       - :app:assembleFdroidRelease
 
-  - versionName: '0.3.1'
+  - versionName: '0.3.1 (2026.10.05)'
     versionCode: 145
     commit: v0.3.1
     subdir: app
@@ -86,7 +86,7 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '0.3.1'
+CurrentVersion: '0.3.1 (2026.10.05)'
 CurrentVersionCode: 145
 ```
 
