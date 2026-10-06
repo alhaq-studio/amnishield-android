@@ -6,9 +6,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// Conditionally apply Google Services plugin for Play Store builds
+// Conditionally apply Google Services plugin for Play Store and Universal builds
 val isFdroidBuild = gradle.startParameter.taskNames.any { it.contains("fdroid", ignoreCase = true) }
-if (!isFdroidBuild && (file("src/playstore/google-services.json").exists() || file("google-services.json").exists())) {
+val hasGoogleServices = file("src/playstore/google-services.json").exists() ||
+    file("src/universal/google-services.json").exists() ||
+    file("google-services.json").exists()
+if (!isFdroidBuild && hasGoogleServices) {
     apply(plugin = "com.google.gms.google-services")
 }
 

@@ -43,6 +43,8 @@ package-lock.json
 .env.local
 .env.*.local
 google-services.json
+!app/src/playstore/google-services.json
+!app/src/universal/google-services.json
 
 # ── OS noise ───────────────────────────────────────────────────────────────
 Thumbs.db
