@@ -24,39 +24,70 @@ Before submitting to F-Droid, you must complete the following:
 
 ## F-Droid Metadata Recipe (`com.alhaq.deenshield.yml`)
 
-Save the following YAML snippet as `com.alhaq.deenshield.yml` in your project root or submit it to the F-Droid metadata repository.
+Save the following YAML snippet as `metadata/com.alhaq.deenshield.yml` inside the `fdroiddata` repository.
+
+> **Note on Fastlane Delegation**: As per F-Droid maintainer policy (`linsui`), do NOT include `Summary`, `Description`, or `AutoName` in the `fdroiddata` YAML file. All app text, icons, and descriptions are pulled automatically from your repository's Fastlane structure:
+> - `fastlane/metadata/android/en-US/title.txt`
+> - `fastlane/metadata/android/en-US/short_description.txt`
+> - `fastlane/metadata/android/en-US/full_description.txt`
+> - `fastlane/metadata/android/en-US/images/icon.png` (512x512)
+> - `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
 
 ```yaml
 Categories:
-  - Security
-  - System
-License: GPL-3.0-only  # Update to match your LICENSE file
+  - Time Tracker
+  - App Manager
+License: GPL-3.0-only
 AuthorName: Habib Mukhlis
-SourceCode: https://github.com/alhaq-studio/amniShield-android
-IssueTracker: https://github.com/alhaq-studio/amniShield-android/issues
-
-Summary: Privacy-focused app blocker, keyword filter, and focus mode utility.
-Description: |
-    AmniShield is an open-source app blocker, keyword filter, and focus mode
-    utility designed to help you stay focused and protect your digital wellness.
-    
-    All processing is performed entirely offline on your device for maximum privacy.
+SourceCode: https://github.com/alhaq-studio/amnishield-android
+IssueTracker: https://github.com/alhaq-studio/amnishield-android/issues
+Changelog: https://github.com/alhaq-studio/amnishield-android/blob/HEAD/CHANGELOG.md
+Donate: https://alhaq-initiative.org/donate
 
 RepoType: git
-Repo: https://github.com/alhaq-studio/amnishield-android
+Repo: https://github.com/alhaq-studio/amnishield-android.git
 
 Builds:
-  - versionName: 0.2.0
+  - versionName: '0.2.0 (2026.09.03)'
     versionCode: 142
     commit: v0.2.0
     subdir: app
     gradle:
       - yes
-    # Execute the FOSS-only F-Droid task to exclude GMS/Billing dependencies
     gradleTasks:
       - :app:assembleFdroidRelease
 
-AutoName: AmniShield
+  - versionName: '0.2.1 (2026.09.03)'
+    versionCode: 143
+    commit: v0.2.1
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+  - versionName: '0.3.0'
+    versionCode: 144
+    commit: v0.3.0
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+  - versionName: '0.3.1'
+    versionCode: 145
+    commit: v0.3.1
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '0.3.1'
+CurrentVersionCode: 145
 ```
 
 ---

@@ -1,31 +1,17 @@
 Categories:
-  - Security
-  - System
+  - Time Tracker
+  - App Manager
 License: GPL-3.0-only
 AuthorName: Habib Mukhlis
 SourceCode: https://github.com/alhaq-studio/amnishield-android
 IssueTracker: https://github.com/alhaq-studio/amnishield-android/issues
-
-Summary: Privacy-focused app blocker, keyword filter, and focus mode utility.
-Description: |-
-  AmniShield is an open-source accessibility based reels & shorts blocker, app blocker, domain & keyword blocker, and focus mode
-  utility designed to help you stay focused and protect your digital wellness.
-
-  All processing is performed entirely offline on your device for maximum privacy.
+Changelog: https://github.com/alhaq-studio/amnishield-android/blob/HEAD/CHANGELOG.md
+Donate: https://alhaq-initiative.org/donate
 
 RepoType: git
 Repo: https://github.com/alhaq-studio/amnishield-android.git
 
 Builds:
-  - versionName: '0.2.1 (2026.09.03)'
-    versionCode: 143
-    commit: v0.2.1
-    subdir: app
-    gradle:
-      - yes
-    gradleTasks:
-      - :app:assembleFdroidRelease
-
   - versionName: '0.2.0 (2026.09.03)'
     versionCode: 142
     commit: v0.2.0
@@ -35,4 +21,34 @@ Builds:
     gradleTasks:
       - :app:assembleFdroidRelease
 
-AutoName: AmniShield Reels blocker & Focus Mode
+  - versionName: '0.2.1 (2026.09.03)'
+    versionCode: 143
+    commit: v0.2.1
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+  - versionName: '0.3.0'
+    versionCode: 144
+    commit: v0.3.0
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+  - versionName: '0.3.1'
+    versionCode: 145
+    commit: v0.3.1
+    subdir: app
+    gradle:
+      - yes
+    gradleTasks:
+      - :app:assembleFdroidRelease
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '0.3.1'
+CurrentVersionCode: 145

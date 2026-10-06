@@ -1,0 +1,21 @@
+AmniShield is a 100% free, open-source digital wellness guardian and distraction blocker for Android. Engineered to help you reclaim your time and attention, AmniShield intercepts addictive digital patterns right at the device level without tracking your habits, serving advertisements, or transmitting telemetry to remote servers.
+
+KEY FEATURES
+
+Short-Video & Reel Blocker
+Intercept infinite-scroll video feeds inside YouTube Shorts, Instagram Reels, and TikTok without disabling standard messaging or video search. Keep the utility of your applications while eliminating addictive algorithms.
+
+App & Website Blocker
+Lock distracting applications and websites on custom schedules or activate deep focus sessions. Enforce daily launch limits or timer intervals to break unconscious phone checking habits.
+
+Real-Time Keyword Filtering
+Protect your focus and browsing with real-time text input filtering. AmniShield can silently intercept triggering keywords or redirect you to a mindful focus space.
+
+PIN & Anti-Bypass Protection
+Enforce strict accountability with PIN-protected settings and uninstallation prevention, keeping your commitments firm during weak moments.
+
+Zero-Knowledge & 100% On-Device
+All filtering operations execute locally on your hardware using Android Accessibility Service APIs. Your browsing history, typed text, screen content, and application usage never leave your phone.
+
+Free and Open Source (GPL-3.0)
+AmniShield is built and maintained as a public good for digital wellness. The core application is completely free forever. Optional supporter passes unlock offline-verified supporter perks via offline NIST P-256 cryptographic verification without requiring an account or network check-in.
