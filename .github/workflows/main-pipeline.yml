@@ -33,7 +33,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run Unit Tests (PlayStore Flavor)
-        run: ./gradlew testPlaystoreDebugUnitTest
+        run: |
+          chmod +x ./gradlew
+          ./gradlew testPlaystoreDebugUnitTest --stacktrace 2>&1 | tee gradle-playstore.log || {
+            echo "### Gradle PlayStore Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 gradle-playstore.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Run Unit Tests (F-Droid FOSS Flavor)
         run: ./gradlew testFdroidDebugUnitTest
