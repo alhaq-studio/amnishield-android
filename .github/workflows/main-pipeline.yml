@@ -44,10 +44,24 @@ jobs:
           }
 
       - name: Run Unit Tests (F-Droid FOSS Flavor)
-        run: ./gradlew testFdroidDebugUnitTest
+        run: |
+          ./gradlew testFdroidDebugUnitTest --stacktrace 2>&1 | tee gradle-fdroid.log || {
+            echo "### Gradle F-Droid Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 gradle-fdroid.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Run Unit Tests (Universal Flavor)
-        run: ./gradlew testUniversalDebugUnitTest
+        run: |
+          ./gradlew testUniversalDebugUnitTest --stacktrace 2>&1 | tee gradle-universal.log || {
+            echo "### Gradle Universal Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 gradle-universal.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Upload Test Reports
         if: always()
