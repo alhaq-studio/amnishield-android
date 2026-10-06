@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken
 import com.alhaq.amnishield.blockers.FocusModeBlocker
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
+import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.ui.activity.MainActivity
 import java.util.Calendar
 import java.util.UUID
@@ -187,6 +188,14 @@ open class SavedPreferencesLoader(
     fun setReelBlockerBrowserEnabled(enabled: Boolean) {
         context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
             .edit().putBoolean("is_browser_enabled", enabled).apply()
+    }
+
+    fun hasAnyReelPlatformConfigured(): Boolean {
+        val prefs = context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
+        return prefs.contains("is_youtube_enabled") ||
+                prefs.contains("is_instagram_enabled") ||
+                prefs.contains("is_tiktok_enabled") ||
+                prefs.contains("is_browser_enabled")
     }
 
     fun loadBlockedKeywords(): Set<String> {
@@ -747,7 +756,7 @@ open class SavedPreferencesLoader(
                 .filterNot { rule ->
                     legacyDummyIds.contains(rule.id) ||
                     legacyDummyIds.contains(rule.groupId) ||
-                    (rule.title.startsWith("Block Always • ") && rule.targets.isEmpty() && rule.targetWebsites.isEmpty() && rule.targetKeywords.isEmpty())
+                    (rule.blockerType == BlockerType.APP && rule.title.startsWith("Block Always • ") && rule.targets.isEmpty() && rule.targetWebsites.isEmpty() && rule.targetKeywords.isEmpty())
                 }
                 .toMutableList()
         }.getOrElse {

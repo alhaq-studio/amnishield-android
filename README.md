@@ -1,8 +1,31 @@
 # AmniShield — Android App
 
-AmniShield is a privacy-first digital wellness and content-blocking app for Android. It
-combines app blocking, keyword filtering, focus mode, scheduled blocking, and launch limits
-into a single accessibility-service–based guardian.
+[![Google Play Testing](https://img.shields.io/badge/Google%20Play-Testing%20%26%20Pre--registration-4285F4?logo=googleplay&logoColor=white)](https://play.google.com/apps/testing/com.alhaq.deenshield)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84.svg?logo=android&logoColor=white)](https://android.com)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device%20%7C%20Zero%20Telemetry-008080.svg)](PRIVACY_POLICY.md)
+[![Discord](https://img.shields.io/badge/Community-Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/zXz7pGVJY)
+[![Telegram](https://img.shields.io/badge/Community-Telegram-26A5E4?logo=telegram&logoColor=white)](https://t.me/amnishield)
+
+AmniShield is a 100% free and open-source, privacy-first digital wellness and distraction blocker for Android. Engineered with Kotlin and Jetpack Compose, it empowers users to reclaim focus by intercepting addictive short-form video reels, scheduled app blocking, keyword filtering, and strict anti-bypass modes without transmitting any screen data or telemetry to remote servers.
+
+---
+
+## Download & Testing
+
+- **Google Play Pre-Registration & Open Testing**: [Join the Beta on Google Play](https://play.google.com/apps/testing/com.alhaq.deenshield) | [Play Store Listing](https://play.google.com/store/apps/details?id=com.alhaq.deenshield)
+- **Direct APK Downloads**: Available on [GitHub Releases](https://github.com/alhaq-studio/amnishield-android/releases) (`universal` for standard Google Play Services devices, `fdroid` for de-Googled ROMs).
+- **Bug Reports & Issues**: Found a bug or want to suggest an improvement? Submit an issue using our [GitHub Issue Tracker](https://github.com/alhaq-studio/amnishield-android/issues/new/choose).
+
+---
+
+## Core Features
+
+- **Short Video & Reel Blocker**: Surface-level interception of infinite-scroll feeds (YouTube Shorts, Instagram Reels, TikTok).
+- **Flexible App & URL Blocking**: Block selected apps, categories, or specific domains with custom schedules and launch limits.
+- **Keyword Filtering**: Real-time accessibility text scanning that clears distracting or inappropriate search terms.
+- **Zero-Knowledge Privacy**: 100% on-device operation. No user tracking, no third-party analytics SDKs, no cloud logging.
+- **Offline Cryptographic Licensing**: Optional Supporter Pass activated completely offline via NIST P-256 ECDSA public key verification.
 
 ---
 
@@ -14,7 +37,8 @@ into a single accessibility-service–based guardian.
 4. [Android Studio Setup](#android-studio-setup)
 5. [If the Build Shows Old UI](#if-the-build-shows-old-ui)
 6. [Release Builds](#release-builds)
-7. [Project Documentation](#project-documentation)
+7. [Contributing & Bug Reports](#contributing--bug-reports)
+8. [Project Documentation](#project-documentation)
 
 ---
 
@@ -144,6 +168,17 @@ For Self Build:
 
 > **Never commit `keystore.properties` or `.jks` files to version control.**
 > These are already listed in `.gitignore`.
+
+---
+
+## Contributing & Bug Reports
+
+Contributions, bug reports, and feedback are warmly welcomed!
+
+- **Report a Bug**: If you notice unexpected behavior, crashes, or unblocked surfaces, please open a [Bug Report](https://github.com/alhaq-studio/amnishield-android/issues/new?template=bug_report.md).
+- **Request a Feature**: Have an idea for a new filter, accessibility improvement, or custom rule? Submit a [Feature Request](https://github.com/alhaq-studio/amnishield-android/issues/new?template=feature_request.md).
+- **Google Play Beta Feedback**: You can also submit private beta feedback directly through Google Play: [Join Open Testing](https://play.google.com/apps/testing/com.alhaq.deenshield).
+- **Email Support**: Reach our engineering team directly at `support@alhaq.uk`.
 
 ---
 

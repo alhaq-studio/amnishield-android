@@ -6,6 +6,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Version tag to release (e.g. v0.3.1)'
+        required: false
+        default: 'v0.3.1'
 
 permissions:
   contents: write
@@ -63,15 +69,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       # ── Signing keystore ────────────────────────────────────────────────────
-      # Store your keystore as a base64 secret in GitHub:
-      #   Windows: [Convert]::ToBase64String([IO.File]::ReadAllBytes("key.jks")) | Set-Clipboard
-      #   macOS:   base64 -i key.jks | pbcopy
-      # Add as repo secret: Settings -> Secrets and variables -> Actions -> KEYSTORE_BASE64
       - name: Decode Keystore
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $RUNNER_TEMP/release.jks
+          echo "$KEYSTORE_BASE64" | base64 --decode > $RUNNER_TEMP/release.jks
 
       - name: Create keystore.properties
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           cat > keystore.properties <<EOF
           storeFile=$RUNNER_TEMP/release.jks
@@ -90,7 +98,7 @@ jobs:
       # ── Rename APKs with version tag ────────────────────────────────────────
       - name: Rename APKs
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ inputs.tag_name || github.ref_name }}"
           cp app/build/outputs/apk/universal/release/app-universal-release.apk \
              AmniShield-${TAG}-universal.apk
           cp app/build/outputs/apk/fdroid/release/app-fdroid-release.apk \
@@ -100,9 +108,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "AmniShield ${{ github.ref_name }}"
+          tag_name: ${{ inputs.tag_name || github.ref_name }}
+          name: "AmniShield ${{ inputs.tag_name || github.ref_name }}"
           body: |
-            ## AmniShield ${{ github.ref_name }}
+            ## AmniShield ${{ inputs.tag_name || github.ref_name }}
 
             > [PASSED] All unit tests passed before this release was published.
 
@@ -110,8 +119,8 @@ jobs:
 
             | APK | Who should use this? |
             |-----|----------------------|
-            | `AmniShield-${{ github.ref_name }}-universal.apk` | Most Android users — sideloading on standard phones with Google Play Services |
-            | `AmniShield-${{ github.ref_name }}-fdroid.apk` | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) — no Google dependencies |
+            | `AmniShield-${{ inputs.tag_name || github.ref_name }}-universal.apk` | Most Android users — sideloading on standard phones with Google Play Services |
+            | `AmniShield-${{ inputs.tag_name || github.ref_name }}-fdroid.apk` | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) — no Google dependencies |
 
             ### Installing
             1. Download the APK for your device type above.
@@ -122,9 +131,10 @@ jobs:
             - The **Play Store** flavor is distributed exclusively through the Google Play Console — not available here.
             - See [TESTING_GUIDE.md](https://github.com/${{ github.repository }}/blob/main/TESTING_GUIDE.md) for full feature documentation.
           files: |
-            AmniShield-${{ github.ref_name }}-universal.apk
-            AmniShield-${{ github.ref_name }}-fdroid.apk
+            AmniShield-${{ inputs.tag_name || github.ref_name }}-universal.apk
+            AmniShield-${{ inputs.tag_name || github.ref_name }}-fdroid.apk
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') }}
+          prerelease: ${{ contains(inputs.tag_name || github.ref_name, '-beta') || contains(inputs.tag_name || github.ref_name, '-rc') || contains(inputs.tag_name || github.ref_name, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

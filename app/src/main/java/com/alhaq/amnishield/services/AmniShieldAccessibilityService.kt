@@ -196,6 +196,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                         setupAppBlocker()
                         setupReelBlocker()
                         setupKeywordBlocker()
+                        setupFocusMode()
                     }
                     override fun onRefreshAppBlockerCooldown(resultId: String?, interval: Int) {
                         val duration = if (interval > 0) interval else appBlockerWarningConfig.timeInterval
@@ -286,10 +287,13 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             val isPremiumUser = premiumManager.isPremium()
 
             val isManualFocusActive = focusModeBlocker.focusModeData.isTurnedOn
-            val isAutoFocusScheduleActive = isFeatureCurrentlyActive("FOCUS_MODE") || isFeatureCurrentlyActive("focus_mode")
+            val activeFocusRule = if (!isManualFocusActive) getActiveFocusModeRule() else null
+            val isAutoFocusScheduleActive = activeFocusRule != null || isFeatureCurrentlyActive("FOCUS_MODE") || isFeatureCurrentlyActive("focus_mode")
             val isFocusModeActive = isManualFocusActive || isAutoFocusScheduleActive
             val activeFocusModeType = if (isManualFocusActive) {
                 focusModeBlocker.focusModeData.modeType
+            } else if (activeFocusRule != null) {
+                activeFocusRule.focusProtectionMode
             } else if (isAutoFocusScheduleActive) {
                 savedPreferencesLoader.getFocusModeData().modeType
             } else {
@@ -303,7 +307,8 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     packageName,
                     savedPreferencesLoader,
                     cachedDefaultLauncher,
-                    isScheduleActive = isAutoFocusScheduleActive
+                    isScheduleActive = isAutoFocusScheduleActive,
+                    activeScheduleRule = activeFocusRule
                 )
                 if (focusModeResult.isRequestingToUpdateSPData) {
                     savedPreferencesLoader.completeFocusSession()
@@ -526,9 +531,11 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             val isReelsEnabled = (reelBlocker.isEnabled || savedPreferencesLoader.isReelBlockerEnabled(false)) && isFeatureCurrentlyActive("reel_blocker")
             if (isReelsEnabled) {
                 reelBlocker.isEnabled = true
-                reelBlocker.isYoutubeEnabled = savedPreferencesLoader.isReelBlockerYoutubeEnabled()
-                reelBlocker.isInstagramEnabled = savedPreferencesLoader.isReelBlockerInstagramEnabled()
-                reelBlocker.isTiktokEnabled = savedPreferencesLoader.isReelBlockerTiktokEnabled()
+                val hasConfiguredPlatforms = savedPreferencesLoader.hasAnyReelPlatformConfigured()
+                val fallbackPlatformEnabled = !hasConfiguredPlatforms
+                reelBlocker.isYoutubeEnabled = savedPreferencesLoader.isReelBlockerYoutubeEnabled(fallbackPlatformEnabled)
+                reelBlocker.isInstagramEnabled = savedPreferencesLoader.isReelBlockerInstagramEnabled(fallbackPlatformEnabled)
+                reelBlocker.isTiktokEnabled = savedPreferencesLoader.isReelBlockerTiktokEnabled(fallbackPlatformEnabled)
                 reelBlocker.isBrowserShortsEnabled = savedPreferencesLoader.isReelBlockerBrowserEnabled()
                 reelBlocker.modeType = savedPreferencesLoader.getReelBlockerMode()
                 reelBlocker.dailyReelLimit = savedPreferencesLoader.getReelBlockerDailyLimit()
@@ -629,9 +636,13 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         reelBlocker.modeType = savedPreferencesLoader.getReelBlockerMode(ReelBlocker.MODE_BLOCK_ALL)
         reelBlocker.dailyReelLimit = savedPreferencesLoader.getReelBlockerDailyLimit(200)
 
-        reelBlocker.isYoutubeEnabled = reelBlockerPrefs.getBoolean("is_youtube_enabled", false)
-        reelBlocker.isInstagramEnabled = reelBlockerPrefs.getBoolean("is_instagram_enabled", false)
-        reelBlocker.isTiktokEnabled = reelBlockerPrefs.getBoolean("is_tiktok_enabled", false)
+        val hasConfiguredPlatforms = reelBlockerPrefs.contains("is_youtube_enabled") ||
+                reelBlockerPrefs.contains("is_instagram_enabled") ||
+                reelBlockerPrefs.contains("is_tiktok_enabled")
+
+        reelBlocker.isYoutubeEnabled = if (hasConfiguredPlatforms) reelBlockerPrefs.getBoolean("is_youtube_enabled", false) else true
+        reelBlocker.isInstagramEnabled = if (hasConfiguredPlatforms) reelBlockerPrefs.getBoolean("is_instagram_enabled", false) else true
+        reelBlocker.isTiktokEnabled = if (hasConfiguredPlatforms) reelBlockerPrefs.getBoolean("is_tiktok_enabled", false) else true
         reelBlocker.isBrowserShortsEnabled = savedPreferencesLoader.isReelBlockerBrowserEnabled()
         reelBlocker.reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
 
@@ -838,6 +849,26 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
 
         return activeKeywords
+    }
+
+    private fun getActiveFocusModeRule(): AppBlockScheduleRule? {
+        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val focusRules = rawRules.filter {
+            it.blockerType == BlockerType.FOCUS_MODE ||
+            it.packageName.equals("FOCUS_MODE", ignoreCase = true) ||
+            it.packageName.equals("focus_mode", ignoreCase = true) ||
+            it.groupTitle?.equals("focus_mode", ignoreCase = true) == true ||
+            it.title.contains("Focus Mode", ignoreCase = true)
+        }
+        val enabledRules = focusRules.filter { it.isRuleEnabled }
+        if (enabledRules.isEmpty()) return null
+
+        val cheatRules = enabledRules.filter { it.type == AppBlockScheduleRule.RuleType.CHEAT }
+        if (getActiveRuleEndTimeLocal(cheatRules) != null) return null
+
+        val blockRules = enabledRules.filter { it.type == AppBlockScheduleRule.RuleType.BLOCK }
+        val nowMillis = System.currentTimeMillis()
+        return blockRules.firstOrNull { isRuleCurrentlyActive(it, nowMillis) }
     }
 
     private fun getActiveRuleEndTimeLocal(rules: List<AppBlockScheduleRule>): Long? {

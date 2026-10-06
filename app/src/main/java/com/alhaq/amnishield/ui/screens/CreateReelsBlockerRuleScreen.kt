@@ -1,5 +1,6 @@
 package com.alhaq.amnishield.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -193,7 +194,7 @@ fun CreateReelsBlockerRuleScreen(
                             isActive = true,
                             periods = emptyList(),
                             targetBlockerType = "Reels Blocker",
-                            selectedApps = emptyList(),
+                            selectedApps = listOf("reel_blocker", "com.google.android.youtube", "com.instagram.android", "com.zhiliaoapp.musically", "com.facebook.katana"),
                             selectedKeywords = emptyList(),
                             selectedWebsites = emptyList(),
                             selectedPlatforms = listOf("Instagram", "YouTube", "TikTok", "Facebook"),
@@ -214,6 +215,11 @@ fun CreateReelsBlockerRuleScreen(
                             loader.setReelBlockerMode(modeToSave)
                             loader.setReelBlockerDailyLimit(reelsLimitCount.roundToInt())
                             loader.setReelBlockerEnabled(true, updateManual = true)
+                            val prefs = context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
+                            if (!prefs.contains("is_youtube_enabled")) loader.setReelBlockerYoutubeEnabled(true)
+                            if (!prefs.contains("is_instagram_enabled")) loader.setReelBlockerInstagramEnabled(true)
+                            if (!prefs.contains("is_tiktok_enabled")) loader.setReelBlockerTiktokEnabled(true)
+                            if (!prefs.contains("is_browser_enabled")) loader.setReelBlockerBrowserEnabled(true)
                             onSaveRule(newRule)
                         }
 
@@ -725,7 +731,7 @@ fun CreateReelsBlockerRuleScreen(
                     isActive = true,
                     periods = emptyList(),
                     targetBlockerType = "Reels Blocker",
-                    selectedApps = emptyList(),
+                    selectedApps = listOf("reel_blocker", "com.google.android.youtube", "com.instagram.android", "com.zhiliaoapp.musically", "com.facebook.katana"),
                     selectedKeywords = emptyList(),
                     selectedWebsites = emptyList(),
                     selectedPlatforms = listOf("Instagram", "YouTube", "TikTok", "Facebook"),
@@ -744,6 +750,11 @@ fun CreateReelsBlockerRuleScreen(
                 loader.setReelBlockerMode(modeToSave)
                 loader.setReelBlockerDailyLimit(reelsLimitCount.roundToInt())
                 loader.setReelBlockerEnabled(true, updateManual = true)
+                val prefs = context.getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
+                if (!prefs.contains("is_youtube_enabled")) loader.setReelBlockerYoutubeEnabled(true)
+                if (!prefs.contains("is_instagram_enabled")) loader.setReelBlockerInstagramEnabled(true)
+                if (!prefs.contains("is_tiktok_enabled")) loader.setReelBlockerTiktokEnabled(true)
+                if (!prefs.contains("is_browser_enabled")) loader.setReelBlockerBrowserEnabled(true)
                 onSaveRule(updatedRule)
             }
         )

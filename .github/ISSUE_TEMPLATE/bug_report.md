@@ -1,38 +1,46 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
+name: Bug Report
+about: Report a bug or unintended behavior in AmniShield Android
+title: '[BUG]: '
+labels: 'bug'
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Bug Description
+A clear and concise description of what went wrong.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## Reproduction Steps
+1. Open AmniShield
+2. Go to '...'
+3. Tap on '...'
+4. Observe the issue
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Expected Behavior
+A concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## Environment & Device Details
+- **AmniShield Version / Build**: (e.g. 1.0.2-closed / versionCode 145)
+- **Distribution Channel**: [ ] Google Play (Closed/Open Testing)  [ ] GitHub Release APK  [ ] F-Droid
+- **Device Model**: (e.g. Samsung Galaxy S23, Google Pixel 8, Xiaomi 13)
+- **Android OS Version**: (e.g. Android 13, Android 14, Android 15)
+- **Manufacturer Skin / ROM**: (e.g. One UI 6, Stock Pixel, MIUI/HyperOS, OxygenOS, LineageOS)
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## Blocker & Permissions State
+- **Accessibility Service Status**: [ ] Enabled and Running  [ ] Stopped / Disabled automatically
+- **Battery Optimization**: [ ] Unrestricted (Exempted from Doze)  [ ] Optimized / Managed
+- **Specific Feature Affected**:
+  - [ ] App Blocker
+  - [ ] Shorts / Reels Blocker (YouTube Shorts, Instagram Reels, TikTok)
+  - [ ] Website / Browser Blocker
+  - [ ] Keyword Intercept
+  - [ ] Focus Mode / Schedules
+  - [ ] Pin / Anti-Uninstall Protection
+  - [ ] Other
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+## Diagnostic Logs / Screenshots
+If you have logs from **Settings -> Error Reporting & Feedback**, or screenshots / screen recordings demonstrating the issue, please attach or paste them below:
+```text
+[Paste error log or crash excerpt here if available]
+```
 
-**Additional context**
-Add any other context about the problem here.

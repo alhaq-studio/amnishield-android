@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Community Discussion & Live Help
+    url: https://discord.gg/zXz7pGVJY
+    about: Ask quick questions or chat with the community and developers on Discord.
+  - name: Telegram Updates & Community
+    url: https://t.me/amnishield
+    about: Follow releases, beta announcements, and discussions on Telegram.
+  - name: Private Security or Email Support
+    url: mailto:support@alhaq.uk
+    about: Contact our team privately for security disclosures or sensitive inquiries.

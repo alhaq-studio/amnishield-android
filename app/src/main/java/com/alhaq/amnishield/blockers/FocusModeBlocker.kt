@@ -126,12 +126,19 @@ class FocusModeBlocker : BaseBlocker() {
         packageName: String,
         savedPreferencesLoader: SavedPreferencesLoader,
         defaultLauncher: String? = null,
-        isScheduleActive: Boolean = false
+        isScheduleActive: Boolean = false,
+        activeScheduleRule: com.alhaq.amnishield.data.blockers.AppBlockScheduleRule? = null
     ): FocusModeResult {
         val isManualActive = focusModeData.isTurnedOn
         val isSessionActive = isManualActive || isScheduleActive
 
-        val modeType = if (isManualActive) focusModeData.modeType else savedPreferencesLoader.getFocusModeData().modeType
+        val modeType = if (isManualActive) {
+            focusModeData.modeType
+        } else if (activeScheduleRule != null) {
+            activeScheduleRule.focusProtectionMode
+        } else {
+            savedPreferencesLoader.getFocusModeData().modeType
+        }
         val isBlockAll = isSessionActive && modeType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED
 
         // 1. Authoritative check: NEVER block emergency dialers, SOS, keyboards, launcher, or exempt system apps
@@ -165,7 +172,13 @@ class FocusModeBlocker : BaseBlocker() {
                 focusModeData.isTurnedOn = false
                 return FocusModeResult(isBlocked = false, isRequestingToUpdateSPData = true)
             }
-            val selectedApps = if (isManualActive) focusModeData.selectedApps else savedPreferencesLoader.getFocusModeData().selectedApps
+            val selectedApps = if (isManualActive) {
+                focusModeData.selectedApps
+            } else if (activeScheduleRule != null && activeScheduleRule.targets.isNotEmpty()) {
+                activeScheduleRule.targets.toSet()
+            } else {
+                savedPreferencesLoader.getFocusModeData().selectedApps
+            }
             val endTime = if (isManualActive) focusModeData.endTime else 0L
             return evaluateBlocking(packageName, modeType, selectedApps, endTime, isStrict)
         }

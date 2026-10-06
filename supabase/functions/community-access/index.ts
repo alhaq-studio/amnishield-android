@@ -323,5 +323,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 }
 
-Deno.serve(handleRequest);
+if (import.meta.main) {
+  Deno.serve(handleRequest);
+}
 

@@ -506,9 +506,19 @@ class BlocksManagerFragment : Fragment() {
                         BlockerType.APP -> "App Blocker"
                     }
 
-                    val apps = associatedApps.mapNotNull { it.packageName }.filter {
-                        it != "keyword_blocker" && it != "website_blocker" && it != "reel_blocker" && it != "FOCUS_MODE" && it != "focus_mode"
-                    }.distinct()
+                    val apps = when (blockerType) {
+                        BlockerType.FOCUS_MODE -> {
+                            val targets = associatedApps.flatMap { it.targets }.filter {
+                                it != "FOCUS_MODE" && it != "focus_mode"
+                            }.distinct()
+                            if (targets.isNotEmpty()) targets else savedPreferencesLoader.getFocusModeSelectedApps().distinct()
+                        }
+                        else -> {
+                            associatedApps.mapNotNull { it.packageName }.filter {
+                                it != "keyword_blocker" && it != "website_blocker" && it != "reel_blocker" && it != "FOCUS_MODE" && it != "focus_mode"
+                            }.distinct()
+                        }
+                    }
 
                     val appOrCategory = when (blockerType) {
                         BlockerType.KEYWORD -> {
@@ -522,7 +532,21 @@ class BlocksManagerFragment : Fragment() {
                             if (siteCount > 0) "$siteCount Websites" else "Website Blocker"
                         }
                         BlockerType.REELS -> "Reels Blocker"
-                        BlockerType.FOCUS_MODE -> "Focus Mode Schedules"
+                        BlockerType.FOCUS_MODE -> {
+                            if (apps.size == 1) {
+                                try {
+                                    requireContext().packageManager.getApplicationLabel(
+                                        requireContext().packageManager.getApplicationInfo(apps.first(), 0)
+                                    ).toString()
+                                } catch (_: Throwable) {
+                                    apps.first()
+                                }
+                            } else if (apps.size > 1) {
+                                "${apps.size} Focus Apps"
+                            } else {
+                                "Focus Mode Schedules"
+                            }
+                        }
                         else -> {
                             if (apps.size == 1) {
                                 try {
@@ -582,7 +606,9 @@ class BlocksManagerFragment : Fragment() {
                     val launchLimitCount = associatedLaunchLimit?.maxLaunches ?: 0
 
                     val isFocusLengthEnabled = targetBlocker == "Focus Mode" && isUsageLimitEnabled
-                    val focusProtectionMode = if (targetBlocker == "Focus Mode") savedPreferencesLoader.getFocusModeData().modeType else com.alhaq.amnishield.Constants.FOCUS_MODE_BLOCK_SELECTED
+                    val focusProtectionMode = if (targetBlocker == "Focus Mode") {
+                        associatedApps.firstOrNull()?.focusProtectionMode ?: savedPreferencesLoader.getFocusModeData().modeType
+                    } else com.alhaq.amnishield.Constants.FOCUS_MODE_BLOCK_SELECTED
 
                     val restrictionTypeStr = when {
                         targetBlocker == "Focus Mode" && isFocusLengthEnabled -> "Focus Length (${usageLimitHours}h/day)"
@@ -778,7 +804,8 @@ class BlocksManagerFragment : Fragment() {
             BlockerType.WEBSITE -> rule.selectedWebsites
             BlockerType.KEYWORD -> rule.selectedKeywords
             BlockerType.APP -> rule.selectedApps
-            else -> emptyList()
+            BlockerType.FOCUS_MODE -> rule.selectedApps.ifEmpty { savedPreferencesLoader.getFocusModeSelectedApps() }
+            BlockerType.REELS -> if (rule.selectedApps.isNotEmpty()) rule.selectedApps else listOf("reel_blocker")
         }
 
         // Determine target packages for database entries
@@ -821,6 +848,7 @@ class BlocksManagerFragment : Fragment() {
                     targets = targets,
                     targetWebsites = if (blockerType == BlockerType.WEBSITE) targets else emptyList(),
                     targetKeywords = if (blockerType == BlockerType.KEYWORD) targets else emptyList(),
+                    focusProtectionMode = if (blockerType == BlockerType.FOCUS_MODE) rule.focusProtectionMode else 0,
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -858,6 +886,7 @@ class BlocksManagerFragment : Fragment() {
                     targets = targets,
                     targetWebsites = if (blockerType == BlockerType.WEBSITE) targets else emptyList(),
                     targetKeywords = if (blockerType == BlockerType.KEYWORD) targets else emptyList(),
+                    focusProtectionMode = if (blockerType == BlockerType.FOCUS_MODE) rule.focusProtectionMode else 0,
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -893,15 +922,15 @@ class BlocksManagerFragment : Fragment() {
 
         // 3b. Focus Mode Specific Saving
         if (rule.targetBlockerType == "Focus Mode") {
-            savedPreferencesLoader.saveFocusModeSelectedApps(rule.selectedApps)
+            if (rule.selectedApps.isNotEmpty()) {
+                savedPreferencesLoader.saveFocusModeSelectedApps(rule.selectedApps)
+            }
             val currentData = savedPreferencesLoader.getFocusModeData()
             val updatedData = currentData.copy(
                 modeType = rule.focusProtectionMode,
-                selectedApps = HashSet(rule.selectedApps),
-                isTurnedOn = rule.isActive
+                selectedApps = if (rule.selectedApps.isNotEmpty()) HashSet(rule.selectedApps) else currentData.selectedApps
             )
             savedPreferencesLoader.saveFocusModeData(updatedData)
-            savedPreferencesLoader.setFocusModeFeatureEnabled(rule.isActive, updateManual = true)
 
             if (rule.isFocusLengthEnabled) {
                 val appRule = AppBlockScheduleRule(
@@ -918,6 +947,9 @@ class BlocksManagerFragment : Fragment() {
                     groupId = groupId,
                     groupTitle = groupTitle,
                     isEnabled = rule.isActive,
+                    blockerType = BlockerType.FOCUS_MODE,
+                    targets = targets,
+                    focusProtectionMode = rule.focusProtectionMode,
                     authType = rule.authType,
                     rulePasswordHash = rule.rulePasswordHash,
                     rulePasswordSalt = rule.rulePasswordSalt
@@ -945,6 +977,11 @@ class BlocksManagerFragment : Fragment() {
                 savedPreferencesLoader.setReelBlockerDailyLimit(rule.limitValue)
             }
             savedPreferencesLoader.setReelBlockerEnabled(rule.isActive, updateManual = true)
+            if (!savedPreferencesLoader.hasAnyReelPlatformConfigured()) {
+                savedPreferencesLoader.setReelBlockerYoutubeEnabled(true)
+                savedPreferencesLoader.setReelBlockerInstagramEnabled(true)
+                savedPreferencesLoader.setReelBlockerTiktokEnabled(true)
+            }
         }
 
         // 3f. App Blocker Specific List Syncing

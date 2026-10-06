@@ -294,6 +294,10 @@
     <string name="feedback_hint">Share your thoughts, suggestions, or report issues...</string>
     <string name="feedback_sent">Thank you for your feedback!</string>
     <string name="feedback_error">Could not send feedback. Please try again.</string>
+    <string name="feedback_option_email">Send Email &amp; Diagnostic Logs</string>
+    <string name="feedback_option_github">Report Issue on GitHub</string>
+    <string name="feedback_option_playstore">Google Play Store Review</string>
+    <string name="feedback_option_community">Community Support (Discord)</string>
     <string name="notification_permission_title">Enable notifications</string>
     <string name="notification_permission_rationale">Focus Mode uses notifications to show the countdown timer. Please enable them to continue.</string>
     <string name="notification_permission_required">Notifications are required to show the Focus Mode timer.</string>
@@ -305,7 +309,7 @@
     <string name="nav_roadmap">Roadmap &amp; Vision</string>
     <string name="nav_website">AmniShield Website</string>
     <string name="nav_github">Source Code &amp; GitHub</string>
-    <string name="nav_star_github">⭐ Star on GitHub</string>
+    <string name="nav_star_github">Star on GitHub</string>
     <string name="nav_other_projects">Other Tools &amp; Projects</string>
     <string name="support_dialog_title">Support the Al-Haq Initiative</string>
     <string name="support_dialog_message">AmniShield is built and maintained as a public good by Al-Haq Studio under the Al-Haq Initiative. 100% free core, zero tracking, no ads. Support ongoing independent development and infrastructure:</string>

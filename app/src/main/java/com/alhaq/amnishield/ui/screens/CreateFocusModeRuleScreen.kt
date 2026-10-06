@@ -79,9 +79,13 @@ fun CreateFocusModeRuleScreen(
 
     // Focus Mode Strategy (Block All Except Whitelist vs Block Selected Blacklist)
     var focusModeType by remember(editingRule) {
-        val loader = SavedPreferencesLoader(context)
-        val defaultType = loader.getFocusModeData().modeType
-        mutableStateOf(if (defaultType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) 1 else 0)
+        if (editingRule != null) {
+            mutableStateOf(if (editingRule.focusProtectionMode == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) 1 else 0)
+        } else {
+            val loader = SavedPreferencesLoader(context)
+            val defaultType = loader.getFocusModeData().modeType
+            mutableStateOf(if (defaultType == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) 1 else 0)
+        }
     }
 
     // Time Window & Days Schedule
@@ -185,6 +189,7 @@ fun CreateFocusModeRuleScreen(
                             selectedBlockers = listOf("Focus Mode"),
                             isScheduleEnabled = true,
                             isActive = editingRule?.isActive ?: true,
+                            focusProtectionMode = if (focusModeType == 1) Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED else Constants.FOCUS_MODE_BLOCK_SELECTED,
                             authType = authType,
                             rulePasswordHash = hash,
                             rulePasswordSalt = salt
@@ -542,6 +547,7 @@ fun CreateFocusModeRuleScreen(
                     selectedBlockers = listOf("Focus Mode"),
                     isScheduleEnabled = true,
                     isActive = editingRule.isActive,
+                    focusProtectionMode = if (focusModeType == 1) Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED else Constants.FOCUS_MODE_BLOCK_SELECTED,
                     authType = authType,
                     rulePasswordHash = hash,
                     rulePasswordSalt = salt

@@ -64,6 +64,11 @@
             android:title="@string/nav_star_github" />
 
         <item
+            android:id="@+id/nav_feedback"
+            android:icon="@drawable/baseline_share_24"
+            android:title="@string/send_feedback" />
+
+        <item
             android:id="@+id/nav_other_projects"
             android:icon="@drawable/baseline_apps_24"
             android:title="@string/nav_other_projects" />

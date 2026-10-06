@@ -1,20 +1,28 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
-title: ''
-labels: ''
+name: Feature Request
+about: Suggest an idea or enhancement for AmniShield
+title: '[ENHANCEMENT]: '
+labels: 'enhancement'
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## Feature Proposal
+A clear and concise description of the feature or improvement you would like to see.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+## Problem Statement
+Is this feature request related to a specific friction point or limitation in current blocking workflows?
+(e.g. "I want to block specific channels on YouTube without blocking the entire app...")
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## Proposed Solution / User Flow
+Describe how you imagine the user experience would work in the app:
+1. User navigates to...
+2. User configures...
+3. The blocker enforces...
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+## Alternatives Considered
+A clear and concise description of any alternative solutions or third-party tools you have considered.
+
+## Additional Context
+Add any other context, mockup screenshots, or references here.
+

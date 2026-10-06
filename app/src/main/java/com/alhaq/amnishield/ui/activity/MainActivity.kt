@@ -1495,6 +1495,9 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_star_github -> {
                     openUrl(Constants.GITHUB_REPO_URL)
                 }
+                R.id.nav_feedback -> {
+                    showFeedbackDialog()
+                }
                 R.id.nav_other_projects -> {
                     openUrl(Constants.ALHAQ_STUDIO_URL)
                 }
@@ -1837,13 +1840,35 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun showFeedbackDialog() {
+        val options = arrayOf(
+            getString(R.string.feedback_option_email),
+            getString(R.string.feedback_option_github),
+            getString(R.string.feedback_option_playstore),
+            getString(R.string.feedback_option_community)
+        )
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.send_feedback))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showEmailFeedbackInput()
+                    1 -> openUrl("${Constants.GITHUB_REPO_URL}/issues/new/choose")
+                    2 -> openPlayStoreListing()
+                    3 -> openUrl(Constants.DISCORD_URL)
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun showEmailFeedbackInput() {
         val input = android.widget.EditText(this).apply {
             hint = getString(R.string.feedback_hint)
             minLines = 4
             maxLines = 8
             setPadding(64, 32, 64, 32)
         }
-        
+
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.send_feedback))
             .setView(input)
@@ -1855,6 +1880,14 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .show()
+    }
+
+    private fun openPlayStoreListing() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.alhaq.deenshield")))
+        } catch (e: ActivityNotFoundException) {
+            openUrl("https://play.google.com/apps/testing/com.alhaq.deenshield")
+        }
     }
     
     private fun sendFeedbackEmail(feedback: String) {
@@ -1897,6 +1930,7 @@ class MainActivity : AppCompatActivity() {
 
         val emailIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
+            putExtra(Intent.EXTRA_EMAIL, arrayOf<String>(Constants.SUPPORT_EMAIL))
             putExtra(Intent.EXTRA_SUBJECT, getString(R.string.feedback_subject))
             putExtra(Intent.EXTRA_TEXT, emailBody)
             putExtra(Intent.EXTRA_CC, SUPPORT_CC_ADDRESSES)
@@ -1907,7 +1941,6 @@ class MainActivity : AppCompatActivity() {
 
         try {
             startActivity(Intent.createChooser(emailIntent, getString(R.string.send_feedback)))
-            Toast.makeText(this, getString(R.string.feedback_sent), Toast.LENGTH_SHORT).show()
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(this, getString(R.string.feedback_error), Toast.LENGTH_SHORT).show()
         }

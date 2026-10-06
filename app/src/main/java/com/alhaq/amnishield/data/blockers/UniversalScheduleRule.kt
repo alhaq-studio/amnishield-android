@@ -30,6 +30,7 @@ data class AppBlockScheduleRule(
     val targetKeywords: List<String> = emptyList(),
     val blockerType: BlockerType = BlockerType.APP,
     val targets: List<String> = emptyList(),
+    val focusProtectionMode: Int = 0,
     override val authType: AuthType = AuthType.NONE,
     override val rulePasswordHash: String? = null,
     override val rulePasswordSalt: String? = null
@@ -63,6 +64,7 @@ data class AppBlockScheduleRule(
             !rawTargets.isNullOrEmpty() -> rawTargets
             safeBlockerType == BlockerType.WEBSITE && !rawWebsites.isNullOrEmpty() -> rawWebsites
             safeBlockerType == BlockerType.KEYWORD && !rawKeywords.isNullOrEmpty() -> rawKeywords
+            safeBlockerType == BlockerType.REELS -> if (!rawTargets.isNullOrEmpty()) rawTargets else listOf("reel_blocker")
             safeBlockerType == BlockerType.APP && safePackage.isNotBlank() &&
                 safePackage != "website_blocker" &&
                 safePackage != "keyword_blocker" &&
@@ -96,6 +98,7 @@ data class AppBlockScheduleRule(
             targetKeywords = safeKeywords,
             blockerType = safeBlockerType,
             targets = resolvedTargets,
+            focusProtectionMode = focusProtectionMode ?: 0,
             authType = authType ?: AuthType.NONE,
             rulePasswordHash = rulePasswordHash,
             rulePasswordSalt = rulePasswordSalt

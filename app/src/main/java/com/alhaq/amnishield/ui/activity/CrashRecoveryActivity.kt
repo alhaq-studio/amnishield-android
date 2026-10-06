@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.R
 import com.alhaq.amnishield.databinding.ActivityCrashRecoveryBinding
 import com.alhaq.amnishield.utils.ErrorReportManager
@@ -178,6 +179,7 @@ class CrashRecoveryActivity : AppCompatActivity() {
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
+            putExtra(Intent.EXTRA_EMAIL, arrayOf<String>(Constants.SUPPORT_EMAIL))
             putExtra(Intent.EXTRA_SUBJECT, "AmniShield Error Report")
             putExtra(Intent.EXTRA_TEXT, emailBody)
             putExtra(Intent.EXTRA_CC, SUPPORT_CC_ADDRESSES.filter { !TextUtils.isEmpty(it) }.toTypedArray())
