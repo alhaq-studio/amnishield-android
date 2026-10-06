@@ -17,36 +17,28 @@ Builds:
     commit: v0.2.0
     subdir: app
     gradle:
-      - yes
-    gradleTasks:
-      - :app:assembleFdroidRelease
+      - fdroid
 
   - versionName: '0.2.1 (2026.09.03)'
     versionCode: 143
     commit: v0.2.1
     subdir: app
     gradle:
-      - yes
-    gradleTasks:
-      - :app:assembleFdroidRelease
+      - fdroid
 
   - versionName: '0.3.0 (2026.09.29)'
     versionCode: 144
     commit: v0.3.0
     subdir: app
     gradle:
-      - yes
-    gradleTasks:
-      - :app:assembleFdroidRelease
+      - fdroid
 
   - versionName: '0.3.1 (2026.10.05)'
     versionCode: 145
     commit: v0.3.1
     subdir: app
     gradle:
-      - yes
-    gradleTasks:
-      - :app:assembleFdroidRelease
+      - fdroid
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
