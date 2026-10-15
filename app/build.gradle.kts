@@ -27,8 +27,8 @@ android {
     compileSdk = 36
 
     signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
                 storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
@@ -93,7 +93,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             resValue("string", "app_package_id", "com.alhaq.deenshield")
         }
     }
