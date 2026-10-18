@@ -2,9 +2,9 @@
 
 This repository (`AmniShield-Android` / `alhaq-studio/amnishield-android`) is part of the **AmniShield Ecosystem**.
 
-## Active Agent Profile: `amn-ecosystem-agent`
+## Active Agent Profile: `amni-ecosystem-agent`
 
-- Full Architecture, Roadmap, and Cross-Platform Specifications: `~/.gemini/config/agents/amn-ecosystem-agent.md`
+- Full Architecture, Roadmap, and Cross-Platform Specifications: `~/.gemini/config/agents/amni-ecosystem-agent.md`
 
 ## Enabled Skills
 
