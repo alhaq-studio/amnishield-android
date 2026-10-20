@@ -2,53 +2,67 @@
 
 ## Overview
 
-AmniShield is an open-source, privacy-first digital wellness and content-blocking application for Android. It operates via a dedicated Android Accessibility Service pipeline, local SQLite/Room data caching, encrypted SharedPreferences, and on-device diagnostic logging.
+AmniShield is an open-source, privacy-first digital wellness and content-blocking application for Android. It operates via a dedicated Android Accessibility Service pipeline, local SharedPreferences persistence (29+ specialized XML files with Gson JSON serialization via SavedPreferencesLoader), hardware-backed EncryptedSharedPreferences strictly isolated to Supabase authentication tokens (SecureKeyStore), and on-device diagnostic logging.
 
 ---
 
-## 🏗️ Core Architectural Layers
+## Core Architectural Layers
 
 ```
-┌────────────────────────────────────────────────────────┐
-│               Jetpack Compose Material 3 UI            │
-│  (StatsScreen, BlocksManager, FocusSpace, Diagnostics)  │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│          ViewModel & Reactive State Management         │
-│          (AmniShieldViewModel, AmniShieldState)           │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│            AmniShieldAccessibilityService               │
-│  (Central Node Stream Orchestrator & Pipeline Host)     │
-└──────┬───────────────────┬───────────────────┬─────────┘
-       │                   │                   │
-┌──────▼────────┐   ┌──────▼────────┐   ┌──────▼────────┐
-│ AntiUninstall │   │  AppBlocker   │   │  ReelBlocker  │
-│  Interceptor  │   │  FocusMode    │   │ & WebsiteFilt │
-│ (Priority 0)  │   │ (Priority 1)  │   │ (Priority 2)  │
-└───────────────┘   └───────────────┘   └───────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│               Dual-Host Presentation Architecture                      │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
+│  │ MainActivity (2,022 lines)   │    │ FragmentActivity (210 lines) │  │
+│  │ 4 Bottom Nav Tabs (XML)      │    │ 18 Sub-Screen Router (Bridge)│  │
+│  │ Stats, Blocks, Focus, Adv.   │    │ Embedding ComposeView M3 UI  │  │
+│  └──────────────────────────────┘    └──────────────────────────────┘  │
+│    [AmniShieldAdaptiveApp (254 lines) disconnected; target for 0.3.5]  │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                  ViewModel & Reactive State Management                 │
+│                 (AmniShieldViewModel, AmniShieldState)                 │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                      Local Persistence Layer                           │
+│  ┌─────────────────────────────────┐ ┌───────────────────────────────┐ │
+│  │ SavedPreferencesLoader.kt       │ │ SecureKeyStore.kt             │ │
+│  │ 29+ SharedPreferences XML files │ │ EncryptedSharedPreferences    │ │
+│  │ 33 Gson JSON serialization calls│ │ Supabase sync secrets strictly│ │
+│  │ (Zero Room DB / Zero DataStore) │ │ (Fallback to plain XML)       │ │
+│  └─────────────────────────────────┘ └───────────────────────────────┘ │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                    AmniShieldAccessibilityService                      │
+│         (Central Node Stream Orchestrator & Pipeline Host)             │
+└───────┬──────────────┬──────────────┬──────────────┬───────────────────┘
+        │              │              │              │
+┌───────▼──────┐┌──────▼──────┐┌──────▼──────┐┌──────▼──────┐┌───────────▼──────────┐
+│AntiUninstall ││ FocusMode   ││WebsiteBlock ││ AppBlocker  ││ Keyword & Reel Blocker│
+│Interceptor   ││ Blocker     ││  Detector   ││ Interceptor ││ Deferred Channel (P4) │
+│ (Priority 0) ││(Priority 1) ││(Priority 2) ││(Priority 3) ││ (Off-thread Worker)   │
+└──────────────┘└─────────────┘└─────────────┘└─────────────┘└───────────────────────┘
 ```
 
 ---
 
-## 🛡️ Blocker Pipeline & Chain of Responsibility
+## Blocker Pipeline & Chain of Responsibility
 
 The `AmniShieldAccessibilityService` orchestrates accessibility window inspection through explicit priority-ordered interceptors:
 
-| Priority | Component | Target Surface / Vectors | Action Dispatched |
-| :--- | :--- | :--- | :--- |
-| **0 (Highest)** | `AntiUninstallDetector` | Play Store, OEM Security Centers, Device Admin, App Info | `GLOBAL_ACTION_HOME`, `AntiUninstallPasswordActivity` |
-| **1** | `AppBlocker` | Blocked Applications, Launch Limits, Daily Usage Limits | `WarningActivity` overlay or task cancellation |
-| **1** | `FocusModeBlocker` | Active Focus Sessions & Whitelist Enforcements | Full-screen Focus Space overlay |
-| **2** | `WebsiteBlockerDetector` | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) | `WarningActivity` redirect / Back navigation |
-| **2** | `KeywordActionHandler` | Search bars, social feed text inputs, query boxes | Real-time text erasure & warning overlay |
-| **3** | `ReelBlocker` | YouTube Shorts, IG Reels, FB Reels, TikTok feeds | Scroll limit counter, feed suppression |
+| Priority | Component | Target Surface / Vectors | Action Dispatched | Execution Model |
+| :--- | :--- | :--- | :--- | :--- |
+| **0 (Highest)** | `AntiUninstallDetector` (Line 283) | Play Store, OEM Security Centers, Device Admin, App Info | `GLOBAL_ACTION_HOME`, `AntiUninstallPasswordActivity` | Synchronous (Main Binder) |
+| **1** | `FocusModeBlocker` (Line 304) | Active Focus Sessions & Whitelist Enforcements | Full-screen Focus Space (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` | Synchronous (Main Binder) |
+| **2** | `WebsiteBlockerDetector` (Line 350) | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) & Social Apps | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` redirect | Synchronous (Linear scan of 1-20 active schedule targets) |
+| **3** | `AppBlocker` (Line 417) | Blocked Applications, Launch Limits, Daily Usage Limits | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` overlay | Synchronous (Main Binder) |
+| **4** | `KeywordBlocker` & `ReelBlocker` (Line 456, 475-562) | Search bars, query inputs, and Short-form Video feeds (YouTube, IG, FB, TikTok) | Text erasure, scroll limit counter, feed suppression | Deferred Coroutine Worker (`Channel.CONFLATED`) |
 
 ---
 
-## 📝 Diagnostic & Crash Logging Architecture (`CrashLogger`)
+## Diagnostic & Crash Logging Architecture (CrashLogger)
 
 AmniShield maintains a strict **zero-external-telemetry** logging policy.
 
@@ -66,13 +80,25 @@ AmniShield maintains a strict **zero-external-telemetry** logging policy.
 
 ---
 
-## 🔒 Invariants & Guardrails for AI & Human Maintainers
+## Invariants & Guardrails for AI & Human Maintainers
 
 > [!IMPORTANT]
 > **Node Lifecycle Invariant:** `AmniShieldAccessibilityService` exclusively owns the lifecycle of `rootNode` (recycled once in the `finally` block of `onAccessibilityEvent`). Interceptors and sub-detectors must **never** call `rootNode.recycle()`. Interceptors must only recycle child nodes they generate during internal stack traversals.
 
 > [!TIP]
 > **Strict Short-Circuiting:** When a higher-priority interceptor (such as Anti-Uninstall) triggers an action, return immediately to stop processing downstream content blockers.
+
+> [!NOTE]
+> **Persistence Reality:** Persistence is 100% SharedPreferences via `SavedPreferencesLoader.kt` across 29+ XML files with Gson JSON serialization. EncryptedSharedPreferences is strictly isolated to Supabase cloud sync tokens in `SecureKeyStore.kt`. There is zero Room DB and zero Preferences DataStore in this codebase.
+
+> [!NOTE]
+> **Dual-Host Presentation Reality:** UI presentation is split between `MainActivity.kt` (4 primary bottom navigation tabs) and `FragmentActivity.kt` (secondary router hosting 18 sub-screens embedding ComposeView). `AmniShieldAdaptiveApp.kt` is currently disconnected to preserve FragmentManager lifecycle stability and represents the target architecture for Milestone 0.3.5.
+
+> [!CAUTION]
+> **Main Binder Thread Safety:** In-flight reflection-based Gson deserialization in `onAccessibilityEvent` must be mitigated via in-memory rule caching (Milestone 0.3.2) to prevent Binder thread jank.
+
+> [!IMPORTANT]
+> **Strict Universal Zero-Emoji Policy:** Do not use UTF-8 emojis anywhere in code, UI layouts, strings, comments, logs, or documentation. Use plain-text tags (`[INFO]`, `[OK]`, `[FAIL]`, `[WARNING]`, `[ERROR]`) instead.
 
 > [!NOTE]
 > **Multi-Flavor Build Configuration:** Always build with flavor-qualified Gradle tasks:

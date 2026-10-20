@@ -26,6 +26,7 @@ AmniShield is a 100% free and open-source, privacy-first digital wellness and di
 - **Keyword Filtering**: Real-time accessibility text scanning that clears distracting or inappropriate search terms.
 - **Zero-Knowledge Privacy**: 100% on-device operation. No user tracking, no third-party analytics SDKs, no cloud logging.
 - **Offline Cryptographic Licensing**: Optional Supporter Pass activated completely offline via NIST P-256 ECDSA public key verification.
+- **Zero-Knowledge Architecture**: 100% on-device SharedPreferences persistence (zero Room/DataStore) and isolated EncryptedSharedPreferences.
 
 ---
 
@@ -34,11 +35,12 @@ AmniShield is a 100% free and open-source, privacy-first digital wellness and di
 1. [Requirements](#requirements)
 2. [Building the App](#building-the-app)
 3. [Product Flavors](#product-flavors)
-4. [Android Studio Setup](#android-studio-setup)
-5. [If the Build Shows Old UI](#if-the-build-shows-old-ui)
-6. [Release Builds](#release-builds)
-7. [Contributing & Bug Reports](#contributing--bug-reports)
-8. [Project Documentation](#project-documentation)
+4. [Architecture & Storage Overview](#architecture--storage-overview)
+5. [Android Studio Setup](#android-studio-setup)
+6. [If the Build Shows Old UI](#if-the-build-shows-old-ui)
+7. [Release Builds](#release-builds)
+8. [Contributing & Bug Reports](#contributing--bug-reports)
+9. [Project Documentation](#project-documentation)
 
 ---
 
@@ -93,6 +95,35 @@ APK output paths:
 
 Each flavor has its own source set under `app/src/<flavor>/java/` for swapping
 billing and sign-in implementations without `#ifdef`-style hacks.
+
+---
+
+## Architecture & Storage Overview
+
+### Presentation Model: Dual-Host Container Architecture
+AmniShield uses a decoupled Dual-Host presentation architecture bridging AndroidX Activities with Jetpack Compose Material 3:
+- **`MainActivity.kt` (2,022 lines)**: Hosts the primary 4 bottom navigation tabs (`Stats`, `Blocks`, `Focus`, `Advanced`) using legacy `supportFragmentManager` transactions.
+- **`FragmentActivity.kt` (210 lines)**: Acts as a secondary router dispatching 18 functional sub-screens and configuration dialogs. Each configuration fragment inherits `BaseFeatureFragment` and returns `ComposeView` embedding Material 3 Compose screens (`AppBlockerConfigScreen`, `ReelBlockerConfigScreen`, etc.).
+- **`AmniShieldAdaptiveApp.kt` (254 lines)**: Pure Compose `NavigationSuiteScaffold` shell temporarily disconnected to avoid FragmentManager lifecycle crashes, preserved as the target architecture for Milestone 0.3.5.
+
+### Persistence Reality: 100% SharedPreferences
+- **Zero Room DB / Zero DataStore**: AmniShield contains zero Room DB and zero DataStore dependencies.
+- **`SavedPreferencesLoader.kt` (2,015 lines)**: Manages 29 specialized SharedPreferences XML files across 459 callers. Complex rules and limits are serialized to JSON strings using Google Gson (33 calls).
+- **`SecureKeyStore.kt`**: `EncryptedSharedPreferences` is strictly isolated to Supabase cloud sync authentication tokens with an automatic plain XML fallback (`amnishield_sync_secrets_fallback`).
+
+### Blocker Interceptor Pipeline
+Executed in `AmniShieldAccessibilityService.kt`:
+1. **Priority 0**: `AntiUninstallDetector` (Line 283) - Intercepts settings, device admin, and store tampering; dispatches Home.
+2. **Priority 1**: `FocusModeBlocker` (Line 304) - Enforces focus sessions; dispatches `AmniSpaceActivity` (Focus Launcher) or `pressHome()`.
+3. **Priority 2**: `WebsiteBlockerDetector` (Line 350) - Evaluates browser URL bars across 15+ browsers (linear scan over 1-20 active schedule targets; `adult_domains.txt` and `haram_domains.txt` are dead assets).
+4. **Priority 3**: `AppBlocker` (Line 417) - Evaluates launch limits, usage quotas, and app block schedules.
+5. **Priority 4**: `KeywordBlocker` & `ReelBlocker` (Lines 456, 475-562) - Deferred via conflated coroutine channel (`Channel.CONFLATED`).
+
+### Premium & Supporter Pass Architecture
+- **Free FOSS Core (`UserType.FREE`)**: Base app, website, reel blockers, and keyword filters are 100% free and open-source forever.
+- **Supporter Passes**: `UserType.PREMIUM`, `UserType.FOUNDER` (90-day early supporter pass), and `UserType.COMPASSIONATE` (Al-Haq community access).
+- **Gated Features**: Rule PIN / Password Security Locking (`RuleProBadge`), Master PIN, App Lock, Bypass PIN Lock, and Supabase cloud policy sync.
+- **Billing Implementation**: `playstore` uses Google Play `BillingClientWrapper.kt`; `fdroid` uses 100% offline NIST P-256 ECDSA public key verification (`SHA256withECDSA` in `LicenseValidator.kt`) with optional Stripe Direct checkout; `universal` provides hybrid capabilities.
 
 ---
 
