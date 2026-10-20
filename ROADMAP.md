@@ -13,7 +13,7 @@ Last updated: October 2026
 
 ---
 
-## V1.0 - V2.0 Roadmap
+## Technical Roadmap
 
 ### Completed Milestones (Current Baseline - v0.3.1 / Code 145)
 
