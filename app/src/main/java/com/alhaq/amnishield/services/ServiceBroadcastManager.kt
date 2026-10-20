@@ -17,6 +17,7 @@ class ServiceBroadcastManager(
 ) {
     interface Callbacks {
         fun onRefreshAppBlocker()
+        fun onRefreshWebsiteBlocker()
         fun onRefreshBlockedKeywordList()
         fun onRefreshViewBlocker()
         fun onRefreshViewBlockerCooldown(resultId: String?, interval: Int)
@@ -37,6 +38,7 @@ class ServiceBroadcastManager(
             intent?.action ?: return
             when (intent.action) {
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER -> callbacks.onRefreshAppBlocker()
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER -> callbacks.onRefreshWebsiteBlocker()
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST -> callbacks.onRefreshBlockedKeywordList()
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER -> callbacks.onRefreshViewBlocker()
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN -> {
@@ -73,6 +75,7 @@ class ServiceBroadcastManager(
         if (isRegistered) return
         val filter = IntentFilter().apply {
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
+            addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN)

@@ -17,8 +17,18 @@ import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class WarningActivity : AppCompatActivity() {
 
+    companion object {
+        private const val KEY_REMAINING_PROCEED_MILLIS = "key_remaining_proceed_millis"
+        private const val KEY_PROCEED_TIMER_FINISHED = "key_proceed_timer_finished"
+        private const val KEY_SELECTED_MINS_VALUE = "key_selected_mins_value"
+    }
+
     private var proceedTimer: CountDownTimer? = null
     private var dialog: AlertDialog? = null
+    private var remainingProceedMillis: Long = 0L
+    private var isProceedTimerFinished: Boolean = false
+    private var dialogBinding: DialogWarningOverlayBinding? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         com.alhaq.amnishield.utils.ThemeUtils.applyTheme(this)
         super.onCreate(savedInstanceState)
@@ -36,6 +46,7 @@ class WarningActivity : AppCompatActivity() {
             else -> savedPreferencesLoader.loadAppBlockerWarningInfo()
         }
         val binding = DialogWarningOverlayBinding.inflate(layoutInflater)
+        dialogBinding = binding
         val isHomePressRequested = intent.getBooleanExtra("is_press_home", false)
         val isReelBlockerWarning = intent.getBooleanExtra("is_reel_blocker", false)
         val isAppBlockerMode = mode == Constants.WARNING_SCREEN_MODE_APP_BLOCKER
@@ -45,8 +56,10 @@ class WarningActivity : AppCompatActivity() {
         val blockedFeature = intent.getStringExtra("blocked_by_feature") 
             ?: if (isFocusMode) "Focus Mode" else if (isKeywordBlockerMode) "Keyword Blocker" else if (isReelBlockerWarning) "Reels Blocker" else "App Blocker"
 
-        binding.minsPicker.setValue(3)
+        val defaultMins = (warningScreenConfig.timeInterval / 60000).coerceAtLeast(2)
+        val restoredMins = savedInstanceState?.getInt(KEY_SELECTED_MINS_VALUE, defaultMins) ?: defaultMins
         binding.minsPicker.minValue = 2
+        binding.minsPicker.setValue(restoredMins)
         var isDialogCancelable = !isAppBlockerMode || isHomePressRequested || isFocusMode
 
         if (isSimpleMode) {
@@ -74,24 +87,42 @@ class WarningActivity : AppCompatActivity() {
                 binding.btnProceed.visibility = View.GONE
                 binding.proceedSeconds.visibility = View.GONE
             } else {
-                proceedTimer =
-                    object : CountDownTimer(warningScreenConfig.proceedDelayInSecs * 1000L, 1000) {
-                    override fun onTick(millisUntilFinished: Long) {
-                        binding.proceedSeconds.text =
-                            getString(R.string.proceed_in, millisUntilFinished / 1000)
-                    }
+                val defaultDelayMillis = (warningScreenConfig.proceedDelayInSecs * 1000L).coerceAtLeast(0L)
+                remainingProceedMillis = savedInstanceState?.getLong(KEY_REMAINING_PROCEED_MILLIS, defaultDelayMillis) ?: defaultDelayMillis
+                isProceedTimerFinished = savedInstanceState?.getBoolean(KEY_PROCEED_TIMER_FINISHED, false) ?: false
 
-                    override fun onFinish() {
-                        binding.btnProceed.let { button ->
-                            button.isEnabled = true
-                            if (warningScreenConfig.isDynamicIntervalSettingAllowed) {
-                                binding.minsPicker.visibility = View.VISIBLE
-                            }
-                            button.setText(R.string.proceed)
-                        }
-                        binding.proceedSeconds.visibility = View.GONE
+                if (isProceedTimerFinished || remainingProceedMillis <= 0L) {
+                    remainingProceedMillis = 0L
+                    isProceedTimerFinished = true
+                    binding.btnProceed.isEnabled = true
+                    if (warningScreenConfig.isDynamicIntervalSettingAllowed) {
+                        binding.minsPicker.visibility = View.VISIBLE
                     }
-                }.start()
+                    binding.btnProceed.setText(R.string.proceed)
+                    binding.proceedSeconds.visibility = View.GONE
+                } else {
+                    binding.proceedSeconds.text = getString(R.string.proceed_in, remainingProceedMillis / 1000)
+                    proceedTimer = object : CountDownTimer(remainingProceedMillis, 1000) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            remainingProceedMillis = millisUntilFinished
+                            binding.proceedSeconds.text =
+                                getString(R.string.proceed_in, millisUntilFinished / 1000)
+                        }
+
+                        override fun onFinish() {
+                            remainingProceedMillis = 0L
+                            isProceedTimerFinished = true
+                            binding.btnProceed.let { button ->
+                                button.isEnabled = true
+                                if (warningScreenConfig.isDynamicIntervalSettingAllowed) {
+                                    binding.minsPicker.visibility = View.VISIBLE
+                                }
+                                button.setText(R.string.proceed)
+                            }
+                            binding.proceedSeconds.visibility = View.GONE
+                        }
+                    }.start()
+                }
             }
         }
 
@@ -126,7 +157,7 @@ class WarningActivity : AppCompatActivity() {
             binding.btnCancel.text = "Return Home"
         } else {
             binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
-            binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
+            binding.minsPicker.setValue(restoredMins)
             binding.btnCancel.text = if (isAppBlockerMode || isHomePressRequested || mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER) {
                 getString(R.string.warning_cancel_go_home)
             } else {
@@ -192,12 +223,18 @@ class WarningActivity : AppCompatActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putLong(KEY_REMAINING_PROCEED_MILLIS, remainingProceedMillis)
+        outState.putBoolean(KEY_PROCEED_TIMER_FINISHED, isProceedTimerFinished)
+        dialogBinding?.minsPicker?.let { outState.putInt(KEY_SELECTED_MINS_VALUE, it.getValue()) }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         proceedTimer?.cancel()
         dialog?.dismiss()  // Ensure dialog is dismissed before activity is destroyed
-
-
+        dialogBinding = null
     }
 
     private fun sendRefreshRequest(id: String, action: String, time: Int) {

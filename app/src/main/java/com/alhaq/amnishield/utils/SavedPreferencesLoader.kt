@@ -738,37 +738,57 @@ open class SavedPreferencesLoader(
     }
 
     fun loadAppBlockerScheduleRules(): MutableList<AppBlockScheduleRule> {
-        val sharedPreferences = context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
-        val json = sharedPreferences.getString("schedule_rules", null)
-        if (json.isNullOrEmpty()) return mutableListOf()
+        cachedScheduleRulesSnapshot?.let { return it.toMutableList() }
 
-        val type = object : TypeToken<MutableList<AppBlockScheduleRule>>() {}.type
-        return runCatching {
-            val rawList = Gson().fromJson<MutableList<AppBlockScheduleRule>>(json, type) ?: mutableListOf()
-            val legacyDummyIds = setOf(
-                "reel_blocker_default",
-                "website_blocker_default",
-                "keyword_blocker_default",
-                "focus_mode_default",
-                "app_blocker_direct_default"
-            )
-            rawList.map { it.sanitize() }
-                .filterNot { rule ->
-                    legacyDummyIds.contains(rule.id) ||
-                    legacyDummyIds.contains(rule.groupId) ||
-                    (rule.blockerType == BlockerType.APP && rule.title.startsWith("Block Always • ") && rule.targets.isEmpty() && rule.targetWebsites.isEmpty() && rule.targetKeywords.isEmpty())
-                }
-                .toMutableList()
-        }.getOrElse {
-            Log.e("SavedPreferencesLoader", "Failed to load app blocker schedule rules", it)
-            mutableListOf()
+        synchronized(scheduleRulesCacheLock) {
+            cachedScheduleRulesSnapshot?.let { return it.toMutableList() }
+
+            val sharedPreferences = context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
+            val json = sharedPreferences.getString("schedule_rules", null)
+            if (json.isNullOrEmpty()) {
+                cachedScheduleRulesSnapshot = emptyList()
+                return mutableListOf()
+            }
+
+            val type = object : TypeToken<MutableList<AppBlockScheduleRule>>() {}.type
+            val sanitizedList = runCatching {
+                val rawList = Gson().fromJson<MutableList<AppBlockScheduleRule>>(json, type) ?: mutableListOf()
+                val legacyDummyIds = setOf(
+                    "reel_blocker_default",
+                    "website_blocker_default",
+                    "keyword_blocker_default",
+                    "focus_mode_default",
+                    "app_blocker_direct_default"
+                )
+                rawList.map { it.sanitize() }
+                    .filterNot { rule ->
+                        legacyDummyIds.contains(rule.id) ||
+                        legacyDummyIds.contains(rule.groupId) ||
+                        (rule.blockerType == BlockerType.APP && rule.title.startsWith("Block Always • ") && rule.targets.isEmpty() && rule.targetWebsites.isEmpty() && rule.targetKeywords.isEmpty())
+                    }
+            }.getOrElse {
+                Log.e("SavedPreferencesLoader", "Failed to load app blocker schedule rules", it)
+                emptyList()
+            }
+
+            cachedScheduleRulesSnapshot = sanitizedList
+            return sanitizedList.toMutableList()
         }
     }
 
     fun saveAppBlockerScheduleRules(rules: MutableList<AppBlockScheduleRule>) {
-        val sharedPreferences = context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
-        val json = Gson().toJson(rules)
-        sharedPreferences.edit().putString("schedule_rules", json).apply()
+        val immutableSnapshot = rules.map { it.sanitize() }
+        synchronized(scheduleRulesCacheLock) {
+            cachedScheduleRulesSnapshot = immutableSnapshot
+            val sharedPreferences = context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
+            val json = Gson().toJson(immutableSnapshot)
+            sharedPreferences.edit().putString("schedule_rules", json).apply()
+        }
+    }
+
+    fun refreshScheduleRulesSnapshot(): List<AppBlockScheduleRule> {
+        invalidateScheduleRulesCache()
+        return loadAppBlockerScheduleRules().toList()
     }
 
     @Synchronized
@@ -1223,6 +1243,16 @@ open class SavedPreferencesLoader(
         const val PREF_EMERGENCY_OVERRIDE_ACTIVE = "is_emergency_override_active"
         const val PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP = "emergency_window_expiry_timestamp"
         const val EMERGENCY_WINDOW_DURATION_MS = 10 * 60 * 1000L // 10-minute temporary unlock window
+
+        private val scheduleRulesCacheLock = Any()
+        @Volatile
+        private var cachedScheduleRulesSnapshot: List<AppBlockScheduleRule>? = null
+
+        fun invalidateScheduleRulesCache() {
+            synchronized(scheduleRulesCacheLock) {
+                cachedScheduleRulesSnapshot = null
+            }
+        }
     }
 
     fun isUsageTrackerFeatureEnabled(default: Boolean = true): Boolean {
@@ -1299,6 +1329,7 @@ open class SavedPreferencesLoader(
         }
     }
 
+    @Synchronized
     fun recordWebsiteUsage(domain: String, durationMillis: Long) {
         if (durationMillis <= 0) return
         if (!isWebsiteUsageTrackingEnabled()) return
@@ -2010,5 +2041,29 @@ open class SavedPreferencesLoader(
     fun setBreathingWidgetDurationMinutes(minutes: Int) {
         context.getSharedPreferences("amnispace_prefs", Context.MODE_PRIVATE)
             .edit().putInt("widget_breathing_duration_minutes", minutes.coerceIn(1, 30)).apply()
+    }
+
+    // ========================================================================
+    // Accessibility Prominent Disclosure Consent Persistence
+    // ========================================================================
+
+    fun isAccessibilityDisclosureAccepted(): Boolean {
+        return context.getSharedPreferences("permission_guide_prefs", Context.MODE_PRIVATE)
+            .getBoolean("has_user_accepted_accessibility_disclosure", false)
+    }
+
+    fun getAccessibilityDisclosureAcceptedTimestamp(): Long {
+        return context.getSharedPreferences("permission_guide_prefs", Context.MODE_PRIVATE)
+            .getLong("accessibility_disclosure_accepted_at", 0L)
+    }
+
+    fun setAccessibilityDisclosureAccepted(accepted: Boolean, version: Int = 1) {
+        val editor = context.getSharedPreferences("permission_guide_prefs", Context.MODE_PRIVATE).edit()
+            .putBoolean("has_user_accepted_accessibility_disclosure", accepted)
+            .putInt("accessibility_disclosure_version", version)
+        if (accepted) {
+            editor.putLong("accessibility_disclosure_accepted_at", System.currentTimeMillis())
+        }
+        editor.apply()
     }
 }

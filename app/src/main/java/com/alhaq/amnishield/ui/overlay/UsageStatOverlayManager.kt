@@ -1,19 +1,24 @@
 package com.alhaq.amnishield.ui.overlay
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.alhaq.amnishield.databinding.OverlayUsageStatBinding
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
@@ -37,10 +42,30 @@ class UsageStatOverlayManager(private val context: Context) {
         private set
 
     private var windowManager: WindowManager? = null
+    private var currentLayoutParams: LayoutParams? = null
+    private var currentGravity: Int = Gravity.TOP or Gravity.END
+    private var isConfigReceiverRegistered = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
     var reelsScrolledThisSession = 0
     var sessionWatchSeconds = 0L
+
+    private val configChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_CONFIGURATION_CHANGED) {
+                runOnMain {
+                    val view = overlayView ?: return@runOnMain
+                    val params = currentLayoutParams ?: return@runOnMain
+                    applyAdaptiveWindowOffsets(view, params, null)
+                    try {
+                        windowManager?.updateViewLayout(view, params)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to update overlay layout on configuration change", e)
+                    }
+                }
+            }
+        }
+    }
 
     private fun runOnMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -50,11 +75,36 @@ class UsageStatOverlayManager(private val context: Context) {
         }
     }
 
+    private fun applyAdaptiveWindowOffsets(
+        view: View,
+        params: LayoutParams,
+        insetsCompat: WindowInsetsCompat?
+    ) {
+        val density = context.resources.displayMetrics.density
+        val isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val systemAndCutoutInsets = (insetsCompat ?: ViewCompat.getRootWindowInsets(view))
+            ?.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+
+        val safeHorizontalInset = maxOf(systemAndCutoutInsets?.left ?: 0, systemAndCutoutInsets?.right ?: 0)
+        val safeTopInset = systemAndCutoutInsets?.top ?: 0
+
+        val baseHorizontalMarginPx = (16 * density).toInt()
+        val baseVerticalMarginPx = if (isLandscape) {
+            (24 * density).toInt()
+        } else {
+            (72 * density).toInt()
+        }
+
+        params.gravity = currentGravity
+        params.x = baseHorizontalMarginPx + safeHorizontalInset
+        params.y = maxOf(baseVerticalMarginPx, safeTopInset + (12 * density).toInt())
+    }
+
     /**
      * Attaches the floating wrap_content pill view to the WindowManager.
      * Tries TYPE_ACCESSIBILITY_OVERLAY first, falling back to TYPE_APPLICATION_OVERLAY if permitted.
      */
-    @SuppressLint("InlinedApi")
+    @SuppressLint("InlinedApi", "UnspecifiedRegisterReceiverFlag")
     fun startDisplaying(
         positionGravity: Int = Gravity.TOP or Gravity.END,
         initialCount: Int = 0,
@@ -63,6 +113,7 @@ class UsageStatOverlayManager(private val context: Context) {
     ) {
         reelsScrolledThisSession = initialCount
         sessionWatchSeconds = initialWatchTimeSeconds
+        currentGravity = positionGravity
 
         runOnMain {
             if (overlayView != null || isOverlayVisible) {
@@ -72,12 +123,9 @@ class UsageStatOverlayManager(private val context: Context) {
 
             try {
                 binding = OverlayUsageStatBinding.inflate(LayoutInflater.from(context))
-                overlayView = binding?.root
+                val rootView = binding?.root ?: return@runOnMain
+                overlayView = rootView
                 isOverlayVisible = true
-
-                val density = context.resources.displayMetrics.density
-                val offsetX = (16 * density).toInt()
-                val offsetY = (72 * density).toInt() // Clean clearance below status bar
 
                 val overlayType = if (context is android.accessibilityservice.AccessibilityService) {
                     LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
@@ -98,22 +146,46 @@ class UsageStatOverlayManager(private val context: Context) {
                             LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT
                 ).apply {
-                    gravity = positionGravity
-                    x = offsetX
-                    y = offsetY
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         layoutInDisplayCutoutMode = LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                     }
                 }
+                applyAdaptiveWindowOffsets(rootView, layoutParams, null)
+                currentLayoutParams = layoutParams
+
+                ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, windowInsets ->
+                    val params = currentLayoutParams
+                    if (params != null && isOverlayVisible) {
+                        val prevX = params.x
+                        val prevY = params.y
+                        applyAdaptiveWindowOffsets(v, params, windowInsets)
+                        if (prevX != params.x || prevY != params.y) {
+                            try {
+                                windowManager?.updateViewLayout(v, params)
+                            } catch (_: Exception) {}
+                        }
+                    }
+                    windowInsets
+                }
 
                 windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
-                windowManager?.addView(overlayView, layoutParams)
+                windowManager?.addView(rootView, layoutParams)
                 binding?.let { applyCounterDisplay(it, reelsScrolledThisSession, sessionWatchSeconds, mode) }
+
+                if (!isConfigReceiverRegistered) {
+                    try {
+                        val filter = IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED)
+                        context.registerReceiver(configChangeReceiver, filter)
+                        isConfigReceiverRegistered = true
+                    } catch (_: Exception) {}
+                }
+
                 Log.d(TAG, "Floating doom-scrolling overlay attached successfully (type: $overlayType)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to attach floating doom-scrolling overlay", e)
                 overlayView = null
                 binding = null
+                currentLayoutParams = null
                 isOverlayVisible = false
             }
         }
@@ -205,6 +277,12 @@ class UsageStatOverlayManager(private val context: Context) {
      */
     fun removeOverlay() {
         runOnMain {
+            if (isConfigReceiverRegistered) {
+                try {
+                    context.unregisterReceiver(configChangeReceiver)
+                } catch (_: Exception) {}
+                isConfigReceiverRegistered = false
+            }
             try {
                 if (overlayView != null && windowManager != null) {
                     windowManager?.removeView(overlayView)
@@ -215,6 +293,7 @@ class UsageStatOverlayManager(private val context: Context) {
             } finally {
                 overlayView = null
                 binding = null
+                currentLayoutParams = null
                 isOverlayVisible = false
                 reelsScrolledThisSession = 0
                 sessionWatchSeconds = 0L

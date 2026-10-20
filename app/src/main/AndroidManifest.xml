@@ -73,7 +73,7 @@
                 <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/pair" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.activity.LauncherActivity" android:exported="true" android:launchMode="singleTask" />
+        <activity android:name=".ui.activity.LauncherActivity" android:exported="false" android:launchMode="singleTask" />
 
         <service android:name=".services.AmniShieldAccessibilityService" android:exported="true" android:label="@string/app_name" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
