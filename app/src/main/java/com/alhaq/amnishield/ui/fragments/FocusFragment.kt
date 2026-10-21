@@ -260,17 +260,22 @@ class FocusFragment : BaseFeatureFragment() {
     }
 
     private fun openFocusConfig() {
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("fragment", com.alhaq.amnishield.ui.fragments.features.FocusModeConfigFragment.FRAGMENT_ID)
-        }
+        val intent = FragmentActivity.createIntent(
+            requireContext(),
+            com.alhaq.amnishield.ui.navigation.FragmentDestination.FocusModeConfig
+        )
         startActivity(intent, activityOptions.toBundle())
     }
 
     private fun configureSchedules() {
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("fragment", BlocksManagerFragment.FRAGMENT_ID)
-            putExtra("prefill_target", "FOCUS_MODE")
+        val extras = Bundle().apply {
+            putString("prefill_target", "FOCUS_MODE")
         }
+        val intent = FragmentActivity.createIntent(
+            requireContext(),
+            com.alhaq.amnishield.ui.navigation.FragmentDestination.BlocksManager(),
+            extras
+        )
         startActivity(intent, activityOptions.toBundle())
     }
 

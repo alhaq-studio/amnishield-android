@@ -67,7 +67,7 @@ object SmartBehavioralBrain {
                 if (diff in 1..5) {
                     val appName = rule.title.ifEmpty { rule.packageName }
                     return SmartNudge(
-                        title = "⏳ App Blocker Starts in $diff Mins",
+                        title = "App Blocker Starts in $diff Mins",
                         message = "Scheduled blocking for $appName starts soon.",
                         actionType = ActionType.SNOOZE_BLOCK
                     )

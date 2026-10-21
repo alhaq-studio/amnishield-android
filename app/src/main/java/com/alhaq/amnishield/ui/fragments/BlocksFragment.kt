@@ -329,8 +329,13 @@ class BlocksFragment : BaseFeatureFragment() {
     }
 
     private fun openFeatureConfig(featureType: String, requiresPremium: Boolean) {
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("feature_type", featureType)
+        val destination = com.alhaq.amnishield.ui.navigation.FragmentDestination.fromKey(featureType)
+        val intent = if (destination != null) {
+            FragmentActivity.createIntent(requireContext(), destination)
+        } else {
+            Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("feature_type", featureType)
+            }
         }
         startActivity(intent, activityOptions.toBundle())
     }
@@ -340,16 +345,18 @@ class BlocksFragment : BaseFeatureFragment() {
     }
 
     private fun openSchedules() {
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("fragment", BlocksManagerFragment.FRAGMENT_ID)
-        }
+        val intent = FragmentActivity.createIntent(
+            requireContext(),
+            com.alhaq.amnishield.ui.navigation.FragmentDestination.BlocksManager()
+        )
         startActivity(intent, activityOptions.toBundle())
     }
 
     private fun openLaunchLimits() {
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("fragment", ManageLaunchLimitsFragment.FRAGMENT_ID)
-        }
+        val intent = FragmentActivity.createIntent(
+            requireContext(),
+            com.alhaq.amnishield.ui.navigation.FragmentDestination.ManageLaunchLimits
+        )
         startActivity(intent, activityOptions.toBundle())
     }
 
@@ -358,9 +365,10 @@ class BlocksFragment : BaseFeatureFragment() {
             .setTitle(R.string.premium_required_title)
             .setMessage(getString(R.string.premium_required_message))
             .setPositiveButton(R.string.premium_view_plans) { _, _ ->
-                val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                    putExtra("feature_type", "premium_features")
-                }
+                val intent = FragmentActivity.createIntent(
+                    requireContext(),
+                    com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures
+                )
                 startActivity(intent, activityOptions.toBundle())
             }
             .setNegativeButton(android.R.string.cancel, null)

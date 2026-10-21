@@ -54,8 +54,11 @@ class ApiPermissionActivity : AppCompatActivity() {
             .show()
     }
 
-    /** callingPackage is reliable when launched for result; referrer is the fallback. */
-    private fun requestingPackage(): String? = callingPackage ?: referrer?.host
+    /**
+     * callingPackage is verified by the OS kernel when launched via startActivityForResult.
+     * Unverified referrer?.host fallback is omitted to prevent third-party caller UI spoofing.
+     */
+    private fun requestingPackage(): String? = callingPackage
 
     private fun labelFor(packageName: String): String {
         return try {

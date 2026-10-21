@@ -297,8 +297,7 @@ class MainActivity : AppCompatActivity() {
         setupFragmentNavigation(savedInstanceState)
 
         if (!isFirstLaunchComplete()) {
-            val intent = Intent(this, FragmentActivity::class.java)
-            intent.putExtra("fragment", WelcomeFragment.FRAGMENT_ID)
+            val intent = FragmentActivity.createIntent(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Welcome)
             startActivity(intent, options.toBundle())
             finish()
             return
@@ -1139,10 +1138,7 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
         dialogView.findViewById<View>(R.id.card_pro_pass)?.setOnClickListener {
-            val intent = Intent(this, FragmentActivity::class.java).apply {
-                putExtra("feature_type", "premium_features")
-            }
-            startActivity(intent)
+            FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures)
             dialog.dismiss()
         }
 
@@ -1471,10 +1467,7 @@ class MainActivity : AppCompatActivity() {
                     openPremiumScreen()
                 }
                 R.id.nav_roadmap -> {
-                    val intent = Intent(this, FragmentActivity::class.java).apply {
-                        putExtra("feature_type", "roadmap")
-                    }
-                    startActivity(intent)
+                    FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Roadmap)
                 }
                 R.id.nav_donate -> {
                     showSupportOptionsDialog()
@@ -1748,10 +1741,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPremiumScreen() {
-        val intent = Intent(this, FragmentActivity::class.java).apply {
-            putExtra("feature_type", "premium_features")
-        }
-        startActivity(intent)
+        FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures)
     }
 
     private fun signInWithGoogle() {
@@ -1774,9 +1764,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun openProfileScreen() {
-        val intent = Intent(this, FragmentActivity::class.java)
-        intent.putExtra("fragment", "profile")
-        startActivity(intent)
+        FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Profile)
     }
     
     private fun showFAQDialog() {
