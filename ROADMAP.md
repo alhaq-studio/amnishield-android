@@ -52,9 +52,9 @@ Last updated: October 2026
 - [x] **Screen Rotation State Preservation:** Add `rememberSaveable` state handling in `AmniSpaceActivity.kt` and `AmniSpaceBreathingCircle.kt`, implement `onSaveInstanceState` timer preservation in `WarningActivity.kt`, and dynamically adapt window insets and orientation offsets in `UsageStatOverlayManager.kt`.
 
 #### Milestone 0.3.4: Dual-Host Cleanup & Navigation Decoupling
-- [ ] **Type-Safe Intent Routing:** Implement a sealed route contract between `MainActivity.kt` and `FragmentActivity.kt`, replacing loosely-typed string extras (`feature_type`, `fragment`).
-- [ ] **SharedPreferences Synchronization Lock:** Implement mutex synchronization locks in `SavedPreferencesLoader.kt` to prevent concurrent multi-threaded read/write file races.
-- [ ] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions to run automated instrumented UI tests across `playstoreDebug`, `fdroidDebug`, and `universalDebug`.
+- [x] **Type-Safe Intent Routing:** Implement a sealed route contract (`FragmentDestination.kt`) between `MainActivity.kt` and `FragmentActivity.kt`, replacing loosely-typed string extras (`feature_type`, `fragment`), plus defense-in-depth hardening in `ApiPermissionActivity.kt`, `BootAndAlarmReceiver.kt`, and `AndroidManifest.xml`.
+- [x] **SharedPreferences Synchronization Lock:** Implement static companion mutex synchronization locks (`rulesLock`, `statsLock`) in `SavedPreferencesLoader.kt` to prevent concurrent multi-threaded read/write file races across instances.
+- [x] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions (`main-pipeline.yml`) to execute parallel matrix builds and unit tests across `playstore`, `fdroid`, and `universal`.
 
 #### Milestone 0.3.5: Pure Compose & Storage Architecture Epic (Prep for V1.0)
 - [ ] **Room & DataStore Migration Epic:** Formalize a phased migration path from the 29+ SharedPreferences XML files to Room DB (relational blocking rules) and Preferences DataStore (flags and tokens).

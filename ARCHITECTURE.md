@@ -54,11 +54,11 @@ The `AmniShieldAccessibilityService` orchestrates accessibility window inspectio
 
 | Priority | Component | Target Surface / Vectors | Action Dispatched | Execution Model |
 | :--- | :--- | :--- | :--- | :--- |
-| **0 (Highest)** | `AntiUninstallDetector` (Line 283) | Play Store, OEM Security Centers, Device Admin, App Info | `GLOBAL_ACTION_HOME`, `AntiUninstallPasswordActivity` | Synchronous (Main Binder) |
-| **1** | `FocusModeBlocker` (Line 304) | Active Focus Sessions & Whitelist Enforcements | Full-screen Focus Space (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` | Synchronous (Main Binder) |
-| **2** | `WebsiteBlockerDetector` (Line 350) | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) & Social Apps | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` redirect | Synchronous (Linear scan of 1-20 active schedule targets) |
-| **3** | `AppBlocker` (Line 417) | Blocked Applications, Launch Limits, Daily Usage Limits | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` overlay | Synchronous (Main Binder) |
-| **4** | `KeywordBlocker` & `ReelBlocker` (Line 456, 475-562) | Search bars, query inputs, and Short-form Video feeds (YouTube, IG, FB, TikTok) | Text erasure, scroll limit counter, feed suppression | Deferred Coroutine Worker (`Channel.CONFLATED`) |
+| **0 (Highest)** | `AntiUninstallDetector` (Line 300) | Play Store, OEM Security Centers, Device Admin, App Info | `GLOBAL_ACTION_HOME`, `AntiUninstallPasswordActivity` | Synchronous (Main Binder) |
+| **1** | `FocusModeBlocker` (Line 321) | Active Focus Sessions & Whitelist Enforcements | Full-screen Focus Space (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` | Synchronous (Main Binder) |
+| **2** | `WebsiteBlockerDetector` (Line 367) | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) & Social Apps | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` redirect | Synchronous (Linear scan of 1-20 active schedule targets) |
+| **3** | `AppBlocker` (Line 434) | Blocked Applications, Launch Limits, Daily Usage Limits | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` overlay | Synchronous (Main Binder) |
+| **4** | `KeywordBlocker` & `ReelBlocker` (Lines 473, 507-598) | Search bars, query inputs, and Short-form Video feeds (YouTube, IG, FB, TikTok) | Text erasure, scroll limit counter, feed suppression | Deferred Coroutine Worker (`Channel.CONFLATED`) |
 
 ---
 
@@ -89,13 +89,13 @@ AmniShield maintains a strict **zero-external-telemetry** logging policy.
 > **Strict Short-Circuiting:** When a higher-priority interceptor (such as Anti-Uninstall) triggers an action, return immediately to stop processing downstream content blockers.
 
 > [!NOTE]
-> **Persistence Reality:** Persistence is 100% SharedPreferences via `SavedPreferencesLoader.kt` across 29+ XML files with Gson JSON serialization. EncryptedSharedPreferences is strictly isolated to Supabase cloud sync tokens in `SecureKeyStore.kt`. There is zero Room DB and zero Preferences DataStore in this codebase.
+> **Persistence Reality:** Persistence is 100% SharedPreferences via `SavedPreferencesLoader.kt` across 30+ XML files with Gson JSON serialization, `@Volatile` in-memory schedule caching, and static companion mutex locks (`rulesLock` and `statsLock`) synchronizing multi-instance reads and writes. EncryptedSharedPreferences is strictly isolated to Supabase cloud sync tokens in `SecureKeyStore.kt`. There is zero Room DB and zero Preferences DataStore in this codebase until Milestone 0.3.5.
 
 > [!NOTE]
-> **Dual-Host Presentation Reality:** UI presentation is split between `MainActivity.kt` (4 primary bottom navigation tabs) and `FragmentActivity.kt` (secondary router hosting 18 sub-screens embedding ComposeView). `AmniShieldAdaptiveApp.kt` is currently disconnected to preserve FragmentManager lifecycle stability and represents the target architecture for Milestone 0.3.5.
+> **Dual-Host Presentation Reality:** UI presentation is split between `MainActivity.kt` (4 primary bottom navigation tabs) and `FragmentActivity.kt` (secondary router hosting 18+ sub-screens embedding ComposeView via the type-safe `FragmentDestination.kt` sealed route contract). `AmniShieldAdaptiveApp.kt` is currently disconnected to preserve FragmentManager lifecycle stability and represents the target architecture for Milestone 0.3.5.
 
 > [!CAUTION]
-> **Main Binder Thread Safety:** In-flight reflection-based Gson deserialization in `onAccessibilityEvent` must be mitigated via in-memory rule caching (Milestone 0.3.2) to prevent Binder thread jank.
+> **Main Binder Thread Safety:** Reflection-based Gson deserialization in `onAccessibilityEvent` is mitigated via thread-safe in-memory rule caching (`@Volatile` + `synchronized(scheduleCacheLock)`, implemented in Milestone 0.3.2) and invalidated via `ServiceBroadcastManager` to prevent Binder thread jank.
 
 > [!IMPORTANT]
 > **Strict Universal Zero-Emoji Policy:** Do not use UTF-8 emojis anywhere in code, UI layouts, strings, comments, logs, or documentation. Use plain-text tags (`[INFO]`, `[OK]`, `[FAIL]`, `[WARNING]`, `[ERROR]`) instead.

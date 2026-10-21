@@ -108,16 +108,16 @@ AmniShield uses a decoupled Dual-Host presentation architecture bridging Android
 
 ### Persistence Reality: 100% SharedPreferences
 - **Zero Room DB / Zero DataStore**: AmniShield contains zero Room DB and zero DataStore dependencies.
-- **`SavedPreferencesLoader.kt` (2,015 lines)**: Manages 29 specialized SharedPreferences XML files across 459 callers. Complex rules and limits are serialized to JSON strings using Google Gson (33 calls).
+- **`SavedPreferencesLoader.kt` (2,069 lines)**: Manages 30 specialized SharedPreferences XML files (37+ total SharedPreferences XML files across the app) with thread-safe in-memory schedule caching. Complex rules and limits are serialized to JSON strings using Google Gson (33 calls).
 - **`SecureKeyStore.kt`**: `EncryptedSharedPreferences` is strictly isolated to Supabase cloud sync authentication tokens with an automatic plain XML fallback (`amnishield_sync_secrets_fallback`).
 
 ### Blocker Interceptor Pipeline
 Executed in `AmniShieldAccessibilityService.kt`:
-1. **Priority 0**: `AntiUninstallDetector` (Line 283) - Intercepts settings, device admin, and store tampering; dispatches Home.
-2. **Priority 1**: `FocusModeBlocker` (Line 304) - Enforces focus sessions; dispatches `AmniSpaceActivity` (Focus Launcher) or `pressHome()`.
-3. **Priority 2**: `WebsiteBlockerDetector` (Line 350) - Evaluates browser URL bars across 15+ browsers (linear scan over 1-20 active schedule targets; `adult_domains.txt` and `haram_domains.txt` are dead assets).
-4. **Priority 3**: `AppBlocker` (Line 417) - Evaluates launch limits, usage quotas, and app block schedules.
-5. **Priority 4**: `KeywordBlocker` & `ReelBlocker` (Lines 456, 475-562) - Deferred via conflated coroutine channel (`Channel.CONFLATED`).
+1. **Priority 0**: `AntiUninstallDetector` (Line 300) - Intercepts settings, device admin, and store tampering; dispatches Home.
+2. **Priority 1**: `FocusModeBlocker` (Line 321) - Enforces focus sessions; dispatches `AmniSpaceActivity` (Focus Launcher) or `pressHome()`.
+3. **Priority 2**: `WebsiteBlockerDetector` (Line 367) - Evaluates browser URL bars across 15+ browsers (linear scan over 1-20 active schedule targets; `adult_domains.txt` and `haram_domains.txt` are dead assets).
+4. **Priority 3**: `AppBlocker` (Line 434) - Evaluates launch limits, usage quotas, and app block schedules.
+5. **Priority 4**: `KeywordBlocker` & `ReelBlocker` (Lines 473, 507-598) - Deferred via conflated coroutine channel (`Channel.CONFLATED`).
 
 ### Premium & Supporter Pass Architecture
 - **Free FOSS Core (`UserType.FREE`)**: Base app, website, reel blockers, and keyword filters are 100% free and open-source forever.

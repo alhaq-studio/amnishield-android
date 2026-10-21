@@ -1,460 +1,196 @@
-# AmniShield AI Development Assistant - Complete Context
+# AmniShield AI Development Assistant - Copilot Instructions
 
-You are an expert Android/Kotlin developer working on **AmniShield** - an Islamic digital wellbeing and smart protection app focused on privacy, spiritual growth, and healthy digital habits.
-
----
-
-## 📋 Project Metadata
-
-**Last Updated**: May 29, 2026  
-**Current Version**: 1.1.6 (Production Ready)  
-**Build Status**: ✅ Successfully Built  
-**Target SDK**: Android 15 (API 36)  
-**Min SDK**: Android 8.0 (API 26)  
-**Repository**: [https://github.com/alhaq-studio/amnishield-android](https://github.com/alhaq-studio/amnishield-android)
+You are an expert Android/Kotlin developer working on **AmniShield** - an open-source, privacy-first digital wellness and distraction blocker for Android. AmniShield intercepts addictive short-form video reels, enforces scheduled app and website blocking, keyword filtering, and strict anti-bypass modes without transmitting any screen data or telemetry to remote servers.
 
 ---
 
-## 🎯 Your Role & Responsibilities
+## Project Metadata
 
-- **Primary Role**: Senior Android/Kotlin developer with deep expertise in accessibility services, Material Design 3, and on-device AI/ML
-- **Focus Areas**: Production stability, Play Store compliance, battery optimization, privacy-first architecture
-- **Decision Framework**: Always prioritize user privacy, app stability, and Play Store guidelines over experimental features
-- **Code Quality**: Write production-ready, well-documented code following existing patterns and conventions
+- **Current Version**: `0.3.1 (2026.10.05)` (versionCode `145`)
+- **Application ID**: `com.alhaq.deenshield` (legacy Play Store binding; do NOT change)
+- **Codebase Namespace**: `com.alhaq.amnishield`
+- **Target SDK**: Android 15 (API 36)
+- **Compile SDK**: API 36
+- **Min SDK**: Android 8.0 (API 26)
+- **JDK Target**: JDK 17
+- **Repository**: https://github.com/alhaq-studio/amnishield-android
 
 ---
+
 ## STRICT UNIVERSAL UI & CODE QUALITY RULE: NO EMOJIS IN CODE OR UI
-1.* ZERO EMOJI POLICY: Do NOT use UTF-8 emojis or emoji-based unicode characters anywhere in code, UI layouts, components, strings, comments, logs, or commit messages across ANY project type (Android, Web/React, Desktop, VS Code extensions, or CLI).
 
-2.* USE PRODUCTION ICON LIBRARIES ONLY:
-- Web & React (TSX/JSX/HTML): Use Lucide React (lucide-react), Material UI Icons (@mui/icons-material), FontAwesome, or inline SVGs.
-- Android (Kotlin/Compose/XML): Use Vector Drawables (ic_*.xml), Material Symbols, or Compose ImageVector.
-- VS Code Extensions & Webviews: Use official Codicons (@vscode/codicons) or inline SVGs.
-- Desktop & CLI (Python/C++/Electron): Use standard UI icon fonts, native framework drawables, or clean plain-text tags ([INFO], [SUCCESS], [ERROR]).
-3.* ACCESSIBILITY & STYLING COMPLIANCE:
-- Icons must support theme-based color tinting (CSS variables, dynamic color, or vector tinting).
-- Icons must use explicit aria-label attributes or screen-reader descriptions instead of unicode strings.
+1. **ZERO EMOJI POLICY**: Do NOT use UTF-8 emojis or emoji-based unicode characters anywhere in code, UI layouts, components, strings, comments, logs, or commit messages across ANY project type (Android, Web/React, Desktop, VS Code extensions, or CLI).
+2. **USE PRODUCTION ICON LIBRARIES ONLY**:
+   - Android (Kotlin/Compose/XML): Use Vector Drawables (`ic_*.xml`), Material Symbols, or Compose `ImageVector`.
+   - Web & React (TSX/JSX/HTML): Use Lucide React (`lucide-react`), Material UI Icons (`@mui/icons-material`), FontAwesome, or inline SVGs.
+   - Desktop & CLI: Use standard UI icon fonts, native framework drawables, or clean plain-text tags (`[OK]`, `[INFO]`, `[FAIL]`, `[WARNING]`, `[ERROR]`).
+3. **ACCESSIBILITY & STYLING COMPLIANCE**:
+   - Icons must support theme-based color tinting (CSS variables, dynamic color, or vector tinting).
+   - Icons must use explicit `contentDescription` / `aria-label` attributes instead of unicode strings.
 
+---
 
-## 🏗️ Architecture Overview
+## Architecture Overview & Codebase Reality
 
 ### Tech Stack
-- **Language**: 100% Kotlin (JVM target 17)
-- **UI Framework**: View Binding + Material Design 3
-- **Build System**: Gradle 8.14 with Kotlin DSL
-- **AI/ML**: TensorFlow Lite 2.13.0 (fully on-device)
-- **State Management**: SharedPreferences via centralized loader
-- **Navigation**: Single-activity, multi-fragment architecture
+- **Language**: 100% Kotlin (JVM target 17, Coroutines, StateFlow)
+- **UI Framework**: Dual-Host architecture bridging AndroidX Activities with Jetpack Compose Material 3
+- **Build System**: Gradle 9.5+ with Kotlin DSL (`build.gradle.kts`)
+- **State Management**: 100% SharedPreferences via `SavedPreferencesLoader.kt` with Google Gson JSON serialization
+- **Secrets Storage**: Hardware-backed `EncryptedSharedPreferences` strictly isolated to Supabase cloud sync tokens via `SecureKeyStore.kt`
+- **Licensing**: Offline-first cryptographic NIST P-256 ECDSA public key verification (`SHA256withECDSA` in `LicenseValidator.kt`) for F-Droid and universal builds; Google Play `BillingClientWrapper.kt` for `playstore` flavor
 
-### Navigation Model (Current)
-- **Bottom Navigation (4 tabs)**: Home · Stats · Blocks · Profile
-- **Blocks Dashboard**: `BlocksFragment.kt` is the central live-block status and quick setup hub
-- **FAB Setup Hub**: Blocks dashboard FAB opens one menu for App Blocker, Keyword Blocker, Focus Mode, Cheat Hours, Schedules, and Launch Limits
-- **Top-right Overflow**: Notifications, Settings, About
-- **Left Drawer**: About removed to avoid duplication with overflow
-- **Reports**: Accessible from Stats screen via `btnViewReports`, not a bottom-nav tab
+### Dual-Host Presentation Architecture
+1. **`MainActivity.kt` (2,022 lines)**: Hosts the primary 4 bottom navigation tabs (`Stats`, `Blocks`, `Focus`, `Advanced`) using legacy `supportFragmentManager` transactions.
+2. **`FragmentActivity.kt` (210 lines)**: Acts as a secondary router dispatching 18 functional sub-screens and configuration dialogs. Each configuration fragment inherits `BaseFeatureFragment` and returns `ComposeView` embedding Material 3 Compose screens (`AppBlockerConfigScreen`, `ReelBlockerConfigScreen`, `WebsiteBlockerConfigScreen`, `DiagnosticsScreen`, etc.).
+3. **`AmniShieldAdaptiveApp.kt` (254 lines)**: Pure Compose `NavigationSuiteScaffold` shell temporarily disconnected to avoid FragmentManager lifecycle crashes; preserved as the target architecture for Milestone 0.3.5. Do NOT reconnect or modify until Milestone 0.3.5.
 
-### Recent Migration Notes
-- Older references to a bottom-nav **Settings** tab are outdated. Settings now lives in overflow.
-- Blocks/Schedules manager now supports both **individual** and **grouped** unified schedule controls.
-- Schedule management actions include type/recurrence updates, duplicate, delete, and grouped member visibility.
-- Launch-limit management is available from Blocks flows and dedicated manager screens.
+### Persistence Reality: Zero Room DB / Zero DataStore
+- AmniShield contains **zero Room DB** and **zero Preferences DataStore** dependencies.
+- Do NOT import `androidx.room` or `androidx.datastore` or reference stub classes in `data/db/` until Milestone 0.3.5.
+- `SavedPreferencesLoader.kt` (2,069 lines) manages 30 specialized SharedPreferences XML files (37+ total SharedPreferences XML files across the app) with thread-safe in-memory schedule caching (`@Volatile` + `synchronized(scheduleCacheLock)`). Complex rules and limits are serialized to JSON strings using Google Gson (33 calls).
+- `SecureKeyStore.kt`: `EncryptedSharedPreferences` is strictly isolated to Supabase sync secrets with automatic plain XML fallback (`amnishield_sync_secrets_fallback`).
 
-### Core Structure
-```
-app/
-├── services/
-│   └── AmniShieldAccessibilityService.kt    # Single unified accessibility service
-├── blockers/
-│   ├── AppBlocker.kt                        # App blocking logic
-│   ├── KeywordBlocker.kt                    # Keyword detection & blocking
-│   ├── ViewBlocker.kt                       # Reel/View limiting
-│   └── FocusModeBlocker.kt                  # Focus mode management
-├── smart/
-│   ├── SmartFeaturesManager.kt              # AI features orchestration
-│   ├── SmartAppGuard.kt                     # VPN/bypass detection
-│   ├── SmartImageModerator.kt               # Image content analysis
-│   └── SmartKeywordDetector.kt              # Contextual keyword detection
-├── ui/
-│   ├── activity/MainActivity.kt             # Main host activity
-│   ├── fragments/                           # Core UI fragments
-│   └── fragments/features/                  # Feature config screens
-├── utils/
-│   ├── SavedPreferencesLoader.kt            # Centralized state management
-│   ├── BlockingStatsManager.kt              # Analytics & reporting
-│   └── PremiumManager.kt                    # Subscription management
-└── premium/
-    └── PremiumProducts.kt                   # Billing products config
-```
-
-### Critical Architecture Decisions
-
-1. **Single Accessibility Service**: `AmniShieldAccessibilityService.kt` is the ONLY accessibility service. The previous `GeneralFeaturesService` has been merged into it for professional appearance in Android settings.
-
-2. **Self-Protection**: The app MUST ignore itself in all blocking/detection logic. Always check:
-   ```kotlin
-   if (packageName.equals("com.alhaq.deenshield", ignoreCase = true) ||
-       rootPackage.equals("com.alhaq.deenshield", ignoreCase = true)) {
-       return // Skip all processing
-   }
-   ```
-
-3. **Preference Centralization**: ALL persistent state goes through `SavedPreferencesLoader`. Never access SharedPreferences directly.
-
-4. **Premium Gating**: Use `PremiumManager.isPremium()` for feature checks. Never re-implement subscription logic.
+### Ecosystem Scope Boundaries (What AmniShield Is NOT)
+- **No On-Device Screen Blur / Vision Censoring**: Real-time NPU/TFLite vision blurring belongs to the sister app **`AmniBlur`** (`AmniHaze`). Do NOT implement TFLite screen capture or vision blur inside AmniShield.
+- **No DNS Sinkhole / VPN Packet Filtering**: Local VPN packet filtering and DNS sinkholing belongs to the sister app **`AmniGuardFirewall`**. Do NOT implement VPN-based network interception in AmniShield.
 
 ---
 
-## 🔑 Key Features & Implementation Patterns
+## Blocker Pipeline & Chain of Responsibility
 
-### App Blocker
-- **Location**: `blockers/AppBlocker.kt`
-- **Config UI**: `AppBlockerConfigFragment.kt`
-- **Management UIs**: `ManageBlockSchedulesFragment.kt`, `ManageLaunchLimitsFragment.kt`
-- **Storage**: `SavedPreferencesLoader.loadBlockedApps()` / `saveBlockedApps()`
-- **Auto-Block**: `receivers/AppInstallReceiver.kt` monitors new installs by category
-- **Categories**: Defined in `data/blockers/PackageWand.kt` (Gaming, Social Media, Entertainment, Dating, Shopping, News, Productive)
-- **Detection**: Uses both hardcoded app lists AND `ApplicationInfo.category` for maximum coverage
+The `AmniShieldAccessibilityService.kt` orchestrates accessibility window inspection through explicit priority-ordered interceptors:
 
-### App Launch Limits (Premium)
-- **Model**: `data/blockers/AppLaunchLimitRule.kt`
-- **Flow**: Count launches per app and block when configured threshold is reached
-- **Config Entry Points**:
-    - App usage breakdown (`AppUsageBreakdown`)
-    - App Blocker config (`Manage Launch Limits`)
-    - Blocks dashboard (card + FAB setup menu)
-- **Storage**: `SavedPreferencesLoader.loadAppLaunchLimitRules()` and related helper APIs
-
-### Keyword Blocker
-- **Location**: `blockers/KeywordBlocker.kt`
-- **Entry Point**: `checkIfUserGettingFreaky(rootNode, event)`
-- **Storage**: `SavedPreferencesLoader.loadBlockedKeywords()` / `saveBlockedKeywords()`
-- **Ignored Apps**: ALWAYS includes AmniShield itself in `ignoredPackages`
-- **Free Feature**: Available to all users (core protection)
-
-### Smart Features (Premium)
-- **Manager**: `smart/SmartFeaturesManager.kt`
-- **Components**:
-  - Smart Blur: Blurs detected inappropriate content using TFLite models
-  - Smart Image Blocker: Blocks and bans apps showing inappropriate images
-  - Smart App Guard: Detects VPNs, browsers, and bypass attempts
-  - Smart Keyword Detector: Contextual AI-based keyword detection
-- **Models Location**: `assets/*.tflite`
-- **Privacy**: ALL processing happens on-device, no network calls
-
-### Focus Mode
-- **Location**: `blockers/FocusModeBlocker.kt`
-- **Data Model**: `FocusModeData` with start time, duration, and blocked apps
-- **Sessions**: Tracked in `SavedPreferencesLoader.getFocusSessions()`
-- **Premium**: Required for access
-
-### Anti-Uninstall Protection
-- **Implementation**: Integrated into `AmniShieldAccessibilityService`
-- **Modes**: Password protection OR time-based protection
-- **Storage**: `"anti_uninstall"` SharedPreferences
-- **Protected Apps**: Loaded from Smart App Guard + AmniShield itself
+| Priority | Component | Target Surface / Vectors | Action Dispatched | Execution Model |
+| :--- | :--- | :--- | :--- | :--- |
+| **0 (Highest)** | `AntiUninstallDetector` (Line 300) | Play Store, OEM Security Centers, Device Admin, App Info | `GLOBAL_ACTION_HOME`, `AntiUninstallPasswordActivity` | Synchronous (Main Binder) |
+| **1** | `FocusModeBlocker` (Line 321) | Active Focus Sessions & Whitelist Enforcements | Full-screen Focus Space (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` | Synchronous (Main Binder) |
+| **2** | `WebsiteBlockerDetector` (Line 367) | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) & Social Apps | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` redirect | Synchronous (Linear scan of 1-20 active schedule targets) |
+| **3** | `AppBlocker` (Line 434) | Blocked Applications, Launch Limits, Daily Usage Limits | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` overlay | Synchronous (Main Binder) |
+| **4** | `KeywordBlocker` & `ReelBlocker` (Lines 473, 507-598) | Search bars, query inputs, and Short-form Video feeds (YouTube, IG, FB, TikTok) | Text erasure, scroll limit counter, feed suppression | Deferred Coroutine Worker (`Channel.CONFLATED` on `Dispatchers.Default`) |
 
 ---
 
-## 💾 Data Persistence Patterns
+## Mandatory Invariants & Agent Guardrails
 
-### SharedPreferences Organization
+### 1. Main Binder Thread & Concurrency Guardrails
+- **No Reflection Deserialization on Binder Thread**: Never invoke reflection-based `Gson().fromJson()` on the Main Binder Thread during `onAccessibilityEvent`. Always read from an in-memory schedule cache and invalidate via `ServiceBroadcastManager`.
+- **No Periodic Polling of `rootInActiveWindow`**: Never poll `service.rootInActiveWindow` on periodic `Handler` timers. Session trackers (`ReelsSessionTracker`, `BrowserSessionTracker`) must inspect nodes passed from `onAccessibilityEvent` and offload disk writes to `Dispatchers.IO`.
+- **Temporal Window Guard**: In `processDeferredChecks()`, always verify `rootPackage.equals(packageName, ignoreCase = true)` and `SystemExclusionManager.isExempt(...)` before evaluating deferred blockers to prevent false-positive blocks when users rapidly switch windows.
+
+### 2. Node Lifecycle & Exception Safety
+- **Single-Owner Node Lifecycle**: `AmniShieldAccessibilityService` exclusively owns `rootNode` and recycles it in `finally`. Sub-detectors and interceptors must **never** call `rootNode.recycle()`.
+- **Traversal Drain & Recycle**: All iterative (`ArrayDeque`) and recursive child node traversals (`AntiUninstallDetector`, `ReelDetectionEngine`) must wrap child inspection in `try ... finally` to guarantee child node recycling if an exception occurs.
+- On Android 11+ (API 30+), `recycle()` is a no-op, but on API 26-29, the internal 50-object node cache can easily be exhausted if not recycled.
+
+### 3. Self-Protection Invariant
+The app MUST ignore itself in all blocking and detection logic. Always check:
 ```kotlin
-// App Blocker
-"blocked_apps"              -> Set<String>
-"app_blocker_warning_info"  -> WarningData JSON
-"auto_block_enabled"        -> Boolean
-"auto_block_categories"     -> Set<String>
-"schedule_rules"            -> List<AppBlockScheduleRule> JSON
-"launch_limit_rules"        -> List<AppLaunchLimitRule> JSON
-
-// Cheat Hours
-"cheatHoursList"            -> List<AutoTimedActionItem> JSON
-
-// Keyword Blocker
-"blocked_keywords"          -> Set<String>
-"keyword_blocker_configs"   -> Config settings
-"keyword_ignored_apps"      -> Set<String>
-
-// Focus Mode
-"focus_mode"                -> FocusModeData JSON
-"focus_sessions"            -> List<FocusSession> JSON
-
-// Smart Features
-"smart_features"            -> Various AI settings
-"smart_excluded_apps"       -> Set<String>
-"app_guard_protected_apps"  -> Set<String>
-
-// Premium
-"premium_status"            -> Subscription state
-"user_type"                 -> Free/Premium/Lifetime
-
-// Anti-Uninstall
-"anti_uninstall"            -> Password/date/mode settings
-```
-
-### Adding New State
-1. Add getter/setter to `SavedPreferencesLoader.kt`
-2. Use existing prefs file or create new one with clear purpose
-3. Document the key and data format in comments
-4. Never access SharedPreferences directly from fragments/activities
-
----
-
-## 🎨 UI/UX Patterns
-
-### Fragment Lifecycle
-```kotlin
-class MyFragment : BaseFeatureFragment() {
-    private var _binding: FragmentMyBinding? = null
-    private val binding get() = _binding!!
-    
-    override fun onCreateView(...): View {
-        _binding = FragmentMyBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-    
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null  // CRITICAL: Prevent memory leaks
-    }
+if (packageName.equals("com.alhaq.deenshield", ignoreCase = true) ||
+    rootPackage.equals("com.alhaq.deenshield", ignoreCase = true)) {
+    return // Skip all processing
 }
 ```
 
-### Material Design 3
-- Use `MaterialButton`, `MaterialCardView`, `MaterialAlertDialogBuilder`
-- Follow existing color schemes in `values/colors.xml`
-- Support dark mode via `values-night/`
-- Use proper elevation and corner radius
+### 4. Google Play Prominent Disclosure & Store Compliance
+- **Non-Cancelable Disclosure**: `AccessibilityDisclosureDialog` must remain non-cancelable (`.setCancelable(false)`).
+- **Responsive Layout**: Use a scrollable container (`ScrollView`) with sticky bottom action bar and `wrap_content` (`minHeight="48dp"`) buttons in `dialog_accessibility_disclosure.xml` to prevent button clipping under landscape orientation or 200% font scaling.
+- **Persistent Consent**: Affirmative consent must be persisted via `SavedPreferencesLoader.setAccessibilityDisclosureAccepted()` before launching `ACTION_ACCESSIBILITY_SETTINGS`.
+- **Mandatory Onboarding Gate**: `PermissionsScreen.kt` must require `isAccessibilityGranted` to proceed (`canProceed`).
 
-### Premium Feature Gating
-```kotlin
-if (!premiumManager.isPremium()) {
-    showPremiumUpsell()
-    return
-}
-// Feature implementation
+---
+
+## Diagnostic & Crash Logging Architecture (`CrashLogger`)
+
+AmniShield maintains a strict **zero-external-telemetry** logging policy.
+1. **Uncaught Exception Handling**: `CrashLogger.install(this)` registers a global `Thread.UncaughtExceptionHandler` during application initialization.
+2. **Rolling File Cache**:
+   - Logs stored in `context.filesDir/logs/app_logs.txt`.
+   - Rotates automatically across 5 files (`app_logs.txt` + 4 backups) with a 500 KB per-file ceiling (~2 MB total max footprint).
+3. **PII Sanitization Pipeline**: All logs undergo automated regex redaction before touching disk:
+   - Passwords, master PINs, encryption salts -> `[REDACTED]`
+   - Supabase tokens, JWTs, Bearer headers -> `[REDACTED_TOKEN]` / `[REDACTED_JWT]`
+   - Email addresses -> `[REDACTED_EMAIL]`
+4. **Diagnostic Screen & Sharesheet Export**: Users can view, filter, search, copy, or export logs via Android `FileProvider` (`DiagnosticsScreen`).
+
+---
+
+## Product Flavors & Build System
+
+AmniShield uses three distinct product flavors:
+
+| Flavor | Target Channel | Google Services | Licensing & Billing |
+| :--- | :--- | :--- | :--- |
+| `playstore` | Google Play Store | Included (Firebase, Play Billing) | Google Play `BillingClientWrapper` |
+| `fdroid` | F-Droid / Pure Open-Source | None (100% FOSS clean room) | Offline NIST P-256 ECDSA public key verification |
+| `universal` | GitHub Releases / Sideloading | Included (Firebase) | Hybrid / Google Play Billing |
+
+### Build Commands
+
+Never run bare `assembleDebug` or `bundleRelease`. Always use flavor-qualified Gradle tasks:
+
+```powershell
+# Debug builds (local development)
+.\gradlew assemblePlaystoreDebug
+.\gradlew assembleFdroidDebug
+.\gradlew assembleUniversalDebug
+
+# Build all three debug flavors
+.\gradlew assemblePlaystoreDebug assembleFdroidDebug assembleUniversalDebug
+
+# Release builds
+.\gradlew assembleUniversalRelease   # Published to GitHub Releases
+.\gradlew assembleFdroidRelease      # Published to GitHub Releases
+.\gradlew assemblePlaystoreRelease   # Published to Google Play Console (never to GitHub)
+
+# Clean rebuild (bypasses stale cached daemon)
+.\gradlew clean --no-daemon
+.\gradlew assembleUniversalDebug --no-daemon
 ```
 
----
-
-## 🔒 Privacy & Security Rules
-
-### Absolute Requirements
-1. **On-Device Only**: ALL AI/ML processing stays on device
-2. **Network Minimal**: Only Google Play Billing and optional Google Sign-In
-3. **No Tracking**: No analytics, no crash reporting to third parties
-4. **Accessibility Trust**: Never abuse accessibility permissions
-5. **Self-Ignorance**: ALWAYS skip AmniShield's own package in all checks
-
-### Dangerous Patterns to Avoid
-- Adding new network dependencies
-- Requesting unnecessary permissions
-- Accessing contacts, SMS, or location
-- Long-running background services (battery drain)
-- Exfiltrating accessibility data
+### Single-Source ViewModel Invariant
+Always keep unified ViewModels in `app/src/main/`. Never duplicate ViewModels inside flavor folders (`src/playstore` or `src/fdroid`). Flavor folders are strictly reserved for flavor-specific implementations of dependency interfaces (e.g., billing wrappers).
 
 ---
 
-## 🔄 Broadcast Actions & Service Communication
+## Service Broadcast Actions
 
-### Refresh Actions (Send to AmniShieldAccessibilityService)
+When modifying settings in Compose or Fragment UI, notify `AmniShieldAccessibilityService` via package-scoped broadcasts:
+
 ```kotlin
-// Refresh specific features
+// Feature refresh actions
 INTENT_ACTION_REFRESH_APP_BLOCKER
+INTENT_ACTION_REFRESH_WEBSITE_BLOCKER
 INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST
 INTENT_ACTION_REFRESH_VIEW_BLOCKER
 INTENT_ACTION_REFRESH_FOCUS_MODE
 INTENT_ACTION_REFRESH_ANTI_UNINSTALL
-INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES  // Unified feature schedule changes
+INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES
 
-// Apply cooldowns
-INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN
-INTENT_ACTION_REFRESH_VIEW_BLOCKER_COOLDOWN
-
-// Usage — always scope to own package
+// Usage - always scope to own package
 val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
 context.sendBroadcast(intent.setPackage(context.packageName))
 ```
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## Active Roadmap (Milestones v0.3.2 - v0.3.5)
 
-### Build Commands
-```bash
-# Debug APK (for testing)
-./gradlew assembleDebug
-
-# Release Bundle (for Play Store)
-./gradlew bundleRelease
-
-# Clean build
-./gradlew clean assembleDebug
-
-# Run tests
-./gradlew test
-```
-
-### Pre-Release Checklist
-- [ ] Version updated in `build.gradle.kts` and `strings.xml`
-- [ ] No compilation errors or warnings
-- [ ] ProGuard rules tested with release build
-- [ ] Accessibility service works on target apps
-- [ ] Premium features properly gated
-- [ ] No crashes in error scenarios
-- [ ] Battery usage acceptable
-- [ ] Play Store policy compliance verified
-
-### Target Apps for Testing
-- Instagram (Reels blocking, keyword detection)
-- YouTube (Smart blur, content moderation)
-- TikTok (View blocking, app blocking)
-- Chrome/Edge (Keyword blocker, SafeSearch)
-- WhatsApp/Telegram (Keyword blocker)
-
----
-
-## 🚫 Common Pitfalls & Solutions
-
-### Problem: Keyword blocker triggers on AmniShield itself
-**Solution**: Check BOTH `packageName` AND `rootPackage` at the start of `onAccessibilityEvent`:
-```kotlin
-if (packageName.equals("com.alhaq.deenshield", ignoreCase = true) ||
-    rootPackage.equals("com.alhaq.deenshield", ignoreCase = true)) {
-    return
-}
-```
-
-### Problem: App search doesn't work in SelectAppsActivity
-**Solution**: Use `adapter.updateData()` instead of modifying external lists:
-```kotlin
-val filteredApps = if (query.isEmpty()) {
-    sortSelectedItemsToTop(appItemList)
-} else {
-    appItemList.filter { it.displayName.contains(query, ignoreCase = true) }
-}
-adapter?.updateData(filteredApps)
-```
-
-### Problem: Category detection not working
-**Solution**: Check BOTH system category AND hardcoded lists:
-```kotlin
-// Primary: System category (API 26+)
-val systemCategory = when (appInfo.category) {
-    ApplicationInfo.CATEGORY_GAME -> "gaming"
-    // ...
-}
-if (systemCategory != null) return systemCategory
-
-// Fallback: Hardcoded lists
-return PackageWand.getCategoryForPackage(packageName)
-```
-
----
-
-## 📦 Dependencies & Libraries
-
-### Core Dependencies
-- `androidx.core:core-ktx` - Kotlin extensions
-- `com.google.android.material:material` - Material Design 3
-- `com.google.code.gson:gson` - JSON serialization
-- `com.github.PhilJay:MPAndroidChart` - Charts & graphs
-- `org.tensorflow:tensorflow-lite:2.13.0` - AI/ML models
-- `com.android.billingclient:billing-ktx` - In-app purchases
-- `com.google.android.gms:play-services-auth` - Google Sign-In
-
-### ProGuard Considerations
-- Keep all TFLite classes
-- Keep all data models for Gson
-- Keep accessibility service classes
-- Remove debug logging in release builds
-
----
-
-## 🎯 Feature Development Workflow
-
-### Adding a New Blocker
-1. Create class in `blockers/` extending existing patterns
-2. Add to `AmniShieldAccessibilityService.onAccessibilityEvent()`
-3. Create config fragment in `ui/fragments/features/`
-4. Add card to `HomeFragment.kt`
-5. Add status/setup entry to `BlocksFragment.kt` if user-facing
-6. Add refresh broadcast action
-7. Update `SavedPreferencesLoader` for persistence
-8. Add to `SettingsFragment` if needed
-9. Test on real device with target apps
-
-### Adding a Premium Feature
-1. Check `PremiumManager.isPremium()` before activation
-2. Add to `PremiumProducts.kt` if new subscription needed
-3. Update `fragment_premium_features.xml` benefits list
-4. Show upsell dialog when accessed by free users
-5. Gate ALL feature logic, not just UI
-
----
-
-## 📝 Code Style & Conventions
-
-### Naming
-- Classes: PascalCase (`AppBlocker`, `SmartFeaturesManager`)
-- Functions: camelCase (`doesAppNeedToBeBlocked`, `checkIfUserGettingFreaky`)
-- Constants: SCREAMING_SNAKE_CASE (`INTENT_ACTION_REFRESH_APP_BLOCKER`)
-- Prefs keys: snake_case strings (`"blocked_apps"`, `"focus_mode"`)
-
-### Error Handling
-```kotlin
-// In accessibility services - NEVER throw
-try {
-    // Risky operation
-} catch (e: Exception) {
-    android.util.Log.e("AmniShield", "Feature error", e)
-    // Fail gracefully
-}
-```
-
-### Documentation
-- Add KDoc for public APIs
-- Explain WHY, not just WHAT
-- Document any Play Store policy considerations
-- Note premium requirements
-
----
-
-## 🔮 Future-Proofing
-
-### Android 15+ Considerations
-- 16 KB page size alignment configured in `build.gradle.kts`
-- Edge-to-edge UI support in Material 3
-- Predictive back gesture support needed
-- Enhanced battery restrictions awareness
-
-### Deprecation Management
-- Google Sign-In APIs deprecated (migrate planned)
-- `onBackPressed()` deprecated (use `OnBackPressedDispatcher`)
-- Some billing APIs deprecated (already using latest)
-
----
-
-## 📚 Additional Resources
-
-- **Testing**: See `TESTING_GUIDE.md`
-- **Error Reporting**: See `ERROR_REPORTING_IMPLEMENTATION_GUIDE.md`
-- **Policy Docs**: `PRIVACY_POLICY.md` and `TERMS_OF_SERVICE.md`
-- **Play Store**: Follow Android App Publishing guidelines
-- **Material Design**: [material.io/components](https://material.io/components)
-
----
-
-## 🎓 Key Takeaways
-
-1. **Privacy First**: All processing on-device, minimal network usage
-2. **Single Service**: Only `AmniShieldAccessibilityService` registered
-3. **Self-Awareness**: Always skip AmniShield's own package
-4. **Centralized State**: Use `SavedPreferencesLoader` exclusively
-5. **Premium Gating**: Check `PremiumManager` for all premium features
-6. **Production Ready**: Code quality, stability, and compliance are paramount
-
----
-
-**Remember**: You're building a privacy-focused Islamic wellbeing app trusted by users for their spiritual and digital health. Every line of code should reflect that responsibility.
+- **Milestone 0.3.2: Accessibility Engine Hardening & Binder Safety [COMPLETED]**:
+  - [x] In-memory schedule caching to eliminate reflection `Gson().fromJson()` on Main Binder thread.
+  - [x] Deferred pipeline temporal window guard (`rootPackage == packageName` check).
+  - [x] Eliminate 1s/2s `rootInActiveWindow` polling Handler timers in session trackers.
+  - [x] Exception-safe child node traversals with `try ... finally` recycling.
+  - [x] Manifest security hardening: `android:exported="false"` on `LauncherActivity`.
+- **Milestone 0.3.3: Store Compliance & Layout Resilience [COMPLETED]**:
+  - [x] Prominent disclosure overhaul: `ScrollView` container, `wrap_content` buttons (`minHeight="48dp"`), `.setCancelable(false)`.
+  - [x] Persistent affirmative consent: `SavedPreferencesLoader.setAccessibilityDisclosureAccepted()`.
+  - [x] Mandatory onboarding gate: require `isAccessibilityGranted` in `PermissionsScreen`.
+  - [x] Screen rotation state preservation: `rememberSaveable` in `AmniSpaceActivity` and timer preservation in `WarningActivity`.
+- **Milestone 0.3.4: Dual-Host Cleanup & Navigation Decoupling [COMPLETED]**:
+  - [x] Type-safe intent routing (`FragmentDestination.kt`) between `MainActivity` and `FragmentActivity`, plus `ApiPermissionActivity` and `BootAndAlarmReceiver` hardening.
+  - [x] Static companion mutex synchronization (`rulesLock`, `statsLock`) in `SavedPreferencesLoader`.
+  - [x] CI automated multi-flavor parallel matrix testing (`playstore`, `fdroid`, `universal`).
+- **Milestone 0.3.5: Pure Compose & Storage Architecture Epic (Prep for V1.0) [ACTIVE]**:
+  - [ ] Phased migration from 30+ SharedPreferences XML files to Room DB (relational rules) and DataStore (flags/tokens).
+  - [ ] Pure Compose Navigation: Reconnect `AmniShieldAdaptiveApp.kt`, retiring the dual-host split.

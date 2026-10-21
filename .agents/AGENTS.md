@@ -17,18 +17,19 @@ This repository (`AmniShield-Android` / `alhaq-studio/amnishield-android`) is pa
 ## Current Project Focus
 
 - **Version**: `0.3.1 (2026.10.05)` / `versionCode 145` (Namespace: `com.alhaq.amnishield`, ApplicationId: `com.alhaq.deenshield`).
-- **Primary Goal**: Milestone 0.3.2 (Accessibility Engine Hardening & Binder Safety) and Milestone 0.3.3 (Google Play Store Compliance & Layout Resilience).
+- **Completed Milestones**: Milestone 0.3.2 (Accessibility Engine Hardening & Binder Safety), Milestone 0.3.3 (Google Play Store Compliance & Layout Resilience), and Milestone 0.3.4 (Dual-Host Cleanup, Type-Safe Routing & SharedPreferences Synchronization).
+- **Primary Goal**: Milestone 0.3.5 (Pure Compose & Storage Architecture Epic).
 
 ---
 
 ## Mandatory Architectural Invariants & Agent Guardrails
 
 1. **Persistence Reality (Zero Room / Zero DataStore):**
-   - Local persistence is 100% `SharedPreferences` orchestrated via `SavedPreferencesLoader.kt` (29 specialized XML files in loader, 37 total XML files, Gson JSON serialization).
+   - Local persistence is 100% `SharedPreferences` orchestrated via `SavedPreferencesLoader.kt` (30 specialized XML files in loader, 37+ total XML files, Gson JSON serialization, in-memory `@Volatile` schedule caching, and static companion mutex locks `rulesLock` / `statsLock`).
    - `EncryptedSharedPreferences` is strictly isolated to `SecureKeyStore.kt` (`amnishield_sync_secrets.xml`).
    - Do **not** import `androidx.room` or `androidx.datastore` or reference the unused stub classes in `data/db/` until Milestone 0.3.5.
 2. **Dual-Host Presentation Reality:**
-   - Top-level UI is hosted by `MainActivity.kt` (4 XML bottom navigation tabs) and `FragmentActivity.kt` (secondary router for 18+ feature/config fragments embedding `ComposeView`).
+   - Top-level UI is hosted by `MainActivity.kt` (4 XML bottom navigation tabs) and `FragmentActivity.kt` (secondary router for 18+ feature/config fragments embedding `ComposeView`), connected via the type-safe `FragmentDestination.kt` sealed route contract.
    - `AmniShieldAdaptiveApp.kt` has 0 callers (disconnected in commit `ed57548`) and must not be modified or reconnected until Milestone 0.3.5.
 3. **Blocker Pipeline Priority Order (`AmniShieldAccessibilityService.kt`):**
    - Priority 0: `AntiUninstallDetector` -> Priority 1: `FocusModeBlocker` -> Priority 2: `WebsiteBlockerDetector` -> Priority 3: `AppBlocker` -> Priority 4: `KeywordBlocker` & `ReelBlocker` (via `Channel.CONFLATED` on `Dispatchers.Default`).
