@@ -341,17 +341,17 @@
     <string name="roadmap_item_local_analytics_title">On-Device Screen Time &amp; Widget Suite</string>
     <string name="roadmap_item_local_analytics_desc">Local usage analytics, doomscroll trackers, and glanceable Material 3 home screen widgets with zero telemetry.</string>
 
-    <string name="roadmap_item_windows_bg_title">Windows Elevated Background Service</string>
-    <string name="roadmap_item_windows_bg_desc">System-level Windows service managing UAC-free network hosts resolution and desktop process monitoring.</string>
-    <string name="roadmap_item_dns_sinkhole_title">Local VPN DNS Sinkhole Filter</string>
-    <string name="roadmap_item_dns_sinkhole_desc">On-device VPN packet filtering engine for network-wide tracking and ad/adult domain suppression across all apps.</string>
     <string name="roadmap_item_bulk_lists_title">Advanced Bulk List Import &amp; Export</string>
     <string name="roadmap_item_bulk_lists_desc">Structured CSV/TXT import and export engine for custom Keyword and Website blocklists.</string>
 
-    <string name="roadmap_item_vision_blur_title">Real-Time Mobile NPU Vision Blur Engine</string>
-    <string name="roadmap_item_vision_blur_desc">On-device screen frame scanning and AI content blurring powered by LiteRT / Mobile NPU (AmnGaze integration).</string>
-    <string name="roadmap_item_cloud_sync_title">Multi-Platform Cloud Policy Sync</string>
-    <string name="roadmap_item_cloud_sync_desc">Optional end-to-end encrypted rule synchronization across Android, Windows Desktop, and Web Console.</string>
+    <string name="roadmap_item_cloud_sync_title">Multi-Platform Cloud Policy Sync [COMING SOON - PRO]</string>
+    <string name="roadmap_item_cloud_sync_desc">Planned end-to-end encrypted rule synchronization across Android, Windows Desktop, and Web Console for AmniShield Premium.</string>
+
+    <!-- Cloud Sync & Pairing Coming Soon -->
+    <string name="cloud_sync_coming_soon_title">Cloud Sync - Upcoming Premium Feature</string>
+    <string name="cloud_sync_coming_soon_message">Cross-device pairing and policy sync via PIN or QR code are currently under active development for AmniShield Premium (Milestone V1.1).\n\nAll current focus protection and content blocking features run 100% on-device.</string>
+    <string name="cloud_sync_pairing_preview_notice">[NOTICE] Cloud pairing backend is being provisioned for V1.1. Pairing is currently in preview.</string>
+    <string name="cloud_sync_pairing_deeplink_info">[INFO] Cross-Device Pairing is currently in preview and under active development for V1.1.</string>
 
     <!-- Our Journey & Founding Supporters -->
     <string name="journey_title">Our Journey &amp; Founders</string>

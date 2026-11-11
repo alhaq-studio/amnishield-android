@@ -24,10 +24,6 @@ Last updated: October 2026
 - [x] **Browser Website Engagement Tracker (`BrowserSessionTracker`):** 2-second background active window domain engagement tracking with screen power-saving lifecycle handling.
 - [x] **Pre-Registration Founder Pass & Entitlements:** Google Play Billing pre-registration entitlement check, 90-day security suite grant, and Founding Supporters Wall.
 - [x] **Hardware Monotonic Clock Verification:** Defense against local system time manipulation for license and pass verification.
-- [x] **Multi-Platform Cloud Policy Sync:** Supabase Realtime + REST policy syncing across Android, Windows, and Web.
-- [x] **Ephemeral 6-Digit PIN & In-App ZXing Camera QR Pairing:** Secure, frictionless cross-device pairing.
-- [x] **Unified AmniShield Console:** Unified device management eliminating confusing dual-mode personas.
-- [x] **Decoupled Console Policy vs. Personal Sync:** Separate tiers for enterprise/parental console lockdown and personal cross-device convenience.
 - [x] **Interceptor-Based `AccessibilityService` Modularization:** Decoupled chain of responsibility pipeline (AntiUninstall, AppBlocker, FocusMode, WebsiteBlocker, KeywordBlocker, ReelsBlocker) with strict node lifecycle and short-circuiting invariants.
 - [x] **On-Device ECDSA NIST P-256 Cryptographic License Validation:** Fully offline cryptographic license verification for F-Droid and sideloaded builds.
 - [x] **Diagnostics & In-App Crash Log Viewer:** Material 3 diagnostic log console with PII redaction, search, category filtering, copy-to-clipboard, and native Android Sharesheet (`FileProvider`) export.
@@ -38,10 +34,10 @@ Last updated: October 2026
 
 ### Active / Upcoming Milestones (V1.1 - V2.0)
 
-- [ ] **Windows Elevated Background Service:** Background Windows service managing UAC-free network `hosts` resolution and system-level firewall rules.
-- [ ] **Opt-in DNS Sinkhole Engine:** Local VPN-based DNS sinkhole filter powered by the `AmniGuard-FireWall` packet filtering engine for network-wide tracking and ad/adult domain mitigation.
-- [ ] **On-Device Mobile NPU Vision Blur Engine:** Realtime shortform media content filtering powered by LiteRT / Mobile NPU (`AmnGaze` pipeline optimization).
-- [ ] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions to run automated instrumented UI tests across `playstoreDebug`, `fdroidDebug`, and `universalDebug`.
+- [ ] **Multi-Platform Cloud Policy Sync [Premium]:** Planned end-to-end encrypted rule and policy synchronization across Android, Windows, and Web Console for AmniShield Premium.
+- [ ] **Ephemeral 6-Digit PIN & In-App ZXing Camera QR Pairing [Premium]:** Secure, frictionless cross-device pairing between mobile devices and the Web Console.
+- [ ] **Unified AmniShield Console:** Web management console for multi-device focus rules and schedules.
+- [ ] **Decoupled Console Policy vs. Personal Sync:** Separate tiers for parental/enterprise console lockdown and personal cross-device sync.
 
 ---
 

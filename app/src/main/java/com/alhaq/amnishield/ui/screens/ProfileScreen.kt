@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -104,6 +105,7 @@ fun ProfileScreen(
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showAvatarPickerSheet by remember { mutableStateOf(false) }
     var showPairingDialog by remember { mutableStateOf(false) }
+    var showCloudSyncComingSoonDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var pairingPinInput by remember { mutableStateOf("") }
     var isPairingInProgress by remember { mutableStateOf(false) }
@@ -1058,7 +1060,7 @@ fun ProfileScreen(
                 item {
                     ProfileSectionHeader(
                         icon = Icons.Default.CloudSync,
-                        title = "ACCOUNT & CLOUD SYNC"
+                        title = "ACCOUNT & CLOUD SYNC [COMING SOON - PRO]"
                     )
                 }
 
@@ -1102,6 +1104,17 @@ fun ProfileScreen(
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                        ) {
+                                            Text(
+                                                text = "[COMING SOON - PRO]",
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
                                         if (isPairedWithConsole) {
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
@@ -1117,7 +1130,7 @@ fun ProfileScreen(
                                         }
                                     }
                                     Text(
-                                        text = if (isPairedWithConsole) "Device ID: ${pairedDeviceId?.take(8) ?: "Linked"}" else "Cross-Device Synchronization",
+                                        text = if (isPairedWithConsole) "Device ID: ${pairedDeviceId?.take(8) ?: "Linked"}" else "Cross-Device Synchronization [In Development]",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -1128,7 +1141,7 @@ fun ProfileScreen(
                                 text = if (isPairedWithConsole)
                                     "This phone is linked to your AmniShield Cloud Sync Hub. Focus rules, schedules, and blocklists automatically synchronize across all your connected devices."
                                 else
-                                    "Link this phone to your AmniShield Cloud Sync Hub using a 6-digit PIN or QR code to sync focus rules and blocklists across your devices.",
+                                    "Multi-platform cloud policy synchronization across Android, Windows, and Web Console is currently in active development. This will be available as a Premium feature in an upcoming release.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1204,19 +1217,14 @@ fun ProfileScreen(
                                 }
                             } else {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .alpha(0.7f),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Button(
                                         onClick = {
-                                            val options = ScanOptions().apply {
-                                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                                setPrompt("Align QR code from app.amnishield.com inside the frame")
-                                                setBeepEnabled(true)
-                                                setBarcodeImageEnabled(false)
-                                                setOrientationLocked(true)
-                                            }
-                                            qrScanLauncher.launch(options)
+                                            showCloudSyncComingSoonDialog = true
                                         },
                                         modifier = Modifier
                                             .weight(1.2f)
@@ -1241,10 +1249,7 @@ fun ProfileScreen(
 
                                     OutlinedButton(
                                         onClick = {
-                                            pairingPinInput = ""
-                                            pairingStatusMsg = null
-                                            isPairingSuccess = false
-                                            showPairingDialog = true
+                                            showCloudSyncComingSoonDialog = true
                                         },
                                         modifier = Modifier
                                             .weight(1f)
@@ -1297,25 +1302,28 @@ fun ProfileScreen(
                         ) {
                             // Sync Rules Switch
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .alpha(0.38f),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Sync Rules & Blocklists",
+                                        text = "Sync Rules & Blocklists [COMING SOON]",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = if (state.syncRulesEnabled) "Cloud sync active for app & domain rules" else "Local rules only (cloud sync off)",
+                                        text = "Cloud sync across devices (Upcoming Premium Feature)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Switch(
-                                    checked = state.syncRulesEnabled,
-                                    onCheckedChange = { viewModel.toggleSyncRules() }
+                                    checked = false,
+                                    onCheckedChange = { },
+                                    enabled = false
                                 )
                             }
 
@@ -1747,6 +1755,41 @@ fun ProfileScreen(
         )
     }
 
+    // CLOUD SYNC COMING SOON PREVIEW DIALOG
+    if (showCloudSyncComingSoonDialog) {
+        AlertDialog(
+            onDismissRequest = { showCloudSyncComingSoonDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.CloudSync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Cloud Sync - Upcoming Premium Feature",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Cross-device pairing and policy sync via PIN or QR code are currently under active development for AmniShield Premium (Milestone V1.1).\n\nAll current focus protection and content blocking features run 100% on-device.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showCloudSyncComingSoonDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Understood", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     // PAIRING PIN DIALOG
     if (showPairingDialog) {
         AlertDialog(
@@ -1759,6 +1802,18 @@ fun ProfileScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = "[NOTICE] Cloud pairing backend is being provisioned for V1.1. Pairing is currently in preview.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+
                     Text(
                         text = "Enter the 6-digit sync PIN from your AmniShield account or scan the QR code to link this device.",
                         style = MaterialTheme.typography.bodySmall,
