@@ -34,10 +34,31 @@ Last updated: October 2026
 
 ### Active / Upcoming Milestones (V1.1 - V2.0)
 
-- [ ] **Multi-Platform Cloud Policy Sync [Premium]:** Planned end-to-end encrypted rule and policy synchronization across Android, Windows, and Web Console for AmniShield Premium.
-- [ ] **Ephemeral 6-Digit PIN & In-App ZXing Camera QR Pairing [Premium]:** Secure, frictionless cross-device pairing between mobile devices and the Web Console.
-- [ ] **Unified AmniShield Console:** Web management console for multi-device focus rules and schedules.
-- [ ] **Decoupled Console Policy vs. Personal Sync:** Separate tiers for parental/enterprise console lockdown and personal cross-device sync.
+- [ ] **Multi-Platform Cloud Policy Sync [Under Development - Premium Feature]:**
+  - Planned end-to-end encrypted rule and policy synchronization across Android, Windows, and Web Console for AmniShield Premium.
+  - **Phase 1: Backend Infrastructure & Cryptographic Pairing Handshake (Milestone V1.1)**
+    - Production PostgreSQL database schema provisioning for `devices`, `sync_records`, and audit ledger in Supabase.
+    - Hardened Row Level Security (RLS) enforcement ensuring all policy access is strictly isolated by authenticated user ID (`auth.uid() = owner_id`).
+    - Ephemeral 6-digit PIN and ZXing camera QR pairing protocol with zero-knowledge AES-256-GCM client-side key derivation.
+  - **Phase 2: Bidirectional Delta Synchronization & WorkManager Engine (Milestone V1.2)**
+    - Monotonic hardware clock and vector timestamp conflict resolution (additive union for domain/keyword blocklists; last-write-wins for scheduled focus intervals).
+    - Android WorkManager periodic background sync with exponential backoff and network unmetered constraints.
+    - Offline-first cache: local Room DB / EncryptedSharedPreferences with rollback protection and audit journal.
+  - **Phase 3: Unified Web Console & Fleet Policy Enforcement (Milestone V1.3)**
+    - Production deployment of `app.amnishield.com` Web Console for centralized multi-device fleet oversight.
+    - Role-based separation: Personal Mode (self-management) vs Guardian Mode (parental/enterprise non-bypassable policy enforcement).
+    - Remote device heartbeat, status monitoring, rule propagation, and instantaneous remote unpair.
+  - **Phase 4: Cross-Platform Desktop & Extensions (Milestone V1.5 - V2.0)**
+    - Windows elevated background service managing UAC-free network `hosts` resolution and desktop process monitoring.
+    - Browser extension policy synchronization across Chromium and Firefox engines.
+- [ ] **Ephemeral 6-Digit PIN & In-App ZXing Camera QR Pairing [Under Development - Premium Feature]:**
+  - Secure, frictionless cross-device pairing between mobile devices and the Web Console.
+- [ ] **Unified AmniShield Console [Under Development - Premium Feature]:**
+  - Web management console for multi-device focus rules and schedules.
+- [ ] **Decoupled Console Policy vs. Personal Sync [Under Development - Premium Feature]:**
+  - Separate tiers for parental/enterprise console lockdown and personal cross-device sync.
+- [ ] **Advanced Bulk List Import & Export (CSV/TXT) [In Active Development - V1.1]:**
+  - Structured CSV/TXT import and export engine for custom Keyword and Website blocklists.
 
 ---
 

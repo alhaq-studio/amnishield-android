@@ -279,20 +279,17 @@ class MainActivity : AppCompatActivity() {
         // Schedule daily reports for premium users
         scheduleDailyReportsIfPremium()
 
-        // Schedule background policy & rules sync engine (active only when paired with console)
+        // Cloud sync engine (under active development for Milestone V1.1 - Premium Feature)
         try {
             val isPairedWithConsole = getSharedPreferences("AppPreferences", MODE_PRIVATE)
                 .getBoolean("is_paired_with_console", false)
             if (isPairedWithConsole) {
-                com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
-                lifecycleScope.launch(Dispatchers.IO) {
-                    com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
-                }
+                android.util.Log.d("MainActivity", "Cloud policy sync is under active development for Milestone V1.1. On-device local protections active.")
             } else {
                 android.util.Log.d("MainActivity", "Cloud sync dormant: device not paired with console.")
             }
         } catch (e: Throwable) {
-            android.util.Log.w("MainActivity", "Failed to initialize SyncWorker", e)
+            android.util.Log.w("MainActivity", "Failed to check cloud sync state", e)
         }
 
         // Setup navigation drawer
@@ -325,14 +322,14 @@ class MainActivity : AppCompatActivity() {
                 (path.contains("activate") || path.contains("license") || path.contains("auth") || path.contains("verify") || path.contains("pair") || host == "pair" || data.getQueryParameter("key") != null || data.getQueryParameter("token") != null || data.getQueryParameter("code") != null || data.getQueryParameter("pin") != null)
 
         if (isAmnScheme || isWebActivation) {
-            val isPairRequest = host == "pair" || path.contains("pair") || (data.getQueryParameter("owner") != null && data.getQueryParameter("token") != null)
+            val isPairRequest = host == "pair" || host == "sync" || path.contains("pair") || path.contains("sync") || (data.getQueryParameter("owner") != null && data.getQueryParameter("token") != null) || data.getQueryParameter("pin") != null
 
             // 0. Ephemeral Device Pairing via Web Console QR Code or PIN Link [COMING SOON]
             if (isPairRequest) {
                 com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                    .setTitle("Cloud Sync - Upcoming Premium Feature")
-                    .setMessage("Cross-device pairing and policy sync via PIN or QR code are currently under active development for AmniShield Premium (Milestone V1.1).\n\nAll current focus protection and content blocking features run 100% on-device.")
-                    .setPositiveButton("Understood", null)
+                    .setTitle(getString(R.string.cloud_sync_coming_soon_title))
+                    .setMessage(getString(R.string.cloud_sync_coming_soon_message))
+                    .setPositiveButton(android.R.string.ok, null)
                     .show()
                 return
             }

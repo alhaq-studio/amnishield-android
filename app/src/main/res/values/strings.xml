@@ -350,8 +350,8 @@
     <!-- Cloud Sync & Pairing Coming Soon -->
     <string name="cloud_sync_coming_soon_title">Cloud Sync - Upcoming Premium Feature</string>
     <string name="cloud_sync_coming_soon_message">Cross-device pairing and policy sync via PIN or QR code are currently under active development for AmniShield Premium (Milestone V1.1).\n\nAll current focus protection and content blocking features run 100% on-device.</string>
-    <string name="cloud_sync_pairing_preview_notice">[NOTICE] Cloud pairing backend is being provisioned for V1.1. Pairing is currently in preview.</string>
-    <string name="cloud_sync_pairing_deeplink_info">[INFO] Cross-Device Pairing is currently in preview and under active development for V1.1.</string>
+    <string name="cloud_sync_pairing_preview_notice">[COMING SOON - PRO] Cloud pairing is currently under active development for Milestone V1.1. Cross-device synchronization will be available as an AmniShield Premium feature.</string>
+    <string name="cloud_sync_pairing_deeplink_info">[COMING SOON - PRO] Cross-Device Pairing is currently under active development for Milestone V1.1.</string>
 
     <!-- Our Journey & Founding Supporters -->
     <string name="journey_title">Our Journey &amp; Founders</string>

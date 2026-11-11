@@ -104,13 +104,8 @@ fun ProfileScreen(
     // Dialog & Flow States
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showAvatarPickerSheet by remember { mutableStateOf(false) }
-    var showPairingDialog by remember { mutableStateOf(false) }
     var showCloudSyncComingSoonDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
-    var pairingPinInput by remember { mutableStateOf("") }
-    var isPairingInProgress by remember { mutableStateOf(false) }
-    var pairingStatusMsg by remember { mutableStateOf<String?>(null) }
-    var isPairingSuccess by remember { mutableStateOf(false) }
     var isPairedWithConsole by remember {
         mutableStateOf(
             context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
@@ -142,45 +137,7 @@ fun ProfileScreen(
     val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) { scanResult ->
         val rawContents = scanResult.contents
         if (!rawContents.isNullOrBlank()) {
-            val extractedPin = extractPinFromQr(rawContents)
-            if (extractedPin.isNotBlank()) {
-                pairingPinInput = extractedPin
-                isPairingInProgress = true
-                pairingStatusMsg = "Linking device with PIN: $extractedPin..."
-                showPairingDialog = true
-                val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
-                coroutineScope.launch(Dispatchers.IO) {
-                    val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                    val result = rest.claimPairingToken(extractedPin, deviceName, "android")
-                    withContext(Dispatchers.Main) {
-                        isPairingInProgress = false
-                        if (result.success) {
-                            isPairingSuccess = true
-                            pairingStatusMsg = "[SUCCESS] Linked to Cloud Sync Hub successfully!"
-                            val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
-                            savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
-                            if (result.policyPayload != null) {
-                                savedPrefs.saveCachedPolicyPayload(result.policyPayload.toString())
-                                com.alhaq.amnishield.data.sync.PolicySyncManager.applyPolicyPayload(context, result.policyPayload)
-                            }
-                            isPairedWithConsole = true
-                            pairedDeviceId = result.deviceId
-                            Toast.makeText(context, "[SUCCESS] Device Linked Successfully!", Toast.LENGTH_LONG).show()
-                            coroutineScope.launch(Dispatchers.IO) {
-                                com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
-                            }
-                            delay(1200)
-                            showPairingDialog = false
-                        } else {
-                            isPairingSuccess = false
-                            pairingStatusMsg = result.message
-                            Toast.makeText(context, "Pairing Failed: ${result.message}", Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            } else {
-                Toast.makeText(context, "Could not find a valid pairing code in QR", Toast.LENGTH_SHORT).show()
-            }
+            showCloudSyncComingSoonDialog = true
         }
     }
 
@@ -728,8 +685,8 @@ fun ProfileScreen(
                             Text(
                                 text = when {
                                     isFounderActive -> "Your 3-Month Founder Pass is active, granting full PIN defense, anti-uninstall protection, and the exclusive Founder Obsidian theme. Thank you for supporting our journey."
-                                    isPremiumActive -> "Your supporter pass is verified offline on-device using ECDSA NIST P-256 signatures. Cloud sync and advanced multi-device management are enabled."
-                                    else -> "AmniShield is free and open-source forever. Optional Supporter Passes fund independent privacy engineering and enable cross-device cloud sync."
+                                    isPremiumActive -> "Your supporter pass is verified offline on-device using ECDSA NIST P-256 signatures. Pro on-device protections are unlocked, and upcoming Cloud Sync will be included when launched."
+                                    else -> "AmniShield is free and open-source forever. Optional Supporter Passes fund independent privacy engineering and unlock upcoming premium features like cross-device cloud sync."
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1021,7 +978,7 @@ fun ProfileScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Sign in to backup settings and enable cross-device synchronization.",
+                                    text = "Sign in to manage your account and prepare for upcoming cross-device synchronization.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -1139,7 +1096,7 @@ fun ProfileScreen(
 
                             Text(
                                 text = if (isPairedWithConsole)
-                                    "This phone is linked to your AmniShield Cloud Sync Hub. Focus rules, schedules, and blocklists automatically synchronize across all your connected devices."
+                                    "This phone is linked in preview mode. Multi-device cloud policy synchronization is currently under active development for Milestone V1.1 (AmniShield Premium). All local on-device protections remain fully active."
                                 else
                                     "Multi-platform cloud policy synchronization across Android, Windows, and Web Console is currently in active development. This will be available as a Premium feature in an upcoming release.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -1147,130 +1104,138 @@ fun ProfileScreen(
                             )
 
                             if (isPairedWithConsole) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = {
-                                            Toast.makeText(context, "Syncing latest policies...", Toast.LENGTH_SHORT).show()
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                val ok = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
-                                                withContext(Dispatchers.Main) {
-                                                    if (ok) {
-                                                        Toast.makeText(context, "[SUCCESS] Policies Synchronized!", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        Toast.makeText(context, "[INFO] Sync offline. Locally cached policy active.", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            }
-                                        },
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
                                         modifier = Modifier
-                                            .weight(1.2f)
-                                            .height(44.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary
-                                        )
+                                            .fillMaxWidth()
+                                            .alpha(0.45f),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Sync,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Sync Now",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp
-                                        )
-                                    }
+                                        Button(
+                                            onClick = {
+                                                showCloudSyncComingSoonDialog = true
+                                            },
+                                            modifier = Modifier
+                                                .weight(1.2f)
+                                                .height(44.dp),
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Sync,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Sync Now (Coming Soon)",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp
+                                            )
+                                        }
 
-                                    OutlinedButton(
-                                        onClick = {
-                                            val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
-                                            savedPrefs.setConsoleManaged(false)
-                                            isPairedWithConsole = false
-                                            pairedDeviceId = null
-                                            Toast.makeText(context, "[INFO] Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(44.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.LinkOff,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "Unlink",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
+                                        OutlinedButton(
+                                            onClick = {
+                                                val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
+                                                savedPrefs.setConsoleManaged(false)
+                                                isPairedWithConsole = false
+                                                pairedDeviceId = null
+                                                Toast.makeText(context, "[INFO] Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier
+                                                .weight(0.9f)
+                                                .height(44.dp),
+                                            shape = RoundedCornerShape(14.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.LinkOff,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Unlink",
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
+                                    Text(
+                                        text = "Cloud Sync & Cross-Device Hub are under active development as a future Premium feature.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
                                 }
                             } else {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .alpha(0.7f),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = {
-                                            showCloudSyncComingSoonDialog = true
-                                        },
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
                                         modifier = Modifier
-                                            .weight(1.2f)
-                                            .height(44.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary
-                                        )
+                                            .fillMaxWidth()
+                                            .alpha(0.45f),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.QrCodeScanner,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Scan QR Code",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp
-                                        )
-                                    }
+                                        Button(
+                                            onClick = {
+                                                showCloudSyncComingSoonDialog = true
+                                            },
+                                            modifier = Modifier
+                                                .weight(1.2f)
+                                                .height(44.dp),
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.QrCodeScanner,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Scan QR (Coming Soon)",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp
+                                            )
+                                        }
 
-                                    OutlinedButton(
-                                        onClick = {
-                                            showCloudSyncComingSoonDialog = true
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(44.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Key,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "Enter PIN",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        OutlinedButton(
+                                            onClick = {
+                                                showCloudSyncComingSoonDialog = true
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(44.dp),
+                                            shape = RoundedCornerShape(14.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Key,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Enter PIN (Coming Soon)",
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
+                                    Text(
+                                        text = "Cloud Sync & Cross-Device Hub are under active development as a future Premium feature.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
                                 }
                             }
                         }
@@ -1310,12 +1275,12 @@ fun ProfileScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Sync Rules & Blocklists [COMING SOON]",
+                                        text = "Sync Rules & Blocklists [COMING SOON - PRO]",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Cloud sync across devices (Upcoming Premium Feature)",
+                                        text = "Cloud sync across devices (Under Development - Premium Feature)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1785,141 +1750,6 @@ fun ProfileScreen(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Understood", fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
-    // PAIRING PIN DIALOG
-    if (showPairingDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!isPairingInProgress) showPairingDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(imageVector = Icons.Default.PhonelinkSetup, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Link with Cloud Sync Hub", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        Text(
-                            text = "[NOTICE] Cloud pairing backend is being provisioned for V1.1. Pairing is currently in preview.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-
-                    Text(
-                        text = "Enter the 6-digit sync PIN from your AmniShield account or scan the QR code to link this device.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    OutlinedTextField(
-                        value = pairingPinInput,
-                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) pairingPinInput = it },
-                        label = { Text("6-Digit PIN") },
-                        placeholder = { Text("e.g. 482910") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        textStyle = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            letterSpacing = 4.sp
-                        )
-                    )
-
-                    if (pairingStatusMsg != null) {
-                        Text(
-                            text = pairingStatusMsg.orEmpty(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isPairingSuccess) Color(0xFF059669) else MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            showPairingDialog = false
-                            val options = ScanOptions().apply {
-                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                setPrompt("Align QR code from AmniShield Sync Hub inside the frame")
-                                setBeepEnabled(true)
-                                setBarcodeImageEnabled(false)
-                                setOrientationLocked(true)
-                            }
-                            qrScanLauncher.launch(options)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Or Scan QR Code with Camera", fontSize = 12.sp)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (pairingPinInput.length >= 6) {
-                            isPairingInProgress = true
-                            pairingStatusMsg = "Connecting to Supabase cloud..."
-                            val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
-                            coroutineScope.launch(Dispatchers.IO) {
-                                val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                                val result = rest.claimPairingToken(pairingPinInput, deviceName, "android")
-                                withContext(Dispatchers.Main) {
-                                    isPairingInProgress = false
-                                    if (result.success) {
-                                        isPairingSuccess = true
-                                        pairingStatusMsg = "[SUCCESS] Linked to Cloud Sync Hub successfully!"
-                                        val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
-                                        savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
-                                        if (result.policyPayload != null) {
-                                            savedPrefs.saveCachedPolicyPayload(result.policyPayload.toString())
-                                            com.alhaq.amnishield.data.sync.PolicySyncManager.applyPolicyPayload(context, result.policyPayload)
-                                        }
-                                        isPairedWithConsole = true
-                                        pairedDeviceId = result.deviceId
-                                        Toast.makeText(context, "[SUCCESS] Device Linked Successfully!", Toast.LENGTH_LONG).show()
-                                        coroutineScope.launch(Dispatchers.IO) {
-                                            com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
-                                        }
-                                        delay(1200)
-                                        showPairingDialog = false
-                                    } else {
-                                        isPairingSuccess = false
-                                        pairingStatusMsg = result.message
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    enabled = pairingPinInput.length >= 6 && !isPairingInProgress,
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    if (isPairingInProgress) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                    } else {
-                        Text("Connect", fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showPairingDialog = false },
-                    enabled = !isPairingInProgress
-                ) {
-                    Text("Cancel")
                 }
             }
         )
