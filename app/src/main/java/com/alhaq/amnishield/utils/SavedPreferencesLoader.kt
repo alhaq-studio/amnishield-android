@@ -18,6 +18,7 @@ import java.util.UUID
 import java.util.ArrayList
 import java.time.LocalDate
 import android.os.SystemClock
+import com.alhaq.amnishield.contract.GuardianContract
 
 open class SavedPreferencesLoader(
     val context: Context,
@@ -510,8 +511,12 @@ open class SavedPreferencesLoader(
             .apply()
     }
     
-    fun stopFocusSession() = synchronized(rulesLock) {
+    fun stopFocusSession(isCancelled: Boolean = false) = synchronized(rulesLock) {
         val currentData = getFocusModeData()
+        val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        val endTime = sharedPreferences.getLong("focus_session_end", -1L)
+        val isEarly = isCancelled || (endTime > 0L && System.currentTimeMillis() < endTime)
+
         saveFocusModeData(
             FocusModeBlocker.FocusModeData(
                 isTurnedOn = false,
@@ -520,15 +525,37 @@ open class SavedPreferencesLoader(
                 selectedApps = currentData.selectedApps
             )
         )
-        completeFocusSession()
+
+        if (isEarly) {
+            sharedPreferences.edit()
+                .remove("focus_session_start")
+                .remove("focus_session_end")
+                .apply()
+
+            try {
+                context.contentResolver.notifyChange(GuardianContract.URI_FOCUS, null)
+            } catch (e: Exception) {
+            }
+
+            val abortIntent = Intent(GuardianContract.ACTION_FOCUS_ABORTED).apply {
+                setPackage("com.alhaq.amniquest")
+            }
+            try {
+                context.sendBroadcast(abortIntent, GuardianContract.PERMISSION_GUARDIAN_IPC)
+            } catch (e: Exception) {
+            }
+        } else {
+            completeFocusSession()
+        }
     }
 
     fun completeFocusSession() = synchronized(rulesLock) {
         val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
-        val startTime = sharedPreferences.getLong("focus_session_start", -1)
-        val endTime = sharedPreferences.getLong("focus_session_end", -1)
+        val startTime = sharedPreferences.getLong("focus_session_start", -1L)
+        val endTime = sharedPreferences.getLong("focus_session_end", -1L)
         
         if (startTime != -1L && endTime != -1L) {
+            val durationMinutes = ((endTime - startTime) / 60000L).toInt()
             // Record the completed focus session
             BlockingStatsManager.getInstance(context).recordFocusSession(startTime, endTime)
             
@@ -537,6 +564,20 @@ open class SavedPreferencesLoader(
                 .remove("focus_session_start")
                 .remove("focus_session_end")
                 .apply()
+
+            try {
+                context.contentResolver.notifyChange(GuardianContract.URI_FOCUS, null)
+            } catch (e: Exception) {
+            }
+
+            val intent = Intent(GuardianContract.ACTION_FOCUS_COMPLETED).apply {
+                setPackage("com.alhaq.amniquest")
+                putExtra(GuardianContract.EXTRA_DURATION_MINUTES, durationMinutes)
+            }
+            try {
+                context.sendBroadcast(intent, GuardianContract.PERMISSION_GUARDIAN_IPC)
+            } catch (e: Exception) {
+            }
         }
     }
 
