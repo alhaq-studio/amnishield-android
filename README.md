@@ -100,16 +100,17 @@ billing and sign-in implementations without `#ifdef`-style hacks.
 
 ## Architecture & Storage Overview
 
-### Presentation Model: Dual-Host Container Architecture
+### Presentation Model: Dual-Host & Pure Compose Adaptive Architecture
 AmniShield uses a decoupled Dual-Host presentation architecture bridging AndroidX Activities with Jetpack Compose Material 3:
-- **`MainActivity.kt` (2,022 lines)**: Hosts the primary 4 bottom navigation tabs (`Stats`, `Blocks`, `Focus`, `Advanced`) using legacy `supportFragmentManager` transactions.
-- **`FragmentActivity.kt` (210 lines)**: Acts as a secondary router dispatching 18 functional sub-screens and configuration dialogs. Each configuration fragment inherits `BaseFeatureFragment` and returns `ComposeView` embedding Material 3 Compose screens (`AppBlockerConfigScreen`, `ReelBlockerConfigScreen`, etc.).
-- **`AmniShieldAdaptiveApp.kt` (254 lines)**: Pure Compose `NavigationSuiteScaffold` shell temporarily disconnected to avoid FragmentManager lifecycle crashes, preserved as the target architecture for Milestone 0.3.5.
+- **`MainActivity.kt`**: Hosts the primary 4 bottom navigation tabs (`Stats`, `Blocks`, `Focus`, `Advanced`) and provides `mountAdaptiveComposeShell()` to activate the pure-Compose adaptive layout (`AmniShieldAdaptiveApp.kt`).
+- **`FragmentActivity.kt`**: Acts as a secondary router dispatching 18 functional sub-screens and configuration dialogs via the type-safe `FragmentDestination.kt` sealed route contract. Each configuration fragment inherits `BaseFeatureFragment` and returns `ComposeView` embedding Material 3 Compose screens (`AppBlockerConfigScreen`, `ReelBlockerConfigScreen`, etc.).
+- **`AmniShieldAdaptiveApp.kt`**: Pure Compose `NavigationSuiteScaffold` shell supporting adaptive mobile, tablet, and foldable form factors, wired to `AmniShieldViewModel`.
 
-### Persistence Reality: 100% SharedPreferences
-- **Zero Room DB / Zero DataStore**: AmniShield contains zero Room DB and zero DataStore dependencies.
-- **`SavedPreferencesLoader.kt` (2,069 lines)**: Manages 30 specialized SharedPreferences XML files (37+ total SharedPreferences XML files across the app) with thread-safe in-memory schedule caching. Complex rules and limits are serialized to JSON strings using Google Gson (33 calls).
-- **`SecureKeyStore.kt`**: `EncryptedSharedPreferences` is strictly isolated to Supabase cloud sync authentication tokens with an automatic plain XML fallback (`amnishield_sync_secrets_fallback`).
+### Persistence Architecture: Synchronized Hybrid Engine
+- **Relational SQLite Database (`AmniShieldRuleDatabase.kt`)**: Structured relational persistence for app blocking rules and screen-time launch limits supporting V1 to V2 schema migrations and reactive `StateFlow` streams.
+- **Reactive Preferences DataStore (`AmniShieldDataStore.kt`)**: Jetpack Preferences DataStore layer streaming core feature toggles, onboarding consent, active theme, and PIN security state.
+- **`SavedPreferencesLoader.kt`**: Orchestrates 30 specialized SharedPreferences XML files with thread-safe in-memory schedule caching (`@Volatile` + static companion mutex locks `rulesLock` and `statsLock`).
+- **`SecureKeyStore.kt`**: `EncryptedSharedPreferences` strictly isolated to Supabase cloud sync authentication tokens with an automatic plain XML fallback (`amnishield_sync_secrets_fallback`).
 
 ### Blocker Interceptor Pipeline
 Executed in `AmniShieldAccessibilityService.kt`:

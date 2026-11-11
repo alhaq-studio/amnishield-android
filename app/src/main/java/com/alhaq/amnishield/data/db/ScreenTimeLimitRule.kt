@@ -1,5 +1,6 @@
 package com.alhaq.amnishield.data.db
 
+import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
 import com.alhaq.amnishield.data.blockers.BaseRule
 import com.alhaq.amnishield.security.AuthType
 
@@ -30,4 +31,39 @@ data class ScreenTimeLimitRule(
     override val authType: AuthType = AuthType.NONE,
     override val rulePasswordHash: String? = null,
     override val rulePasswordSalt: String? = null
-) : BaseRule
+) : BaseRule {
+
+    fun toLaunchLimitRule(): AppLaunchLimitRule {
+        return AppLaunchLimitRule(
+            id = id,
+            packageName = packageName,
+            maxLaunches = maxLaunches,
+            timePeriod = runCatching { AppLaunchLimitRule.TimePeriod.valueOf(timePeriod) }
+                .getOrDefault(AppLaunchLimitRule.TimePeriod.DAILY),
+            dayOfWeek = dayOfWeek,
+            createdAt = createdAt,
+            isEnabled = isEnabled,
+            authType = authType,
+            rulePasswordHash = rulePasswordHash,
+            rulePasswordSalt = rulePasswordSalt
+        )
+    }
+
+    companion object {
+        fun fromLaunchLimitRule(rule: AppLaunchLimitRule): ScreenTimeLimitRule {
+            return ScreenTimeLimitRule(
+                id = rule.id.ifBlank { rule.packageName },
+                packageName = rule.packageName,
+                maxLaunches = rule.maxLaunches,
+                timePeriod = rule.timePeriod.name,
+                dayOfWeek = rule.dayOfWeek,
+                limitMinutes = 0,
+                createdAt = rule.createdAt,
+                isEnabled = rule.isEnabled,
+                authType = rule.authType,
+                rulePasswordHash = rule.rulePasswordHash,
+                rulePasswordSalt = rule.rulePasswordSalt
+            )
+        }
+    }
+}

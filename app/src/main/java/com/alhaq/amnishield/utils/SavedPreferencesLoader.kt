@@ -514,8 +514,8 @@ open class SavedPreferencesLoader(
     fun stopFocusSession(isCancelled: Boolean = false) = synchronized(rulesLock) {
         val currentData = getFocusModeData()
         val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
+        val startTime = sharedPreferences.getLong("focus_session_start", -1L)
         val endTime = sharedPreferences.getLong("focus_session_end", -1L)
-        val isEarly = isCancelled || (endTime > 0L && System.currentTimeMillis() < endTime)
 
         saveFocusModeData(
             FocusModeBlocker.FocusModeData(
@@ -526,26 +526,32 @@ open class SavedPreferencesLoader(
             )
         )
 
-        if (isEarly) {
-            sharedPreferences.edit()
-                .remove("focus_session_start")
-                .remove("focus_session_end")
-                .apply()
+        if (startTime != -1L && endTime != -1L) {
+            val isEarly = isCancelled || (System.currentTimeMillis() < endTime)
+            if (isEarly) {
+                sharedPreferences.edit()
+                    .remove("focus_session_start")
+                    .remove("focus_session_end")
+                    .apply()
 
-            try {
-                context.contentResolver.notifyChange(GuardianContract.URI_FOCUS, null)
-            } catch (e: Exception) {
-            }
+                try {
+                    context.contentResolver.notifyChange(GuardianContract.URI_FOCUS, null)
+                } catch (e: Exception) {
+                }
 
-            val abortIntent = Intent(GuardianContract.ACTION_FOCUS_ABORTED).apply {
-                setPackage("com.alhaq.amniquest")
+                val targetPackages = listOf("com.alhaq.amniquest", "com.alhaq.amniquest.debug")
+                for (pkg in targetPackages) {
+                    val abortIntent = Intent(GuardianContract.ACTION_FOCUS_ABORTED).apply {
+                        setPackage(pkg)
+                    }
+                    try {
+                        context.sendBroadcast(abortIntent, GuardianContract.PERMISSION_GUARDIAN_IPC)
+                    } catch (e: Exception) {
+                    }
+                }
+            } else {
+                completeFocusSession()
             }
-            try {
-                context.sendBroadcast(abortIntent, GuardianContract.PERMISSION_GUARDIAN_IPC)
-            } catch (e: Exception) {
-            }
-        } else {
-            completeFocusSession()
         }
     }
 
@@ -570,13 +576,16 @@ open class SavedPreferencesLoader(
             } catch (e: Exception) {
             }
 
-            val intent = Intent(GuardianContract.ACTION_FOCUS_COMPLETED).apply {
-                setPackage("com.alhaq.amniquest")
-                putExtra(GuardianContract.EXTRA_DURATION_MINUTES, durationMinutes)
-            }
-            try {
-                context.sendBroadcast(intent, GuardianContract.PERMISSION_GUARDIAN_IPC)
-            } catch (e: Exception) {
+            val targetPackages = listOf("com.alhaq.amniquest", "com.alhaq.amniquest.debug")
+            for (pkg in targetPackages) {
+                val intent = Intent(GuardianContract.ACTION_FOCUS_COMPLETED).apply {
+                    setPackage(pkg)
+                    putExtra(GuardianContract.EXTRA_DURATION_MINUTES, durationMinutes)
+                }
+                try {
+                    context.sendBroadcast(intent, GuardianContract.PERMISSION_GUARDIAN_IPC)
+                } catch (e: Exception) {
+                }
             }
         }
     }
@@ -825,11 +834,19 @@ open class SavedPreferencesLoader(
             val json = Gson().toJson(immutableSnapshot)
             sharedPreferences.edit().putString("schedule_rules", json).apply()
         }
+        runCatching {
+            com.alhaq.amnishield.data.db.AmniShieldRuleDatabase.getInstance(context)
+                .syncAppBlockScheduleRules(immutableSnapshot)
+        }
     }
 
     fun refreshScheduleRulesSnapshot(): List<AppBlockScheduleRule> {
         invalidateScheduleRulesCache()
         return loadAppBlockerScheduleRules().toList()
+    }
+
+    fun invalidateScheduleRulesCache() {
+        Companion.invalidateScheduleRulesCache()
     }
 
     fun upsertAppBlockerScheduleRule(rule: AppBlockScheduleRule) = synchronized(rulesLock) {
@@ -1480,6 +1497,10 @@ open class SavedPreferencesLoader(
             context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
         val json = Gson().toJson(rules)
         sharedPreferences.edit().putString("launch_limit_rules", json).apply()
+        runCatching {
+            com.alhaq.amnishield.data.db.AmniShieldRuleDatabase.getInstance(context)
+                .syncLaunchLimitRules(rules)
+        }
     }
 
     fun addAppLaunchLimitRule(rule: AppLaunchLimitRule) = synchronized(rulesLock) {
@@ -2104,5 +2125,34 @@ open class SavedPreferencesLoader(
             editor.putLong("accessibility_disclosure_accepted_at", System.currentTimeMillis())
         }
         editor.apply()
+    }
+
+    fun isReelsBlockerFeatureEnabled(default: Boolean = false): Boolean = isReelBlockerEnabled(default)
+    fun setReelsBlockerFeatureEnabled(enabled: Boolean, updateManual: Boolean = true) = setReelBlockerEnabled(enabled, updateManual)
+    fun isWebsiteBlockerFeatureEnabled(default: Boolean = false): Boolean = isWebsiteBlockerEnabled(default)
+    fun setWebsiteBlockerFeatureEnabled(enabled: Boolean, updateManual: Boolean = true) = setWebsiteBlockerEnabled(enabled, updateManual)
+
+    fun isAppUsageLimitEnabled(): Boolean {
+        return context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+            .getBoolean("app_usage_limit_enabled", false)
+    }
+
+    fun setAppUsageLimitEnabled(enabled: Boolean) {
+        context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("app_usage_limit_enabled", enabled)
+            .apply()
+    }
+
+    fun isAdaptiveShellEnabled(): Boolean {
+        return context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+            .getBoolean("adaptive_compose_shell_enabled", false)
+    }
+
+    fun setAdaptiveShellEnabled(enabled: Boolean) {
+        context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("adaptive_compose_shell_enabled", enabled)
+            .apply()
     }
 }

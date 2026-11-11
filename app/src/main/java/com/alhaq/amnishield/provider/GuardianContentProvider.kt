@@ -104,6 +104,10 @@ open class GuardianContentProvider(
     protected open fun isCallerAuthorized(): Boolean {
         val ctx = effectiveContext ?: return false
         val callingUid = Binder.getCallingUid()
+        return verifyCaller(ctx, callingUid)
+    }
+
+    internal fun verifyCaller(ctx: Context, callingUid: Int): Boolean {
         if (callingUid == Process.myUid()) return true
 
         val pm = ctx.packageManager
@@ -112,13 +116,6 @@ open class GuardianContentProvider(
         }
 
         val packages = pm.getPackagesForUid(callingUid)
-        if (packages != null && (
-            packages.contains("com.alhaq.amniquest") ||
-            packages.contains("com.alhaq.amniquest.debug")
-        )) {
-            return true
-        }
-
         return ApiAuthStore.isAnyGranted(ctx, packages)
     }
 

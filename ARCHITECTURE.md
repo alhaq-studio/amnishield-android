@@ -2,7 +2,7 @@
 
 ## Overview
 
-AmniShield is an open-source, privacy-first digital wellness and content-blocking application for Android. It operates via a dedicated Android Accessibility Service pipeline, local SharedPreferences persistence (29+ specialized XML files with Gson JSON serialization via SavedPreferencesLoader), hardware-backed EncryptedSharedPreferences strictly isolated to Supabase authentication tokens (SecureKeyStore), and on-device diagnostic logging.
+AmniShield is an open-source, privacy-first digital wellness and content-blocking application for Android. It operates via a dedicated Android Accessibility Service pipeline, local SharedPreferences persistence (30 specialized XML files orchestrated by `SavedPreferencesLoader.kt`), a relational SQLite persistence layer (`AmniShieldRuleDatabase` for structured blocking rules and screen-time limits), a reactive Preferences DataStore layer (`AmniShieldDataStore`), hardware-backed EncryptedSharedPreferences strictly isolated to Supabase authentication tokens (`SecureKeyStore`), and on-device diagnostic logging.
 
 ---
 
@@ -10,13 +10,17 @@ AmniShield is an open-source, privacy-first digital wellness and content-blockin
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│               Dual-Host Presentation Architecture                      │
+│               Dual-Host & Adaptive Compose Architecture                │
 │  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
-│  │ MainActivity (2,022 lines)   │    │ FragmentActivity (210 lines) │  │
+│  │ MainActivity.kt              │    │ FragmentActivity.kt          │  │
 │  │ 4 Bottom Nav Tabs (XML)      │    │ 18 Sub-Screen Router (Bridge)│  │
-│  │ Stats, Blocks, Focus, Adv.   │    │ Embedding ComposeView M3 UI  │  │
-│  └──────────────────────────────┘    └──────────────────────────────┘  │
-│    [AmniShieldAdaptiveApp (254 lines) disconnected; target for 0.3.5]  │
+│  │ + mountAdaptiveComposeShell()│    │ Embedding ComposeView M3 UI  │  │
+│  └──────────────┬───────────────┘    └──────────────────────────────┘  │
+│                 │                                                      │
+│  ┌──────────────▼───────────────────────────────────────────────────┐  │
+│  │ AmniShieldAdaptiveApp.kt (Adaptive Navigation & M3 Scaffolds)    │  │
+│  │ BlocksManagerAdaptiveScreen, StatsAdaptiveScreen, AppDestinations│  │
+│  └──────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
 ┌───────────────────────────────────▼────────────────────────────────────┐
@@ -25,13 +29,21 @@ AmniShield is an open-source, privacy-first digital wellness and content-blockin
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
 ┌───────────────────────────────────▼────────────────────────────────────┐
-│                      Local Persistence Layer                           │
-│  ┌─────────────────────────────────┐ ┌───────────────────────────────┐ │
-│  │ SavedPreferencesLoader.kt       │ │ SecureKeyStore.kt             │ │
-│  │ 29+ SharedPreferences XML files │ │ EncryptedSharedPreferences    │ │
-│  │ 33 Gson JSON serialization calls│ │ Supabase sync secrets strictly│ │
-│  │ (Zero Room DB / Zero DataStore) │ │ (Fallback to plain XML)       │ │
-│  └─────────────────────────────────┘ └───────────────────────────────┘ │
+│                      Hybrid Local Persistence Layer                    │
+│  ┌──────────────────────────────┐ ┌──────────────────────────────────┐ │
+│  │ AmniShieldRuleDatabase.kt    │ │ AmniShieldDataStore.kt           │ │
+│  │ Relational SQLite Database   │ │ Jetpack Preferences DataStore    │ │
+│  │ (AppBlockRule, ScreenTime)   │ │ (Flags, Theme, PIN Settings)     │ │
+│  └──────────────┬───────────────┘ └─────────────────┬────────────────┘ │
+│                 │                                   │                  │
+│  ┌──────────────▼───────────────────────────────────▼────────────────┐ │
+│  │ SavedPreferencesLoader.kt (30 Specialized SharedPreferences XML)  │ │
+│  │ Mutex synchronization (rulesLock, statsLock), in-memory caching   │ │
+│  └──────────────────────────────┬────────────────────────────────────┘ │
+│  ┌──────────────────────────────▼────────────────────────────────────┐ │
+│  │ SecureKeyStore.kt (EncryptedSharedPreferences / AES256_GCM)       │ │
+│  │ Isolated to Supabase sync secrets with fallback plain XML         │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
 ┌───────────────────────────────────▼────────────────────────────────────┐
@@ -89,13 +101,13 @@ AmniShield maintains a strict **zero-external-telemetry** logging policy.
 > **Strict Short-Circuiting:** When a higher-priority interceptor (such as Anti-Uninstall) triggers an action, return immediately to stop processing downstream content blockers.
 
 > [!NOTE]
-> **Persistence Reality:** Persistence is 100% SharedPreferences via `SavedPreferencesLoader.kt` across 30+ XML files with Gson JSON serialization, `@Volatile` in-memory schedule caching, and static companion mutex locks (`rulesLock` and `statsLock`) synchronizing multi-instance reads and writes. EncryptedSharedPreferences is strictly isolated to Supabase cloud sync tokens in `SecureKeyStore.kt`. There is zero Room DB and zero Preferences DataStore in this codebase until Milestone 0.3.5.
+> **Persistence Architecture:** Persistence is supported by a synchronized hybrid engine: `SavedPreferencesLoader.kt` orchestrates 30 SharedPreferences XML files with companion mutex locks (`rulesLock`, `statsLock`) and in-memory `@Volatile` schedule caching for zero Main Binder thread latency. Relational rules are persisted in SQLite via `AmniShieldRuleDatabase`, core toggles in `AmniShieldDataStore`, and cloud sync tokens in `SecureKeyStore.kt` (`EncryptedSharedPreferences`).
 
 > [!NOTE]
-> **Dual-Host Presentation Reality:** UI presentation is split between `MainActivity.kt` (4 primary bottom navigation tabs) and `FragmentActivity.kt` (secondary router hosting 18+ sub-screens embedding ComposeView via the type-safe `FragmentDestination.kt` sealed route contract). `AmniShieldAdaptiveApp.kt` is currently disconnected to preserve FragmentManager lifecycle stability and represents the target architecture for Milestone 0.3.5.
+> **Dual-Host & Adaptive Presentation:** UI presentation is hosted by `MainActivity.kt` (supporting both legacy 4 bottom navigation tabs and the pure-Compose adaptive shell `AmniShieldAdaptiveApp.kt` via `mountAdaptiveComposeShell()`), while `FragmentActivity.kt` provides secondary sub-screen routing via the type-safe `FragmentDestination.kt` sealed route contract.
 
 > [!CAUTION]
-> **Main Binder Thread Safety:** Reflection-based Gson deserialization in `onAccessibilityEvent` is mitigated via thread-safe in-memory rule caching (`@Volatile` + `synchronized(scheduleCacheLock)`, implemented in Milestone 0.3.2) and invalidated via `ServiceBroadcastManager` to prevent Binder thread jank.
+> **Main Binder Thread Safety:** Reflection-based Gson deserialization in `onAccessibilityEvent` is strictly avoided via thread-safe in-memory rule caching (`@Volatile` + `synchronized(scheduleCacheLock)`) and invalidated via `ServiceBroadcastManager` to prevent Binder thread jank.
 
 > [!IMPORTANT]
 > **Strict Universal Zero-Emoji Policy:** Do not use UTF-8 emojis anywhere in code, UI layouts, strings, comments, logs, or documentation. Use plain-text tags (`[INFO]`, `[OK]`, `[FAIL]`, `[WARNING]`, `[ERROR]`) instead.

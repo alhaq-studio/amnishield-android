@@ -97,7 +97,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
+import androidx.activity.compose.setContent
+import com.alhaq.amnishield.ui.AmniShieldAdaptiveApp
 import com.alhaq.amnishield.ui.theme.AmniShieldTheme
+import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import com.alhaq.amnishield.ui.state.AppTheme
 
 
@@ -189,6 +192,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var directoryPicker: ActivityResultLauncher<Intent>
 
 
+    private val adaptiveViewModel by lazy {
+        AmniShieldViewModel().apply {
+            bindPersistence(this@MainActivity, savedPreferencesLoader)
+        }
+    }
     private val savedPreferencesLoader = SavedPreferencesLoader(this)
     private val premiumManager by lazy { PremiumManager.getInstance(this) }
     private lateinit var options: ActivityOptionsCompat
@@ -206,6 +214,36 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+    fun mountAdaptiveComposeShell() {
+        setContent {
+            val state by adaptiveViewModel.state.collectAsState()
+            AmniShieldTheme {
+                AmniShieldAdaptiveApp(
+                    viewModel = adaptiveViewModel,
+                    state = state,
+                    isGoogleSignedIn = false,
+                    onOpenAccessibilitySettings = {
+                        try {
+                            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        } catch (e: Exception) {
+                            Toast.makeText(this@MainActivity, "Unable to open Accessibility Settings", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onStartFocusMode = { _, _, _ -> },
+                    onStopFocusMode = {},
+                    onBackupRestore = {},
+                    onShareCrashLogs = {
+                        shareCrashLog(this@MainActivity)
+                    },
+                    onHelpFAQ = {},
+                    onAbout = {
+                        showAboutDialog()
+                    }
+                )
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             ThemeUtils.applyTheme(this)
@@ -215,6 +253,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
+
+        if (savedPreferencesLoader.isAdaptiveShellEnabled() || intent?.getBooleanExtra("EXTRA_USE_ADAPTIVE_SHELL", false) == true) {
+            mountAdaptiveComposeShell()
+            return
+        }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

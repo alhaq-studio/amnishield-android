@@ -1,17 +1,83 @@
 package com.alhaq.amnishield.ui.viewmodel
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
+import com.alhaq.amnishield.data.datastore.AmniShieldDataStore
+import com.alhaq.amnishield.data.db.AmniShieldRuleDatabase
+import com.alhaq.amnishield.data.db.AppBlockRule
+import com.alhaq.amnishield.security.AuthType
+import com.alhaq.amnishield.services.AmniShieldAccessibilityService
+import com.alhaq.amnishield.ui.state.AmniShieldState
+import com.alhaq.amnishield.ui.state.AppTheme
+import com.alhaq.amnishield.ui.state.ScheduleRule
+import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import com.alhaq.amnishield.ui.state.AmniShieldState
-import com.alhaq.amnishield.ui.state.AppTheme
-import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class AmniShieldViewModel : ViewModel() {
     private val _state = MutableStateFlow(AmniShieldState())
     val state: StateFlow<AmniShieldState> = _state.asStateFlow()
+
+    private var boundContext: Context? = null
+    private var boundLoader: SavedPreferencesLoader? = null
+    private var boundDataStore: AmniShieldDataStore? = null
+    private var boundRuleDb: AmniShieldRuleDatabase? = null
+
+    fun bindPersistence(
+        context: Context,
+        loader: SavedPreferencesLoader = SavedPreferencesLoader(context),
+        dataStore: AmniShieldDataStore = AmniShieldDataStore.getInstance(context),
+        ruleDb: AmniShieldRuleDatabase = AmniShieldRuleDatabase.getInstance(context)
+    ) {
+        this.boundContext = context
+        this.boundLoader = loader
+        this.boundDataStore = dataStore
+        this.boundRuleDb = ruleDb
+
+        val keywords = loader.loadBlockedKeywords().toList()
+        val websites = loader.loadBlockedWebsites().toList()
+        val scheduleRules = ruleDb.loadScheduleRules().ifEmpty {
+            loader.loadAppBlockerScheduleRules().map { AppBlockRule.fromAppBlockScheduleRule(it).toScheduleRule() }
+        }
+
+        val appBlocker = loader.isAppBlockerFeatureEnabled(true)
+        val reelsBlocker = loader.isReelsBlockerFeatureEnabled(true)
+        val keywordBlocker = loader.isKeywordBlockerFeatureEnabled(true)
+        val webFilter = loader.isWebsiteBlockerFeatureEnabled(true)
+        val usageLimit = loader.isAppUsageLimitEnabled()
+
+        _state.update { current ->
+            current.copy(
+                keywords = if (keywords.isNotEmpty()) keywords else current.keywords,
+                customBlockedWebsites = if (websites.isNotEmpty()) websites else current.customBlockedWebsites,
+                scheduleRules = if (scheduleRules.isNotEmpty()) scheduleRules else current.scheduleRules,
+                isAppBlockerEnabled = appBlocker,
+                isReelsBlockerEnabled = reelsBlocker,
+                isKeywordBlockerEnabled = keywordBlocker,
+                isWebFilterEnabled = webFilter,
+                isUsageLimitEnabled = usageLimit
+            )
+        }
+    }
+
+    private fun sendRefreshBroadcast(action: String) {
+        val ctx = boundContext ?: return
+        ctx.sendBroadcast(Intent(action).setPackage(ctx.packageName))
+    }
+
+    private fun syncRulesToPersistence() {
+        val rules = _state.value.scheduleRules
+        boundRuleDb?.syncScheduleRules(rules)
+        boundLoader?.let { loader ->
+            val appBlockRules = rules.map { AppBlockRule.fromScheduleRule(it).toAppBlockScheduleRule() }
+            loader.saveAppBlockerScheduleRules(appBlockRules.toMutableList())
+        }
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+    }
 
     fun loadState(newState: AmniShieldState) {
         _state.update { current ->
@@ -62,19 +128,32 @@ class AmniShieldViewModel : ViewModel() {
     }
 
     fun toggleAppBlocker() {
-        _state.update { it.copy(isAppBlockerEnabled = !it.isAppBlockerEnabled) }
+        val newEnabled = !_state.value.isAppBlockerEnabled
+        _state.update { it.copy(isAppBlockerEnabled = newEnabled) }
+        boundLoader?.setAppBlockerFeatureEnabled(newEnabled)
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
     }
 
     fun toggleReelsBlocker() {
-        _state.update { it.copy(isReelsBlockerEnabled = !it.isReelsBlockerEnabled) }
+        val newEnabled = !_state.value.isReelsBlockerEnabled
+        _state.update { it.copy(isReelsBlockerEnabled = newEnabled) }
+        boundLoader?.setReelsBlockerFeatureEnabled(newEnabled)
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER)
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER)
     }
 
     fun toggleKeywordBlocker() {
-        _state.update { it.copy(isKeywordBlockerEnabled = !it.isKeywordBlockerEnabled) }
+        val newEnabled = !_state.value.isKeywordBlockerEnabled
+        _state.update { it.copy(isKeywordBlockerEnabled = newEnabled) }
+        boundLoader?.setKeywordBlockerFeatureEnabled(newEnabled)
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
     }
 
     fun toggleWebFilter() {
-        _state.update { it.copy(isWebFilterEnabled = !it.isWebFilterEnabled) }
+        val newEnabled = !_state.value.isWebFilterEnabled
+        _state.update { it.copy(isWebFilterEnabled = newEnabled) }
+        boundLoader?.setWebsiteBlockerFeatureEnabled(newEnabled)
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
     }
 
     fun toggleSchedule() {
@@ -82,7 +161,9 @@ class AmniShieldViewModel : ViewModel() {
     }
 
     fun toggleUsageLimit() {
-        _state.update { it.copy(isUsageLimitEnabled = !it.isUsageLimitEnabled) }
+        val newEnabled = !_state.value.isUsageLimitEnabled
+        _state.update { it.copy(isUsageLimitEnabled = newEnabled) }
+        boundLoader?.setAppUsageLimitEnabled(newEnabled)
     }
 
     fun setAppUsageTrackingEnabled(enabled: Boolean) {
@@ -98,12 +179,12 @@ class AmniShieldViewModel : ViewModel() {
     }
 
     fun toggleFocusMode() {
-        _state.update { 
+        _state.update {
             val newActive = !it.isFocusModeActive
             it.copy(
                 isFocusModeActive = newActive,
                 focusTimeMinutes = if (newActive) it.focusTimeMinutes + 1 else it.focusTimeMinutes
-            ) 
+            )
         }
     }
 
@@ -116,42 +197,61 @@ class AmniShieldViewModel : ViewModel() {
     }
 
     fun toggleAccessibilityPermission() {
-        _state.update { 
+        _state.update {
             val newValue = !it.permissionAccessibilityDone
-            it.copy(permissionAccessibilityDone = newValue) 
+            it.copy(permissionAccessibilityDone = newValue)
         }
     }
 
     fun toggleBackgroundPermission() {
-        _state.update { 
+        _state.update {
             val newValue = !it.permissionBackgroundDone
-            it.copy(permissionBackgroundDone = newValue) 
+            it.copy(permissionBackgroundDone = newValue)
         }
     }
 
     fun toggleNotificationsPermission() {
-        _state.update { 
+        _state.update {
             val newValue = !it.permissionNotificationsDone
-            it.copy(permissionNotificationsDone = newValue) 
+            it.copy(permissionNotificationsDone = newValue)
         }
     }
 
     fun addKeyword(keyword: String) {
         if (keyword.isBlank()) return
-        _state.update { it.copy(keywords = it.keywords + keyword.trim()) }
+        val trimmed = keyword.trim()
+        _state.update { it.copy(keywords = it.keywords + trimmed) }
+        boundLoader?.let { loader ->
+            loader.saveBlockedKeywords(_state.value.keywords.toSet())
+        }
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
     }
 
     fun removeKeyword(keyword: String) {
         _state.update { it.copy(keywords = it.keywords.filter { kw -> kw != keyword }) }
+        boundLoader?.let { loader ->
+            loader.saveBlockedKeywords(_state.value.keywords.toSet())
+        }
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
     }
 
     fun addBlockedWebsite(website: String) {
         if (website.isBlank()) return
-        _state.update { it.copy(customBlockedWebsites = it.customBlockedWebsites + website.trim().lowercase()) }
+        val normalized = website.trim().lowercase()
+        _state.update { it.copy(customBlockedWebsites = it.customBlockedWebsites + normalized) }
+        boundLoader?.let { loader ->
+            loader.saveBlockedWebsites(_state.value.customBlockedWebsites.toSet())
+        }
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
     }
 
     fun removeBlockedWebsite(website: String) {
-        _state.update { it.copy(customBlockedWebsites = it.customBlockedWebsites.filter { s -> s != website }) }
+        val normalized = website.trim().lowercase()
+        _state.update { it.copy(customBlockedWebsites = it.customBlockedWebsites.filter { s -> s != normalized }) }
+        boundLoader?.let { loader ->
+            loader.saveBlockedWebsites(_state.value.customBlockedWebsites.toSet())
+        }
+        sendRefreshBroadcast(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
     }
 
     fun dismissNotification(id: String) {
@@ -171,12 +271,14 @@ class AmniShieldViewModel : ViewModel() {
         _state.update { it.copy(isShowingAddAppModal = show) }
     }
 
-    fun addScheduleRule(rule: com.alhaq.amnishield.ui.state.ScheduleRule) {
+    fun addScheduleRule(rule: ScheduleRule) {
         _state.update { it.copy(scheduleRules = it.scheduleRules + rule) }
+        syncRulesToPersistence()
     }
 
     fun deleteScheduleRule(id: String) {
         _state.update { it.copy(scheduleRules = it.scheduleRules.filter { rule -> rule.id != id }) }
+        syncRulesToPersistence()
     }
 
     fun toggleScheduleRuleActive(id: String) {
@@ -187,6 +289,29 @@ class AmniShieldViewModel : ViewModel() {
                 }
             )
         }
+        syncRulesToPersistence()
+    }
+
+    fun updateRuleAuth(
+        ruleId: String,
+        authType: AuthType,
+        rulePasswordHash: String?,
+        rulePasswordSalt: String?
+    ) {
+        _state.update {
+            it.copy(
+                scheduleRules = it.scheduleRules.map { rule ->
+                    if (rule.id == ruleId) {
+                        rule.copy(
+                            authType = authType,
+                            rulePasswordHash = rulePasswordHash,
+                            rulePasswordSalt = rulePasswordSalt
+                        )
+                    } else rule
+                }
+            )
+        }
+        syncRulesToPersistence()
     }
 
     fun updateProfile(

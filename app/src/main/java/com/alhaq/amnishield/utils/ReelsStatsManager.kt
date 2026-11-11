@@ -128,6 +128,11 @@ class ReelsStatsManager private constructor(private val context: Context) {
             .putString("reels_stats_date", dateStr)
             .putLong("reels_watch_time_seconds_today", updatedWatchTime)
             .apply()
+
+        try {
+            context.contentResolver.notifyChange(GuardianContract.URI_REELS, null)
+        } catch (e: Exception) {
+        }
     }
 
     /**

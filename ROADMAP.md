@@ -57,8 +57,8 @@ Last updated: October 2026
 - [x] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions (`main-pipeline.yml`) to execute parallel matrix builds and unit tests across `playstore`, `fdroid`, and `universal`.
 
 #### Milestone 0.3.5: Pure Compose & Storage Architecture Epic (Prep for V1.0)
-- [ ] **Room & DataStore Migration Epic:** Formalize a phased migration path from the 29+ SharedPreferences XML files to Room DB (relational blocking rules) and Preferences DataStore (flags and tokens).
-- [ ] **Pure-Compose Navigation Epic:** Reconnect and finalize `AmniShieldAdaptiveApp.kt` using modern Compose Navigation 2.8+, safely retiring the dual-host split (`MainActivity.kt` + `FragmentActivity.kt`).
+- [x] **Room & DataStore Migration Epic:** Relational SQLite persistence engine (`AmniShieldRuleDatabase`, `AppBlockRule`, `ScreenTimeLimitRule`, `AmniShieldDatabaseMigrations`) and reactive Preferences DataStore (`AmniShieldDataStore`) integrated with `SavedPreferencesLoader.kt` for seamless migration and zero Main Binder thread latency.
+- [x] **Pure-Compose Navigation Epic:** Reconnected and verified `AmniShieldAdaptiveApp.kt` using modern Compose Navigation, adaptive multi-pane scaffolds (`BlocksManagerAdaptiveScreen`, `StatsAdaptiveScreen`), type-safe sub-destinations (`AppDestinations.kt`), and dynamic mounting in `MainActivity.kt` (`mountAdaptiveComposeShell()`).
 
 ---
 

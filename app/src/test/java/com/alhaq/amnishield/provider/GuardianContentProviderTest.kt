@@ -142,4 +142,23 @@ class GuardianContentProviderTest {
             assertTrue(e.message?.contains("Caller is not authorized") == true)
         }
     }
+
+    @Test
+    fun testVerifyCaller_sameUid_returnsTrue() {
+        val provider = GuardianContentProvider(testContext)
+        assertTrue(provider.verifyCaller(testContext, android.os.Process.myUid()))
+    }
+
+    @Test
+    fun testGuardianContract_constantsMatchContractSpec() {
+        assertEquals("com.alhaq.deenshield.guardian.provider", GuardianContract.AUTHORITY)
+        assertEquals("start_focus", GuardianContract.METHOD_START_FOCUS)
+        assertEquals("stop_focus", GuardianContract.METHOD_STOP_FOCUS)
+        assertEquals("get_snapshot", GuardianContract.METHOD_GET_SNAPSHOT)
+        assertEquals("minutes", GuardianContract.ARG_MINUTES)
+        assertEquals("com.alhaq.amnishield.ACTION_FOCUS_COMPLETED", GuardianContract.ACTION_FOCUS_COMPLETED)
+        assertEquals("com.alhaq.amnishield.ACTION_FOCUS_ABORTED", GuardianContract.ACTION_FOCUS_ABORTED)
+        assertEquals("duration_minutes", GuardianContract.EXTRA_DURATION_MINUTES)
+        assertEquals("com.alhaq.deenshield.permission.GUARDIAN_IPC", GuardianContract.PERMISSION_GUARDIAN_IPC)
+    }
 }
