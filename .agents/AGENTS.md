@@ -16,12 +16,13 @@ This repository (`AmniShield-Android` / `alhaq-studio/amnishield-android`) is pa
 
 ## Current Project Focus
 
-- **Version**: `0.3.5 (2026.10.21)` / `versionCode 145` (Namespace: `com.alhaq.amnishield`, ApplicationId: `com.alhaq.deenshield`).
+- **Version**: `0.3.6 (2026.11.12)` / `versionCode 146` (Namespace: `com.alhaq.amnishield`, ApplicationId: `com.alhaq.deenshield`).
 - **Completed Milestones**:
   - Milestone 0.3.2 (Accessibility Engine Hardening & Binder Safety)
   - Milestone 0.3.3 (Google Play Store Compliance & Layout Resilience)
   - Milestone 0.3.4 (Dual-Host Cleanup, Type-Safe Routing & SharedPreferences Synchronization)
   - Milestone 0.3.5 (Pure Compose & Storage Architecture Epic)
+  - Milestone 0.3.6 (Cloud Sync & Canonical PolicyPayload v2 Cross-Platform Architecture)
 - **Primary Goal**: Finalize V1.0 Release Preparation, automated instrumented CI tests, and production distribution builds.
 
 ---
@@ -34,10 +35,18 @@ This repository (`AmniShield-Android` / `alhaq-studio/amnishield-android`) is pa
      - `AmniShieldRuleDatabase.kt` provides relational SQLite persistence for app blocking rules and screen-time launch limits with schema version migrations (V1 -> V2) and reactive `StateFlow` streams.
      - `AmniShieldDataStore.kt` provides reactive Preferences DataStore streaming for core feature flags, onboarding consent, theme, and PIN security.
      - `EncryptedSharedPreferences` is strictly isolated to `SecureKeyStore.kt` (`amnishield_sync_secrets.xml`).
+     - `PolicySyncManager.kt` orchestrates canonical `PolicyPayload v2` cloud synchronization:
+       - Strict domain vs keyword separation: `blocked_domains` strictly saves to `blocked_websites` (`savedPrefs.saveBlockedWebsites()`) and broadcasts `INTENT_ACTION_REFRESH_WEBSITE_BLOCKER`, separate from `blocked_keywords`.
+       - Full multi-schedule deserialization into `AppBlockScheduleRule` (`blockerType`, `selectedDays` [1=Sun..7=Sat], `startMinute`/`endMinute`, `targets`, `targetWebsites`, `targetKeywords`) with backward compatibility for legacy v1 schedules.
+       - Conflict resolution: Supports `ApplyMode.FORCE_REPLACE` (with automated pre-sync snapshot recovery via `savedPrefs.savePreSyncRuleSnapshot()`) and `ApplyMode.MERGE`.
+       - Bidirectional sync: Supports `exportLocalPolicyPayload()` and `pushLocalPolicyToCloud()`.
 2. **Dual-Host & Adaptive Presentation Reality:**
    - Presentation layer supports both legacy XML tab navigation and modern pure-Compose adaptive shells:
-     - `MainActivity.kt` hosts bottom navigation tabs and provides `mountAdaptiveComposeShell()` to activate `AmniShieldAdaptiveApp.kt` (`NavigationSuiteScaffold` + `NavHost`).
+     - `MainActivity.kt` hosts bottom navigation tabs and provides `mountAdaptiveComposeShell()` to activate `AmniShieldAdaptiveApp.kt` (`NavigationSuiteScaffold` + `NavHost`) wired to live Google/Supabase authentication and profile state.
      - `FragmentActivity.kt` provides secondary sub-screen routing for 18+ configuration fragments embedding `ComposeView` via the type-safe `FragmentDestination.kt` sealed route contract.
+     - `ProfileScreen.kt` and `SettingsScreen.kt` provide Account & Cloud Sync management:
+       - Live policy mode indicator (`Console Managed`, `Personal Cloud Sync`, or `Standalone`), paired device tracking, and last sync timestamp.
+       - "Pull / Force Apply Remote Rules" guarded by a mandatory Material 3 `AlertDialog` user warning disclosing overwrite vs merge behavior before applying remote rules.
 3. **Blocker Pipeline Priority Order (`AmniShieldAccessibilityService.kt`):**
    - Priority 0: `AntiUninstallDetector` -> Priority 1: `FocusModeBlocker` -> Priority 2: `WebsiteBlockerDetector` -> Priority 3: `AppBlocker` -> Priority 4: `KeywordBlocker` & `ReelBlocker` (via `Channel.CONFLATED` on `Dispatchers.Default`).
 4. **Main Binder Thread & Concurrency Guardrails:**
