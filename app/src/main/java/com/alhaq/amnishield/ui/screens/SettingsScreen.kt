@@ -36,6 +36,9 @@ import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import com.alhaq.amnishield.ui.state.AppTheme
 import com.alhaq.amnishield.ui.components.AmniShieldToggleButton
 import com.alhaq.amnishield.ui.components.bounceClick
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,10 +65,145 @@ fun SettingsScreen(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val preferencesLoader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context.applicationContext) }
     val isFounderThemeUnlocked = remember { preferencesLoader.isFounderThemeUnlocked() }
     var showPinCooldownDialog by remember { mutableStateOf(false) }
     var showEmergencyCooldownDialog by remember { mutableStateOf(false) }
+    var showPullRemoteRulesDialog by remember { mutableStateOf(false) }
+    var isSyncActionInProgress by remember { mutableStateOf(false) }
+    var lastSyncTimestamp by remember { mutableLongStateOf(preferencesLoader.getLastPolicySyncTimestamp()) }
+    var hasPreSyncBackup by remember { mutableStateOf(preferencesLoader.hasPreSyncRuleSnapshot()) }
+
+    val formattedLastSynced = remember(lastSyncTimestamp) {
+        if (lastSyncTimestamp > 0L) {
+            java.text.SimpleDateFormat("MMM d, yyyy • HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date(lastSyncTimestamp))
+        } else {
+            "Never synced"
+        }
+    }
+
+    if (showPullRemoteRulesDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isSyncActionInProgress) showPullRemoteRulesDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Pull & Apply Remote Rules?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Pulling remote rules fetches the latest schedules, blocked apps, websites, keywords, and launch limits from your Cloud Account or Console.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Force Apply (Overwrite Local) will replace conflicting local rules with your remote policy so rules removed in the cloud are also removed locally. An automatic local backup snapshot is created first so you can restore your previous local rules at any time.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Merge with Local Rules combines remote rules with your existing local rules without removing local-only entries.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Button(
+                        onClick = {
+                            showPullRemoteRulesDialog = false
+                            isSyncActionInProgress = true
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val summary = com.alhaq.amnishield.data.sync.PolicySyncManager.forcePullAndApply(
+                                    context,
+                                    com.alhaq.amnishield.data.sync.PolicySyncManager.ApplyMode.FORCE_REPLACE
+                                )
+                                withContext(Dispatchers.Main) {
+                                    isSyncActionInProgress = false
+                                    lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                    hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                    viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                    val msg = if (summary.success) {
+                                        "Force Applied remote rules: ${summary.schedulesCount} schedules, ${summary.appsCount} apps, ${summary.websitesCount} domains, ${summary.keywordsCount} keywords, ${summary.launchLimitsCount} limits (pre-sync backup saved)."
+                                    } else {
+                                        summary.message.ifBlank { "Unable to pull remote rules. Ensure device is paired or signed in." }
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        enabled = !isSyncActionInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Force Apply (Overwrite Local)", fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            showPullRemoteRulesDialog = false
+                            isSyncActionInProgress = true
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val summary = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(
+                                    context,
+                                    com.alhaq.amnishield.data.sync.PolicySyncManager.ApplyMode.MERGE
+                                )
+                                withContext(Dispatchers.Main) {
+                                    isSyncActionInProgress = false
+                                    lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                    hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                    viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                    val msg = if (summary.success) {
+                                        "Merged remote rules: ${summary.schedulesCount} schedules, ${summary.appsCount} apps, ${summary.websitesCount} domains, ${summary.keywordsCount} keywords, ${summary.launchLimitsCount} limits."
+                                    } else {
+                                        summary.message.ifBlank { "Unable to merge remote rules. Ensure device is paired or signed in." }
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        enabled = !isSyncActionInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Merge with Local Rules", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = { showPullRemoteRulesDialog = false },
+                    enabled = !isSyncActionInProgress
+                ) {
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
 
     if (showPinCooldownDialog) {
         CooldownSelectionDialog(
@@ -185,6 +323,70 @@ fun SettingsScreen(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = "Edit Profile",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsNavigationRow(
+                            icon = Icons.Outlined.CloudDownload,
+                            title = "Pull / Force Apply Remote Rules",
+                            subtitle = "Fetch latest schedules, apps, websites & keywords • Last synced: $formattedLastSynced",
+                            onClick = { showPullRemoteRulesDialog = true }
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsNavigationRow(
+                            icon = Icons.Outlined.CloudUpload,
+                            title = "Push Current Rules to Cloud",
+                            subtitle = "Upload active local blocklists, schedules & limits to cloud policy",
+                            onClick = {
+                                if (!isSyncActionInProgress) {
+                                    isSyncActionInProgress = true
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val ok = com.alhaq.amnishield.data.sync.PolicySyncManager.pushLocalPolicyToCloud(context)
+                                        withContext(Dispatchers.Main) {
+                                            isSyncActionInProgress = false
+                                            lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                            val msg = if (ok) {
+                                                "Current local rules pushed to Cloud Account / Sync Hub."
+                                            } else {
+                                                "Unable to push rules to cloud. Ensure device is paired or signed in."
+                                            }
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            }
+                        )
+
+                        if (hasPreSyncBackup) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+
+                            SettingsNavigationRow(
+                                icon = Icons.Outlined.Restore,
+                                title = "Restore Pre-Sync Local Backup",
+                                subtitle = "Revert rules to the snapshot saved before Force Apply",
+                                onClick = {
+                                    val restored = preferencesLoader.restorePreSyncRuleSnapshot()
+                                    if (restored) {
+                                        viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                        hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                        Toast.makeText(context, "Restored pre-sync local rule backup.", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context, "Could not restore pre-sync local backup.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             )
                         }
 

@@ -38,7 +38,9 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
                 keys.cursor = latest
                 
                 for (row in rows) {
-                    if (row.namespace == "amnishield_config" && row.recordKey == "rules" && !row.deleted) {
+                    val isPolicyRecord = (row.namespace == "amnishield_config" && row.recordKey == "rules") ||
+                        row.namespace == "policy_v2"
+                    if (isPolicyRecord && !row.deleted) {
                         try {
                             val rawJson = if (row.ciphertext.startsWith("plain:")) {
                                 row.ciphertext.removePrefix("plain:")
@@ -47,7 +49,7 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
                             }
                             val jsonObj = gson.fromJson(rawJson, JsonObject::class.java)
                             if (jsonObj != null) {
-                                PolicySyncManager.applyPolicyPayload(context, jsonObj)
+                                PolicySyncManager.applyPolicyPayload(context, jsonObj, PolicySyncManager.ApplyMode.MERGE)
                             }
                         } catch (e: Exception) {
                             // ignore malformed record
@@ -65,26 +67,22 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
         val session = getOrRefreshSession() ?: return
         _status.value = SyncStatus(isSyncing = true)
         try {
-            // Push active rules, blocklists, and schedules to Supabase sync_records
-            val configObj = JsonObject().apply {
-                val appsArray = com.google.gson.JsonArray()
-                savedPrefs.loadBlockedApps().forEach { appsArray.add(it) }
-                add("blocked_apps", appsArray)
-
-                val kwArray = com.google.gson.JsonArray()
-                savedPrefs.loadBlockedKeywords().forEach { kwArray.add(it) }
-                add("blocked_keywords", kwArray)
-
-                addProperty("adult_pack", savedPrefs.isKeywordBlockerAdultPackEnabled())
-                addProperty("strict_mode", savedPrefs.isFocusModeFeatureEnabled())
-            }
-
+            // Push full PolicyPayload v2 rules, blocklists, schedules, and limits to Supabase
+            val configObj = PolicySyncManager.exportLocalPolicyPayload(context)
             val rulesJson = configObj.toString()
-            val ciphertext = keys.dekB64 ?: "plain:$rulesJson"
+            val ciphertext = "plain:$rulesJson"
             rest.upsertRecord(
                 session = session,
                 namespace = "amnishield_config",
                 recordKey = "rules",
+                deviceId = keys.deviceId,
+                ciphertextB64 = ciphertext,
+                version = System.currentTimeMillis()
+            )
+            rest.upsertRecord(
+                session = session,
+                namespace = "policy_v2",
+                recordKey = "default",
                 deviceId = keys.deviceId,
                 ciphertextB64 = ciphertext,
                 version = System.currentTimeMillis()

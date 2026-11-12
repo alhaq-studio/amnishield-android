@@ -111,15 +111,57 @@ fun ProfileScreen(
     var isPairingSuccess by remember { mutableStateOf(false) }
     var isPairedWithConsole by remember {
         mutableStateOf(
-            context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-                .getBoolean("is_paired_with_console", false)
+            preferencesLoader.isConsoleManaged() ||
+                context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                    .getBoolean("is_paired_with_console", false)
         )
     }
     var pairedDeviceId by remember {
         mutableStateOf(
-            context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-                .getString("paired_device_id", null)
+            preferencesLoader.getPairedDeviceId()
         )
+    }
+    var personalCloudSyncEnabled by remember {
+        mutableStateOf(preferencesLoader.isPersonalCloudSyncEnabled())
+    }
+    var lastSyncTimestamp by remember {
+        mutableLongStateOf(preferencesLoader.getLastPolicySyncTimestamp())
+    }
+    var hasPreSyncBackup by remember {
+        mutableStateOf(preferencesLoader.hasPreSyncRuleSnapshot())
+    }
+    var preSyncBackupTimestamp by remember {
+        mutableLongStateOf(preferencesLoader.getPreSyncRuleSnapshotTimestamp())
+    }
+    var showPullRemoteRulesDialog by remember { mutableStateOf(false) }
+    var isSyncActionInProgress by remember { mutableStateOf(false) }
+    var syncStatusBannerMessage by remember { mutableStateOf<String?>(null) }
+    var syncStatusBannerIsError by remember { mutableStateOf(false) }
+
+    val operationModeLabel = remember(isPairedWithConsole, pairedDeviceId, personalCloudSyncEnabled) {
+        when {
+            isPairedWithConsole && !pairedDeviceId.isNullOrBlank() -> "Console Managed"
+            personalCloudSyncEnabled -> "Personal Cloud Sync"
+            else -> "Standalone"
+        }
+    }
+
+    val formattedLastSynced = remember(lastSyncTimestamp) {
+        if (lastSyncTimestamp > 0L) {
+            java.text.SimpleDateFormat("MMM d, yyyy • HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date(lastSyncTimestamp))
+        } else {
+            "Never synced"
+        }
+    }
+
+    val formattedPreSyncBackupTime = remember(preSyncBackupTimestamp) {
+        if (preSyncBackupTimestamp > 0L) {
+            java.text.SimpleDateFormat("MMM d, yyyy • HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date(preSyncBackupTimestamp))
+        } else {
+            "Snapshot available"
+        }
     }
 
     // Dynamic Guardian Level & Rank
@@ -163,9 +205,15 @@ fun ProfileScreen(
                             }
                             isPairedWithConsole = true
                             pairedDeviceId = result.deviceId
+                            lastSyncTimestamp = savedPrefs.getLastPolicySyncTimestamp()
+                            viewModel.bindPersistence(context.applicationContext, savedPrefs)
                             Toast.makeText(context, "[SUCCESS] Device Linked Successfully!", Toast.LENGTH_LONG).show()
                             coroutineScope.launch(Dispatchers.IO) {
                                 com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
+                                withContext(Dispatchers.Main) {
+                                    lastSyncTimestamp = savedPrefs.getLastPolicySyncTimestamp()
+                                    viewModel.bindPersistence(context.applicationContext, savedPrefs)
+                                }
                             }
                             delay(1200)
                             showPairingDialog = false
@@ -1102,25 +1150,93 @@ fun ProfileScreen(
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        if (isPairedWithConsole) {
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = Color(0xFF059669).copy(alpha = 0.15f)
-                                            ) {
-                                                Text(
-                                                    text = "CONNECTED",
-                                                    color = Color(0xFF059669),
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = when {
+                                                isPairedWithConsole -> Color(0xFF059669).copy(alpha = 0.15f)
+                                                personalCloudSyncEnabled -> MaterialTheme.colorScheme.primaryContainer
+                                                else -> MaterialTheme.colorScheme.surfaceVariant
                                             }
+                                        ) {
+                                            Text(
+                                                text = operationModeLabel.uppercase(),
+                                                color = when {
+                                                    isPairedWithConsole -> Color(0xFF059669)
+                                                    personalCloudSyncEnabled -> MaterialTheme.colorScheme.primary
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                },
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
                                         }
                                     }
                                     Text(
-                                        text = if (isPairedWithConsole) "Device ID: ${pairedDeviceId?.take(8) ?: "Linked"}" else "Cross-Device Synchronization",
+                                        text = if (isPairedWithConsole) "Paired Device ID: ${pairedDeviceId ?: "Linked"}" else "Mode: $operationModeLabel",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
+                                }
+                            }
+
+                            // Live Cloud Sync & Policy Status Summary Box
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Policy Mode",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = operationModeLabel,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Paired Device ID",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = pairedDeviceId?.take(12) ?: "Not paired",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Last Synced",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = formattedLastSynced,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             }
 
@@ -1141,17 +1257,30 @@ fun ProfileScreen(
                                     Button(
                                         onClick = {
                                             Toast.makeText(context, "Syncing latest policies...", Toast.LENGTH_SHORT).show()
+                                            isSyncActionInProgress = true
                                             coroutineScope.launch(Dispatchers.IO) {
-                                                val ok = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
+                                                val summary = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
                                                 withContext(Dispatchers.Main) {
-                                                    if (ok) {
-                                                        Toast.makeText(context, "[SUCCESS] Policies Synchronized!", Toast.LENGTH_SHORT).show()
+                                                    isSyncActionInProgress = false
+                                                    lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                                    hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                                    preSyncBackupTimestamp = preferencesLoader.getPreSyncRuleSnapshotTimestamp()
+                                                    viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                                    if (summary.success) {
+                                                        val msg = "Policies synced: ${summary.schedulesCount} schedules, ${summary.appsCount} apps, ${summary.websitesCount} domains, ${summary.keywordsCount} keywords."
+                                                        syncStatusBannerIsError = false
+                                                        syncStatusBannerMessage = msg
+                                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                                     } else {
-                                                        Toast.makeText(context, "[INFO] Sync offline. Locally cached policy active.", Toast.LENGTH_SHORT).show()
+                                                        val msg = summary.message.ifBlank { "Sync offline. Locally cached policy active." }
+                                                        syncStatusBannerIsError = true
+                                                        syncStatusBannerMessage = msg
+                                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                                     }
                                                 }
                                             }
                                         },
+                                        enabled = !isSyncActionInProgress,
                                         modifier = Modifier
                                             .weight(1.2f)
                                             .height(44.dp),
@@ -1179,7 +1308,7 @@ fun ProfileScreen(
                                             savedPrefs.setConsoleManaged(false)
                                             isPairedWithConsole = false
                                             pairedDeviceId = null
-                                            Toast.makeText(context, "[INFO] Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Device Unlinked from Cloud Sync Hub", Toast.LENGTH_SHORT).show()
                                         },
                                         modifier = Modifier
                                             .weight(1f)
@@ -1272,11 +1401,11 @@ fun ProfileScreen(
                     }
                 }
 
-                // SYNC & DATA PRIVACY TOGGLES
+                // CLOUD SYNC & REMOTE POLICIES
                 item {
                     ProfileSectionHeader(
-                        icon = Icons.Default.Lock,
-                        title = "SYNC & DATA PRIVACY"
+                        icon = Icons.Default.CloudDownload,
+                        title = "CLOUD SYNC & REMOTE POLICIES"
                     )
                 }
 
@@ -1295,7 +1424,7 @@ fun ProfileScreen(
                                 .padding(18.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            // Sync Rules Switch
+                            // Personal Cloud Sync Switch
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1303,20 +1432,172 @@ fun ProfileScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Sync Rules & Blocklists",
+                                        text = "Personal Cloud Sync",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = if (state.syncRulesEnabled) "Cloud sync active for app & domain rules" else "Local rules only (cloud sync off)",
+                                        text = if (personalCloudSyncEnabled)
+                                            "Cloud sync active for schedules, app rules, websites & keywords"
+                                        else
+                                            "Local rules only (enable to sync rules with your cloud account)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Switch(
-                                    checked = state.syncRulesEnabled,
-                                    onCheckedChange = { viewModel.toggleSyncRules() }
+                                    checked = personalCloudSyncEnabled,
+                                    onCheckedChange = { enabled ->
+                                        personalCloudSyncEnabled = enabled
+                                        preferencesLoader.setPersonalCloudSyncEnabled(enabled)
+                                        if (state.syncRulesEnabled != enabled) {
+                                            viewModel.toggleSyncRules()
+                                        }
+                                    }
                                 )
+                            }
+
+                            if (syncStatusBannerMessage != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (syncStatusBannerIsError)
+                                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                    else
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (syncStatusBannerIsError) Icons.Outlined.WarningAmber else Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = if (syncStatusBannerIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = syncStatusBannerMessage.orEmpty(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+                            // Action 1: Pull / Force Apply Remote Rules
+                            Button(
+                                onClick = { showPullRemoteRulesDialog = true },
+                                enabled = !isSyncActionInProgress,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Pull / Force Apply Remote Rules",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            // Action 2: Push Current Rules to Cloud
+                            OutlinedButton(
+                                onClick = {
+                                    isSyncActionInProgress = true
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val ok = com.alhaq.amnishield.data.sync.PolicySyncManager.pushLocalPolicyToCloud(context)
+                                        withContext(Dispatchers.Main) {
+                                            isSyncActionInProgress = false
+                                            lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                            if (ok) {
+                                                val msg = "Current local rules pushed to Cloud Account / Sync Hub."
+                                                syncStatusBannerIsError = false
+                                                syncStatusBannerMessage = msg
+                                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                            } else {
+                                                val msg = "Unable to push rules to cloud. Ensure device is paired or signed in."
+                                                syncStatusBannerIsError = true
+                                                syncStatusBannerMessage = msg
+                                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = !isSyncActionInProgress,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudUpload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Push Current Rules to Cloud",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            // Action 3: Restore Pre-Sync Local Backup (shown if snapshot exists)
+                            if (hasPreSyncBackup) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val restored = preferencesLoader.restorePreSyncRuleSnapshot()
+                                        if (restored) {
+                                            viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                            hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                            preSyncBackupTimestamp = preferencesLoader.getPreSyncRuleSnapshotTimestamp()
+                                            val msg = "Restored pre-sync local rule backup ($formattedPreSyncBackupTime)."
+                                            syncStatusBannerIsError = false
+                                            syncStatusBannerMessage = msg
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                        } else {
+                                            val msg = "Could not restore pre-sync local backup."
+                                            syncStatusBannerIsError = true
+                                            syncStatusBannerMessage = msg
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    enabled = !isSyncActionInProgress,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f))
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Restore,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Restore Pre-Sync Local Backup ($formattedPreSyncBackupTime)",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                }
                             }
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
@@ -1483,6 +1764,10 @@ fun ProfileScreen(
                                 .putBoolean("profile_pin_enabled", pinProtectionEnabled)
                                 .putString("profile_pin", profilePin)
                                 .apply()
+                            preferencesLoader.setPinSecurityEnabled(pinProtectionEnabled)
+                            if (profilePin.isNotBlank()) {
+                                preferencesLoader.setPinCode(profilePin)
+                            }
                             showSuccessMessage = true
                         },
                         style = AmniShieldButtonStyle.Primary,
@@ -1835,9 +2120,15 @@ fun ProfileScreen(
                                         }
                                         isPairedWithConsole = true
                                         pairedDeviceId = result.deviceId
+                                        lastSyncTimestamp = savedPrefs.getLastPolicySyncTimestamp()
+                                        viewModel.bindPersistence(context.applicationContext, savedPrefs)
                                         Toast.makeText(context, "[SUCCESS] Device Linked Successfully!", Toast.LENGTH_LONG).show()
                                         coroutineScope.launch(Dispatchers.IO) {
                                             com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(context)
+                                            withContext(Dispatchers.Main) {
+                                                lastSyncTimestamp = savedPrefs.getLastPolicySyncTimestamp()
+                                                viewModel.bindPersistence(context.applicationContext, savedPrefs)
+                                            }
                                         }
                                         delay(1200)
                                         showPairingDialog = false
@@ -1939,6 +2230,142 @@ fun ProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteAccountDialog = false }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // MANDATORY USER WARNING DIALOG FOR PULL / FORCE APPLY REMOTE RULES
+    if (showPullRemoteRulesDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isSyncActionInProgress) showPullRemoteRulesDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Pull & Apply Remote Rules?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Pulling remote rules fetches the latest schedules, blocked apps, websites, keywords, and launch limits from your Cloud Account or Console.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Force Apply (Overwrite Local) will replace conflicting local rules with your remote policy so rules removed in the cloud are also removed locally. An automatic local backup snapshot is created first so you can restore your previous local rules at any time.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Merge with Local Rules combines remote rules with your existing local rules without removing local-only entries.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Action 1: Force Apply (Overwrite Local)
+                    Button(
+                        onClick = {
+                            showPullRemoteRulesDialog = false
+                            isSyncActionInProgress = true
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val summary = com.alhaq.amnishield.data.sync.PolicySyncManager.forcePullAndApply(
+                                    context,
+                                    com.alhaq.amnishield.data.sync.PolicySyncManager.ApplyMode.FORCE_REPLACE
+                                )
+                                withContext(Dispatchers.Main) {
+                                    isSyncActionInProgress = false
+                                    lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                    hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                    preSyncBackupTimestamp = preferencesLoader.getPreSyncRuleSnapshotTimestamp()
+                                    viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                    if (summary.success) {
+                                        val msg = "Force Applied remote rules: ${summary.schedulesCount} schedules, ${summary.appsCount} apps, ${summary.websitesCount} domains, ${summary.keywordsCount} keywords, ${summary.launchLimitsCount} limits (pre-sync backup saved)."
+                                        syncStatusBannerIsError = false
+                                        syncStatusBannerMessage = msg
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    } else {
+                                        val msg = summary.message.ifBlank { "Unable to pull remote rules. Ensure device is paired or signed in." }
+                                        syncStatusBannerIsError = true
+                                        syncStatusBannerMessage = msg
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isSyncActionInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Force Apply (Overwrite Local)", fontWeight = FontWeight.Bold)
+                    }
+
+                    // Action 2: Merge with Local Rules
+                    OutlinedButton(
+                        onClick = {
+                            showPullRemoteRulesDialog = false
+                            isSyncActionInProgress = true
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val summary = com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(
+                                    context,
+                                    com.alhaq.amnishield.data.sync.PolicySyncManager.ApplyMode.MERGE
+                                )
+                                withContext(Dispatchers.Main) {
+                                    isSyncActionInProgress = false
+                                    lastSyncTimestamp = preferencesLoader.getLastPolicySyncTimestamp()
+                                    hasPreSyncBackup = preferencesLoader.hasPreSyncRuleSnapshot()
+                                    preSyncBackupTimestamp = preferencesLoader.getPreSyncRuleSnapshotTimestamp()
+                                    viewModel.bindPersistence(context.applicationContext, preferencesLoader)
+                                    if (summary.success) {
+                                        val msg = "Merged remote rules: ${summary.schedulesCount} schedules, ${summary.appsCount} apps, ${summary.websitesCount} domains, ${summary.keywordsCount} keywords, ${summary.launchLimitsCount} limits."
+                                        syncStatusBannerIsError = false
+                                        syncStatusBannerMessage = msg
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    } else {
+                                        val msg = summary.message.ifBlank { "Unable to merge remote rules. Ensure device is paired or signed in." }
+                                        syncStatusBannerIsError = true
+                                        syncStatusBannerMessage = msg
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isSyncActionInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Merge with Local Rules", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = { showPullRemoteRulesDialog = false },
+                    enabled = !isSyncActionInProgress
+                ) {
+                    Text("Cancel", fontWeight = FontWeight.SemiBold)
                 }
             }
         )

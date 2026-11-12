@@ -39,7 +39,20 @@ class SupabaseRest(
         val updatedAt: String,
     )
 
-    data class DeviceRow(val id: String, val platform: String, val label: String, val lastSeen: String?)
+    data class DeviceRow(
+        val id: String,
+        val platform: String,
+        val label: String,
+        val lastSeen: String?,
+        val deviceName: String = label,
+        val ownerId: String? = null,
+        val userId: String? = null,
+        val isManaged: Boolean = false,
+        val isOnline: Boolean = false,
+        val syncEnabled: Boolean = true,
+        val lastHeartbeat: String? = lastSeen,
+        val policyPayload: JsonObject? = null
+    )
 
     private fun parseSession(body: JsonObject): Session? {
         val token = body.get("access_token")?.takeIf { !it.isJsonNull }?.asString ?: return null
@@ -277,26 +290,63 @@ class SupabaseRest(
         authedPost(session, "vault", obj.toString(), "return=minimal")
     }
 
-    fun upsertDevice(session: Session, id: String, platform: String, label: String, fcmToken: String? = null) {
+    fun upsertDevice(
+        session: Session,
+        id: String,
+        platform: String,
+        label: String,
+        fcmToken: String? = null,
+        policyPayload: JsonObject? = null
+    ) {
+        val nowIso = java.time.Instant.now().toString()
         val obj = JsonObject().apply {
             addProperty("id", id)
             addProperty("user_id", session.userId)
+            addProperty("owner_id", session.userId)
             addProperty("platform", platform)
             addProperty("label", label)
+            addProperty("device_name", label)
+            addProperty("last_seen", nowIso)
+            addProperty("last_heartbeat", nowIso)
+            addProperty("is_online", true)
+            addProperty("sync_enabled", true)
             if (fcmToken != null) addProperty("fcm_token", fcmToken)
+            if (policyPayload != null) add("policy_payload", policyPayload)
         }
         authedPost(session, "devices?on_conflict=id", "[$obj]", "resolution=merge-duplicates,return=minimal")
     }
 
     fun devices(session: Session): List<DeviceRow> {
-        val text = authedGet(session, "devices?user_id=eq.${session.userId}&select=id,platform,label,last_seen&order=last_seen.desc")
+        val selectCols = "id,owner_id,user_id,device_name,label,platform,is_managed,policy_payload,last_heartbeat,last_seen,is_online,sync_enabled"
+        val text = try {
+            authedGet(session, "devices?or=(user_id.eq.${session.userId},owner_id.eq.${session.userId})&select=$selectCols&order=last_heartbeat.desc.nullslast")
+        } catch (_: Exception) {
+            authedGet(session, "devices?user_id=eq.${session.userId}&select=id,platform,label,last_seen&order=last_seen.desc")
+        }
         return gson.fromJson(text, com.google.gson.JsonArray::class.java).map { el ->
             val o = el.asJsonObject
+            val labelVal = o.get("label")?.takeIf { !it.isJsonNull }?.asString
+                ?: o.get("device_name")?.takeIf { !it.isJsonNull }?.asString.orEmpty()
+            val devNameVal = o.get("device_name")?.takeIf { !it.isJsonNull }?.asString ?: labelVal
+            val lastSeenVal = o.get("last_seen")?.takeIf { !it.isJsonNull }?.asString
+                ?: o.get("last_heartbeat")?.takeIf { !it.isJsonNull }?.asString
+            val heartbeatVal = o.get("last_heartbeat")?.takeIf { !it.isJsonNull }?.asString ?: lastSeenVal
+            val policyObj = if (o.has("policy_payload") && !o.get("policy_payload").isJsonNull && o.get("policy_payload").isJsonObject) {
+                o.getAsJsonObject("policy_payload")
+            } else null
             DeviceRow(
                 id = o.get("id").asString,
-                platform = o.get("platform")?.asString ?: "device",
-                label = o.get("label")?.takeIf { !it.isJsonNull }?.asString.orEmpty(),
-                lastSeen = o.get("last_seen")?.takeIf { !it.isJsonNull }?.asString,
+                platform = o.get("platform")?.takeIf { !it.isJsonNull }?.asString ?: "device",
+                label = labelVal,
+                lastSeen = lastSeenVal,
+                deviceName = devNameVal,
+                ownerId = o.get("owner_id")?.takeIf { !it.isJsonNull }?.asString,
+                userId = o.get("user_id")?.takeIf { !it.isJsonNull }?.asString,
+                isManaged = o.get("is_managed")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
+                isOnline = o.get("is_online")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
+                syncEnabled = o.get("sync_enabled")?.takeIf { !it.isJsonNull }?.asBoolean ?: true,
+                lastHeartbeat = heartbeatVal,
+                policyPayload = policyObj
             )
         }
     }
@@ -311,6 +361,210 @@ class SupabaseRest(
             .patch(JsonObject().apply { add("fcm_token", com.google.gson.JsonNull.INSTANCE) }.toString().toRequestBody(jsonType))
             .build()
         client.newCall(req).execute().use { }
+    }
+
+    fun fetchDevicePolicy(deviceId: String, accessToken: String? = null): JsonObject? {
+        if (deviceId.isBlank()) return null
+        val encodedId = java.net.URLEncoder.encode(deviceId.trim(), "UTF-8")
+        val bearer = accessToken?.takeIf { it.isNotBlank() } ?: anonKey
+        val req = Request.Builder()
+            .url("$baseUrl/rest/v1/devices?id=eq.$encodedId&select=id,owner_id,user_id,device_name,label,is_managed,policy_payload,sync_enabled")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $bearer")
+            .get()
+            .build()
+        client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            val body = resp.body?.string().orEmpty()
+            if (body.isBlank()) return null
+            val array = gson.fromJson(body, com.google.gson.JsonArray::class.java)
+            if (array == null || array.size() == 0) return null
+            val devObj = array[0].asJsonObject
+            return if (devObj.has("policy_payload") && !devObj.get("policy_payload").isJsonNull && devObj.get("policy_payload").isJsonObject) {
+                devObj.getAsJsonObject("policy_payload")
+            } else {
+                null
+            }
+        }
+    }
+
+    fun updateDevicePolicy(
+        deviceId: String,
+        policyPayload: JsonObject,
+        deviceName: String? = null,
+        accessToken: String? = null
+    ): Boolean {
+        if (deviceId.isBlank()) return false
+        val encodedId = java.net.URLEncoder.encode(deviceId.trim(), "UTF-8")
+        val bearer = accessToken?.takeIf { it.isNotBlank() } ?: anonKey
+        val nowIso = java.time.Instant.now().toString()
+        val updateObj = JsonObject().apply {
+            add("policy_payload", policyPayload)
+            addProperty("last_heartbeat", nowIso)
+            addProperty("last_seen", nowIso)
+            addProperty("is_online", true)
+            addProperty("sync_enabled", true)
+            addProperty("platform", "android")
+            if (!deviceName.isNullOrBlank()) {
+                addProperty("device_name", deviceName)
+                addProperty("label", deviceName)
+            }
+        }
+        val req = Request.Builder()
+            .url("$baseUrl/rest/v1/devices?id=eq.$encodedId")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $bearer")
+            .header("Content-Type", "application/json")
+            .header("Prefer", "return=minimal")
+            .patch(updateObj.toString().toRequestBody(jsonType))
+            .build()
+        client.newCall(req).execute().use { resp ->
+            return resp.isSuccessful
+        }
+    }
+
+    fun fetchPolicyByOwner(ownerId: String, accessToken: String? = null): JsonObject? {
+        if (ownerId.isBlank()) return null
+        val encodedOwner = java.net.URLEncoder.encode(ownerId.trim(), "UTF-8")
+        val bearer = accessToken?.takeIf { it.isNotBlank() } ?: anonKey
+        val req = Request.Builder()
+            .url("$baseUrl/rest/v1/devices?or=(owner_id.eq.$encodedOwner,user_id.eq.$encodedOwner)&select=id,policy_payload,last_heartbeat&order=last_heartbeat.desc.nullslast")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $bearer")
+            .get()
+            .build()
+        client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            val body = resp.body?.string().orEmpty()
+            if (body.isBlank()) return null
+            val array = gson.fromJson(body, com.google.gson.JsonArray::class.java) ?: return null
+            for (elem in array) {
+                val obj = elem.asJsonObject
+                if (obj.has("policy_payload") && !obj.get("policy_payload").isJsonNull && obj.get("policy_payload").isJsonObject) {
+                    val payload = obj.getAsJsonObject("policy_payload")
+                    if (payload.entrySet().isNotEmpty()) {
+                        return payload
+                    }
+                }
+            }
+            return null
+        }
+    }
+
+    fun upsertDevicePolicyForOwner(
+        ownerId: String,
+        deviceId: String?,
+        deviceName: String,
+        policyPayload: JsonObject,
+        accessToken: String? = null
+    ): Boolean {
+        if (ownerId.isBlank()) return false
+        val bearer = accessToken?.takeIf { it.isNotBlank() } ?: anonKey
+        val nowIso = java.time.Instant.now().toString()
+        if (!deviceId.isNullOrBlank()) {
+            if (updateDevicePolicy(deviceId, policyPayload, deviceName, bearer)) {
+                return true
+            }
+        }
+        val encodedOwner = java.net.URLEncoder.encode(ownerId.trim(), "UTF-8")
+        val updateObj = JsonObject().apply {
+            add("policy_payload", policyPayload)
+            addProperty("last_heartbeat", nowIso)
+            addProperty("last_seen", nowIso)
+            addProperty("is_online", true)
+            addProperty("sync_enabled", true)
+        }
+        val patchReq = Request.Builder()
+            .url("$baseUrl/rest/v1/devices?or=(owner_id.eq.$encodedOwner,user_id.eq.$encodedOwner)&platform=eq.android")
+            .header("apikey", anonKey)
+            .header("Authorization", "Bearer $bearer")
+            .header("Content-Type", "application/json")
+            .header("Prefer", "return=minimal")
+            .patch(updateObj.toString().toRequestBody(jsonType))
+            .build()
+        client.newCall(patchReq).execute().use { resp ->
+            if (resp.isSuccessful) return true
+        }
+        return false
+    }
+
+    fun fetchUserCloudPolicy(session: Session, preferredDeviceId: String? = null): JsonObject? {
+        // 1. Check preferred device ID if provided
+        if (!preferredDeviceId.isNullOrBlank()) {
+            runCatching { fetchDevicePolicy(preferredDeviceId, session.accessToken) }.getOrNull()?.let {
+                if (it.entrySet().isNotEmpty()) return it
+            }
+        }
+
+        // 2. Check user's devices in `devices` table
+        runCatching { fetchPolicyByOwner(session.userId, session.accessToken) }.getOrNull()?.let {
+            if (it.entrySet().isNotEmpty()) return it
+        }
+
+        // 3. Check `sync_records` table (`policy_v2` or `amnishield_config`)
+        runCatching {
+            val path = "sync_records?user_id=eq.${session.userId}&namespace=in.(policy_v2,amnishield_config)" +
+                "&deleted=eq.false&order=updated_at.desc&limit=5&select=namespace,record_key,ciphertext,updated_at"
+            val text = authedGet(session, path)
+            val arr = gson.fromJson(text, com.google.gson.JsonArray::class.java)
+            if (arr != null) {
+                for (el in arr) {
+                    val row = el.asJsonObject
+                    val rawCipher = row.get("ciphertext")?.takeIf { !it.isJsonNull }?.asString ?: continue
+                    val rawJson = if (rawCipher.startsWith("plain:")) rawCipher.removePrefix("plain:") else rawCipher
+                    val parsed = runCatching { gson.fromJson(rawJson, JsonObject::class.java) }.getOrNull()
+                    if (parsed != null && parsed.entrySet().isNotEmpty()) {
+                        return parsed
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    fun pushUserCloudPolicy(
+        session: Session,
+        deviceId: String,
+        deviceName: String,
+        policyPayload: JsonObject
+    ): Boolean {
+        var anySuccess = false
+        val plainCipher = "plain:${policyPayload}"
+        val nowVersion = System.currentTimeMillis()
+
+        runCatching {
+            upsertRecord(
+                session = session,
+                namespace = "policy_v2",
+                recordKey = "default",
+                deviceId = deviceId,
+                ciphertextB64 = plainCipher,
+                version = nowVersion,
+                deleted = false
+            )
+            anySuccess = true
+        }
+
+        runCatching {
+            upsertRecord(
+                session = session,
+                namespace = "amnishield_config",
+                recordKey = "rules",
+                deviceId = deviceId,
+                ciphertextB64 = plainCipher,
+                version = nowVersion,
+                deleted = false
+            )
+            anySuccess = true
+        }
+
+        runCatching {
+            if (upsertDevicePolicyForOwner(session.userId, deviceId, deviceName, policyPayload, session.accessToken)) {
+                anySuccess = true
+            }
+        }
+
+        return anySuccess
     }
 
     fun pull(session: Session, cursor: String): List<SyncRow> {
@@ -373,7 +627,7 @@ class SupabaseRest(
         try {
             val encodedToken = java.net.URLEncoder.encode(cleanToken, "UTF-8")
             val req = Request.Builder()
-                .url("$baseUrl/rest/v1/devices?pairing_token=eq.$encodedToken&select=id,owner_id,is_managed,policy_payload,pairing_token_expires_at")
+                .url("$baseUrl/rest/v1/devices?pairing_token=eq.$encodedToken&select=id,owner_id,user_id,device_name,label,is_managed,policy_payload,pairing_token_expires_at")
                 .header("apikey", anonKey)
                 .header("Authorization", "Bearer $anonKey")
                 .get()
@@ -391,8 +645,11 @@ class SupabaseRest(
                 val dev = arr[0].asJsonObject
                 val deviceId = dev.get("id").asString
                 val ownerId = dev.get("owner_id")?.takeIf { !it.isJsonNull }?.asString
-                val isManaged = dev.get("is_managed")?.takeIf { !it.isJsonNull }?.asBoolean ?: false
-                val policyPayload = if (dev.has("policy_payload") && !dev.get("policy_payload").isJsonNull) dev.getAsJsonObject("policy_payload") else null
+                    ?: dev.get("user_id")?.takeIf { !it.isJsonNull }?.asString
+                val isManaged = dev.get("is_managed")?.takeIf { !it.isJsonNull }?.asBoolean ?: true
+                val policyPayload = if (dev.has("policy_payload") && !dev.get("policy_payload").isJsonNull && dev.get("policy_payload").isJsonObject) {
+                    dev.getAsJsonObject("policy_payload")
+                } else null
 
                 // Check expiry
                 val expiresAtStr = dev.get("pairing_token_expires_at")?.takeIf { !it.isJsonNull }?.asString
@@ -410,11 +667,14 @@ class SupabaseRest(
                 }
 
                 // Claim the device
+                val nowIso = java.time.Instant.now().toString()
                 val updateObj = JsonObject().apply {
                     addProperty("device_name", deviceName)
+                    addProperty("label", deviceName)
                     addProperty("platform", platform)
                     add("pairing_token", com.google.gson.JsonNull.INSTANCE)
-                    addProperty("last_heartbeat", java.time.Instant.now().toString())
+                    addProperty("last_heartbeat", nowIso)
+                    addProperty("last_seen", nowIso)
                     addProperty("is_online", true)
                     addProperty("is_managed", true)
                     addProperty("sync_enabled", true)

@@ -60,6 +60,13 @@ Last updated: October 2026
 - [x] **Room & DataStore Migration Epic:** Relational SQLite persistence engine (`AmniShieldRuleDatabase`, `AppBlockRule`, `ScreenTimeLimitRule`, `AmniShieldDatabaseMigrations`) and reactive Preferences DataStore (`AmniShieldDataStore`) integrated with `SavedPreferencesLoader.kt` for seamless migration and zero Main Binder thread latency.
 - [x] **Pure-Compose Navigation Epic:** Reconnected and verified `AmniShieldAdaptiveApp.kt` using modern Compose Navigation, adaptive multi-pane scaffolds (`BlocksManagerAdaptiveScreen`, `StatsAdaptiveScreen`), type-safe sub-destinations (`AppDestinations.kt`), and dynamic mounting in `MainActivity.kt` (`mountAdaptiveComposeShell()`).
 
+#### Milestone 0.3.6: Ecosystem Cloud Sync & Multi-Platform Policy Payload v2 Architecture
+- [x] **Policy Payload v2 Engine:** Full implementation and migration in `PolicySyncManager.kt` handling structured `websites`, `keywords`, `apps`, `schedules`, and `settings` with conflict resolution and cryptographic verification.
+- [x] **Supabase REST & Realtime Integration:** Zero-dependency, lightweight REST client (`SupabaseRest.kt`) supporting user auth token lifecycle, device heartbeat, policy pulling/pushing, and pairing flows.
+- [x] **Adaptive UI & Profile Alignment:** Account authentication, pairing modal, and manual/auto sync toggles in `ProfileScreen.kt`, `SettingsScreen.kt`, and `AmniShieldAdaptiveApp.kt` with live status indicators and zero telemetry compliance.
+- [x] **Comprehensive Sync Unit Testing:** Added rigorous suite (`PolicySyncManagerTest.kt`) verifying schema migration, payload transformation, schedule conversion, and null-safe deserialization.
+
+
 ---
 
 ## Architectural Standards & Development Invariants

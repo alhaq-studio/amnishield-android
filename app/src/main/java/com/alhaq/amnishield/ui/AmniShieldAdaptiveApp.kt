@@ -87,13 +87,16 @@ fun AmniShieldAdaptiveApp(
 
             // 2. Focus Mode
             composable(TopLevelDestination.FOCUS.route) {
+                val loader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context) }
+                val focusData = remember(state.isFocusModeActive) { loader.getFocusModeData() }
+                val preSelected = remember(state.isFocusModeActive) { loader.getFocusModeSelectedApps().toSet() }
                 FocusScreen(
                     isServiceEnabled = state.isMainServiceEnabled,
-                    isFocusModeActive = state.isFocusModeActive,
-                    focusModeEndTime = 0L,
+                    isFocusModeActive = state.isFocusModeActive || focusData.isTurnedOn,
+                    focusModeEndTime = focusData.endTime,
                     installedApps = emptyList(),
-                    preSelectedApps = emptySet(),
-                    defaultMode = 0,
+                    preSelectedApps = preSelected,
+                    defaultMode = focusData.modeType,
                     onStartFocusSession = onStartFocusMode,
                     onStopFocusSession = onStopFocusMode,
                     onOpenFocusConfig = { navController.navigate(AppRoutes.CREATE_FOCUS_RULE) },
@@ -112,6 +115,7 @@ fun AmniShieldAdaptiveApp(
 
             // 4. Settings
             composable(TopLevelDestination.SETTINGS.route) {
+                val loader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context) }
                 SettingsScreen(
                     state = state,
                     viewModel = viewModel,
@@ -125,7 +129,28 @@ fun AmniShieldAdaptiveApp(
                     onLanguage = onLanguage,
                     onSignOut = onGoogleSignOut,
                     onToggleWebFilter = { viewModel.toggleWebFilter() },
-                    onToggleUsageLimit = { viewModel.toggleSchedule() },
+                    onToggleUsageLimit = { viewModel.toggleUsageLimit() },
+                    onToggleAppUsageTracking = { enabled ->
+                        loader.setAppUsageTrackingEnabled(enabled)
+                        loader.setUsageTrackerFeatureEnabled(enabled)
+                        viewModel.setAppUsageTrackingEnabled(enabled)
+                    },
+                    onToggleWebsiteUsageTracking = { enabled ->
+                        loader.setWebsiteUsageTrackingEnabled(enabled)
+                        viewModel.setWebsiteUsageTrackingEnabled(enabled)
+                    },
+                    onToggleReelsTracking = { enabled ->
+                        loader.setReelsTrackingEnabled(enabled)
+                        viewModel.setReelsTrackingEnabled(enabled)
+                    },
+                    onUpdatePinResetCooldown = { mins ->
+                        loader.setPinResetCooldownMinutes(mins)
+                        viewModel.updatePinResetCooldown(mins)
+                    },
+                    onUpdateEmergencyCooldown = { mins ->
+                        loader.setEmergencyAccessCooldownMinutes(mins)
+                        viewModel.updateEmergencyAccessCooldown(mins)
+                    },
                     showTopAppBar = false
                 )
             }

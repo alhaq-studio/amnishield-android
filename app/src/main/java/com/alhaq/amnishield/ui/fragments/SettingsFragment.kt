@@ -216,8 +216,11 @@ class SettingsFragment : Fragment() {
         val websiteUsageTrackingEnabled = savedPreferencesLoader.isWebsiteUsageTrackingEnabled()
         val reelsTrackingEnabled = savedPreferencesLoader.isReelsTrackingEnabled()
         val account = googleSignInHelper.getLastSignedInAccount()
-        val name = account?.displayName ?: "Alhaq DST"
-        val email = account?.email ?: "alhaq.dst@gmail.com"
+        val sharedPrefs = requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val defaultName = account?.displayName ?: "Alhaq DST"
+        val defaultEmail = account?.email ?: "alhaq.dst@gmail.com"
+        val name = sharedPrefs.getString("profile_name", defaultName) ?: defaultName
+        val email = sharedPrefs.getString("profile_email", defaultEmail) ?: defaultEmail
         val pinResetCooldown = savedPreferencesLoader.getPinResetCooldownMinutes()
         val emergencyCooldown = savedPreferencesLoader.getEmergencyAccessCooldownMinutes()
         

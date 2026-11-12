@@ -2014,9 +2014,18 @@ open class SavedPreferencesLoader(
             .edit().putBoolean("personal_cloud_sync_enabled", enabled).apply()
     }
 
+    fun isPersonalCloudSyncEnabled(): Boolean = isPersonalSyncEnabled()
+
+    fun setPersonalCloudSyncEnabled(enabled: Boolean) = setPersonalSyncEnabled(enabled)
+
     fun getPairedDeviceId(): String? {
         return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .getString("paired_device_id", null)
+    }
+
+    fun getPairedOwnerId(): String? {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("paired_owner_id", null)
     }
 
     fun saveCachedPolicyPayload(payloadJson: String) {
@@ -2035,6 +2044,139 @@ open class SavedPreferencesLoader(
     fun getLastPolicySyncTimestamp(): Long {
         return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .getLong("last_policy_sync_timestamp", 0L)
+    }
+
+    // ==================== Pre-Sync Local Recovery Snapshot ====================
+
+    data class PreSyncRuleSnapshot(
+        val timestamp: Long = System.currentTimeMillis(),
+        val blockedApps: List<String> = emptyList(),
+        val namedBlockLists: Map<String, List<String>> = emptyMap(),
+        val blockedWebsites: List<String> = emptyList(),
+        val blockedWebsitesApps: List<String> = emptyList(),
+        val blockedKeywords: List<String> = emptyList(),
+        val adultPackEnabled: Boolean = false,
+        val scheduleRules: List<AppBlockScheduleRule> = emptyList(),
+        val launchLimitRules: List<AppLaunchLimitRule> = emptyList(),
+        val appBlockerEnabled: Boolean = false,
+        val websiteBlockerEnabled: Boolean = false,
+        val keywordBlockerEnabled: Boolean = false,
+        val reelBlockerEnabled: Boolean = false,
+        val reelBlockerMode: Int = ReelBlocker.MODE_BLOCK_ALL,
+        val reelBlockerDailyLimit: Int = 200,
+        val reelYoutubeEnabled: Boolean = false,
+        val reelInstagramEnabled: Boolean = false,
+        val reelTiktokEnabled: Boolean = false,
+        val reelBrowserEnabled: Boolean = false,
+        val focusModeEnabled: Boolean = false,
+        val focusStrictness: Int = 0,
+        val focusEarlyStopAllowed: Boolean = true,
+        val alwaysWhitelistedApps: List<String> = emptyList()
+    )
+
+    fun hasPreSyncRuleSnapshot(): Boolean {
+        return !getPreSyncRuleSnapshotJson().isNullOrBlank()
+    }
+
+    fun getPreSyncRuleSnapshotJson(): String? {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("pre_sync_rule_snapshot_json", null)
+    }
+
+    fun getPreSyncRuleSnapshotTimestamp(): Long {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getLong("pre_sync_rule_snapshot_timestamp", 0L)
+    }
+
+    fun savePreSyncRuleSnapshot(): Boolean = synchronized(rulesLock) {
+        return@synchronized try {
+            val now = System.currentTimeMillis()
+            val snapshot = PreSyncRuleSnapshot(
+                timestamp = now,
+                blockedApps = loadBlockedApps().toList(),
+                namedBlockLists = loadAppBlockLists().mapValues { it.value.toList() },
+                blockedWebsites = loadBlockedWebsites().toList(),
+                blockedWebsitesApps = loadBlockedWebsitesApps().toList(),
+                blockedKeywords = loadBlockedKeywords().toList(),
+                adultPackEnabled = isKeywordBlockerAdultPackEnabled(),
+                scheduleRules = loadAppBlockerScheduleRules().toList(),
+                launchLimitRules = loadAppLaunchLimitRules(),
+                appBlockerEnabled = isAppBlockerFeatureEnabled(false),
+                websiteBlockerEnabled = isWebsiteBlockerEnabled(false),
+                keywordBlockerEnabled = isKeywordBlockerFeatureEnabled(false),
+                reelBlockerEnabled = isReelBlockerEnabled(false),
+                reelBlockerMode = getReelBlockerMode(),
+                reelBlockerDailyLimit = getReelBlockerDailyLimit(),
+                reelYoutubeEnabled = isReelBlockerYoutubeEnabled(false),
+                reelInstagramEnabled = isReelBlockerInstagramEnabled(false),
+                reelTiktokEnabled = isReelBlockerTiktokEnabled(false),
+                reelBrowserEnabled = isReelBlockerBrowserEnabled(false),
+                focusModeEnabled = isFocusModeFeatureEnabled(false),
+                focusStrictness = getFocusModeStrictness(),
+                focusEarlyStopAllowed = isFocusModeEarlyStopAllowed(),
+                alwaysWhitelistedApps = getAlwaysWhitelistedApps()
+            )
+            val json = Gson().toJson(snapshot)
+            context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                .edit()
+                .putString("pre_sync_rule_snapshot_json", json)
+                .putLong("pre_sync_rule_snapshot_timestamp", now)
+                .apply()
+            true
+        } catch (e: Exception) {
+            Log.e("SavedPreferencesLoader", "Failed to save pre-sync rule snapshot", e)
+            false
+        }
+    }
+
+    fun restorePreSyncRuleSnapshot(): Boolean = synchronized(rulesLock) {
+        val json = getPreSyncRuleSnapshotJson()
+        if (json.isNullOrBlank()) return@synchronized false
+        return@synchronized try {
+            val snapshot = Gson().fromJson(json, PreSyncRuleSnapshot::class.java) ?: return@synchronized false
+
+            val mutableNamedLists = snapshot.namedBlockLists
+                .mapValues { it.value.toMutableSet() }
+                .toMutableMap()
+            saveAppBlockLists(mutableNamedLists)
+            saveBlockedApps(snapshot.blockedApps.toSet())
+            saveBlockedWebsites(snapshot.blockedWebsites.toSet())
+            saveBlockedWebsitesApps(snapshot.blockedWebsitesApps.toSet())
+            saveBlockedKeywords(snapshot.blockedKeywords.toSet())
+            setKeywordBlockerAdultPackEnabled(snapshot.adultPackEnabled)
+
+            saveAppBlockerScheduleRules(snapshot.scheduleRules.map { it.sanitize() }.toMutableList())
+            saveAppLaunchLimitRules(snapshot.launchLimitRules.map { it.sanitize() })
+
+            setAppBlockerFeatureEnabled(snapshot.appBlockerEnabled)
+            setWebsiteBlockerEnabled(snapshot.websiteBlockerEnabled)
+            setKeywordBlockerFeatureEnabled(snapshot.keywordBlockerEnabled)
+            setReelBlockerEnabled(snapshot.reelBlockerEnabled)
+            setReelBlockerMode(snapshot.reelBlockerMode)
+            setReelBlockerDailyLimit(snapshot.reelBlockerDailyLimit)
+            setReelBlockerYoutubeEnabled(snapshot.reelYoutubeEnabled)
+            setReelBlockerInstagramEnabled(snapshot.reelInstagramEnabled)
+            setReelBlockerTiktokEnabled(snapshot.reelTiktokEnabled)
+            setReelBlockerBrowserEnabled(snapshot.reelBrowserEnabled)
+
+            setFocusModeFeatureEnabled(snapshot.focusModeEnabled)
+            setFocusModeStrictness(snapshot.focusStrictness)
+            setFocusModeEarlyStopAllowed(snapshot.focusEarlyStopAllowed)
+            saveAlwaysWhitelistedApps(snapshot.alwaysWhitelistedApps)
+
+            runCatching {
+                context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER).setPackage(context.packageName))
+                context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).setPackage(context.packageName))
+                context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST).setPackage(context.packageName))
+                context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER).setPackage(context.packageName))
+                context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).setPackage(context.packageName))
+                context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES).setPackage(context.packageName))
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("SavedPreferencesLoader", "Failed to restore pre-sync rule snapshot", e)
+            false
+        }
     }
 
     // ========================================================================
@@ -2131,6 +2273,8 @@ open class SavedPreferencesLoader(
     fun setReelsBlockerFeatureEnabled(enabled: Boolean, updateManual: Boolean = true) = setReelBlockerEnabled(enabled, updateManual)
     fun isWebsiteBlockerFeatureEnabled(default: Boolean = false): Boolean = isWebsiteBlockerEnabled(default)
     fun setWebsiteBlockerFeatureEnabled(enabled: Boolean, updateManual: Boolean = true) = setWebsiteBlockerEnabled(enabled, updateManual)
+    fun isKeywordBlockerEnabled(default: Boolean = false): Boolean = isKeywordBlockerFeatureEnabled(default)
+    fun setKeywordBlockerEnabled(enabled: Boolean, updateManual: Boolean = true) = setKeywordBlockerFeatureEnabled(enabled, updateManual)
 
     fun isAppUsageLimitEnabled(): Boolean {
         return context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)

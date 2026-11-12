@@ -60,6 +60,25 @@ AmniShield is an open-source, privacy-first digital wellness and content-blockin
 
 ---
 
+## Cloud Policy Synchronization & PolicyPayload v2 Architecture
+
+AmniShield provides optional multi-platform policy synchronization across Android, Web Admin Console, and Browser Extensions via Supabase REST and Realtime channels.
+
+1. **PolicyPayload v2 Specification:**
+   - Unified data model containing structured `websites`, `keywords`, `apps`, `schedules` (multi-blocker weekly/daily rules), and `settings` (`strict_mode`, `allow_unblur`, `reel_blocker`).
+   - Backwards-compatible parser and bidirectional conversion between legacy v1 flat schedules and v2 multi-target schedule rules.
+2. **Synchronization Strategies:**
+   - **`MERGE`:** Unions local and remote domains, keywords, and schedules without destructive overwrites.
+   - **`FORCE_REPLACE`:** Authoritative remote replacement with pre-sync local snapshot backup enabling instant rollback upon failure.
+3. **Transport Layer (`SupabaseRest.kt`):**
+   - Lightweight, zero-proprietary-SDK HTTP REST implementation avoiding heavyweight third-party bloat.
+   - Endpoints for JWT token exchange, device registration, pairing verification, policy GET/POST, and encrypted storage.
+4. **Adaptive UI Integration:**
+   - Live pairing flows via 6-digit PIN and QR codes in `ProfileScreen.kt` and `SettingsScreen.kt`.
+   - Real-time cloud sync status badges and manual sync triggers embedded in the adaptive Compose shell (`AmniShieldAdaptiveApp.kt`).
+
+---
+
 ## Blocker Pipeline & Chain of Responsibility
 
 The `AmniShieldAccessibilityService` orchestrates accessibility window inspection through explicit priority-ordered interceptors:

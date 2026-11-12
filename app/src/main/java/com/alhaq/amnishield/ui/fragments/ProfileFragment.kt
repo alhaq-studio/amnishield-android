@@ -45,6 +45,7 @@ class ProfileFragment : Fragment() {
                 sharedPrefs.edit().apply {
                     putString("profile_name", account.displayName)
                     putString("profile_email", account.email)
+                    putBoolean("is_google_signed_in", true)
                     apply()
                 }
                 // Refresh ViewModel state
@@ -128,7 +129,9 @@ class ProfileFragment : Fragment() {
                 
                 // Track Google sign-in status dynamically
                 val isGoogleSignedIn = remember(state.userName, state.userEmail) {
-                    googleSignInHelper.isSignedIn()
+                    googleSignInHelper.isSignedIn() ||
+                        requireContext().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                            .getBoolean("is_google_signed_in", false)
                 }
                 
                 AmniShieldTheme(appTheme = activeTheme) {
@@ -165,6 +168,7 @@ class ProfileFragment : Fragment() {
             sharedPrefs.edit().apply {
                 remove("profile_name")
                 remove("profile_email")
+                putBoolean("is_google_signed_in", false)
                 apply()
             }
             loadProfileData()
@@ -173,6 +177,10 @@ class ProfileFragment : Fragment() {
     }
 
     private fun loadProfileData() {
+        val appContext = requireContext().applicationContext
+        val savedPrefsLoader = com.alhaq.amnishield.utils.SavedPreferencesLoader(appContext)
+        viewModel.bindPersistence(appContext, savedPrefsLoader)
+
         val account = googleSignInHelper.getLastSignedInAccount()
         val defaultName = account?.displayName ?: ""
         val defaultEmail = account?.email ?: ""
@@ -186,9 +194,11 @@ class ProfileFragment : Fragment() {
         val imageUri = sharedPrefs.getString("profile_image_uri", null)
         val avatarId = sharedPrefs.getString("profile_avatar_id", "avatar_shield") ?: "avatar_shield"
         val goalMinutes = sharedPrefs.getInt("profile_goal_minutes", 120)
+        val pinEnabled = sharedPrefs.getBoolean("profile_pin_enabled", savedPrefsLoader.isPinSecurityEnabled())
+        val pinCode = sharedPrefs.getString("profile_pin", savedPrefsLoader.getPinCode()) ?: ""
 
         // Compute production-ready dynamic guardian stats
-        val guardianStats = com.alhaq.amnishield.utils.GuardianStatsEngine.computeGuardianStats(requireContext().applicationContext)
+        val guardianStats = com.alhaq.amnishield.utils.GuardianStatsEngine.computeGuardianStats(appContext)
         viewModel.updateGuardianStats(
             streakDays = guardianStats.focusStreakDays,
             shieldScore = guardianStats.focusShieldScore,
@@ -201,8 +211,8 @@ class ProfileFragment : Fragment() {
             bio = bio,
             goalMinutes = goalMinutes,
             profileType = profileType,
-            pinEnabled = viewModel.state.value.isPinProtectionEnabled,
-            pin = viewModel.state.value.profilePin,
+            pinEnabled = pinEnabled,
+            pin = pinCode,
             imageUri = imageUri,
             avatarId = avatarId
         )
@@ -210,7 +220,7 @@ class ProfileFragment : Fragment() {
         val isAdvanced = true
 
         // Ensure ViewModel state has the correct premium status and advanced mode as well
-        val isPremium = com.alhaq.amnishield.premium.PremiumManager.getInstance(requireContext().applicationContext).isPremium()
+        val isPremium = com.alhaq.amnishield.premium.PremiumManager.getInstance(appContext).isPremium()
         if (viewModel.state.value.isPremiumUser != isPremium || viewModel.state.value.isAdvancedMode != isAdvanced) {
             viewModel.loadState(viewModel.state.value.copy(isPremiumUser = isPremium, isAdvancedMode = isAdvanced))
         }

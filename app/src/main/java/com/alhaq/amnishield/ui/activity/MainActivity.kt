@@ -113,13 +113,40 @@ class MainActivity : AppCompatActivity() {
     private var brandLogoBitmap: Bitmap? = null
     private var drawerBannerDrawable: Drawable? = null
     
+    private val isGoogleSignedInState = mutableStateOf(false)
+
+    private val restoreFileLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        result.data?.data?.let { uri ->
+            try {
+                ZipUtils.unzipSharedPreferencesFromUri(this, uri)
+                syncAdaptiveProfileState()
+                Toast.makeText(this, "Restore complete! Restart app to apply changes.", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             val account = googleSignInHelper.handleSignInResult(result.data)
             if (account != null) {
-                updateNavigationHeader(account)
+                val prefs = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                prefs.edit().apply {
+                    putString("profile_name", account.displayName)
+                    putString("profile_email", account.email)
+                    putBoolean("is_google_signed_in", true)
+                    apply()
+                }
+                isGoogleSignedInState.value = true
+                syncAdaptiveProfileState()
+                if (::binding.isInitialized) {
+                    updateNavigationHeader(account)
+                }
                 Toast.makeText(this, getString(R.string.signed_in_as, account.email), Toast.LENGTH_SHORT).show()
                 syncAccountWithBackend(account)
             } else {
@@ -214,14 +241,151 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+    private fun syncAdaptiveProfileState() {
+        val account = if (::googleSignInHelper.isInitialized) {
+            runCatching { googleSignInHelper.getLastSignedInAccount() }.getOrNull()
+        } else null
+        val defaultName = account?.displayName ?: ""
+        val defaultEmail = account?.email ?: ""
+        val prefs = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val name = prefs.getString("profile_name", defaultName) ?: defaultName
+        val email = prefs.getString("profile_email", defaultEmail) ?: defaultEmail
+        val bio = prefs.getString("profile_bio", "") ?: ""
+        val profileType = prefs.getString("profile_type", "Deep Focus") ?: "Deep Focus"
+        val imageUri = prefs.getString("profile_image_uri", null)
+        val avatarId = prefs.getString("profile_avatar_id", "avatar_shield") ?: "avatar_shield"
+        val goalMinutes = prefs.getInt("profile_goal_minutes", 120)
+        val pinEnabled = prefs.getBoolean("profile_pin_enabled", savedPreferencesLoader.isPinSecurityEnabled())
+        val pin = prefs.getString("profile_pin", savedPreferencesLoader.getPinCode()) ?: ""
+
+        isGoogleSignedInState.value =
+            (::googleSignInHelper.isInitialized && runCatching { googleSignInHelper.isSignedIn() }.getOrDefault(false)) ||
+            prefs.getBoolean("is_google_signed_in", false) ||
+            account != null
+
+        adaptiveViewModel.bindPersistence(this@MainActivity, savedPreferencesLoader)
+        val guardianStats = runCatching {
+            com.alhaq.amnishield.utils.GuardianStatsEngine.computeGuardianStats(applicationContext)
+        }.getOrNull()
+        if (guardianStats != null) {
+            adaptiveViewModel.updateGuardianStats(
+                streakDays = guardianStats.focusStreakDays,
+                shieldScore = guardianStats.focusShieldScore,
+                threatsBlocked = guardianStats.totalThreatsBlocked
+            )
+        }
+        adaptiveViewModel.updateProfile(
+            name = name,
+            email = email,
+            bio = bio,
+            goalMinutes = goalMinutes,
+            profileType = profileType,
+            pinEnabled = pinEnabled,
+            pin = pin,
+            imageUri = imageUri,
+            avatarId = avatarId
+        )
+        val focusData = savedPreferencesLoader.getFocusModeData()
+        val isServiceOn = PermissionsManager(this).isAccessibilityServiceEnabled()
+        val isPremium = premiumManager.isPremium()
+        adaptiveViewModel.loadState(
+            adaptiveViewModel.state.value.copy(
+                isMainServiceEnabled = isServiceOn,
+                isFocusModeActive = focusData.isTurnedOn,
+                isWebFilterEnabled = savedPreferencesLoader.isWebsiteBlockerEnabled(),
+                isUsageLimitEnabled = savedPreferencesLoader.isUsageTrackerFeatureEnabled(),
+                isAppUsageTrackingEnabled = savedPreferencesLoader.isAppUsageTrackingEnabled(),
+                isWebsiteUsageTrackingEnabled = savedPreferencesLoader.isWebsiteUsageTrackingEnabled(),
+                isReelsTrackingEnabled = savedPreferencesLoader.isReelsTrackingEnabled(),
+                pinResetCooldownMinutes = savedPreferencesLoader.getPinResetCooldownMinutes(),
+                emergencyAccessCooldownMinutes = savedPreferencesLoader.getEmergencyAccessCooldownMinutes(),
+                isPremiumUser = isPremium,
+                isAdvancedMode = true
+            )
+        )
+    }
+
+    private fun startAdaptiveFocusSession(durationMinutes: Int, mode: Int, selectedApps: Set<String>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        val durationMillis = durationMinutes.coerceAtLeast(1) * 60_000L
+        val startTime = System.currentTimeMillis()
+        val endTime = startTime + durationMillis
+
+        savedPreferencesLoader.saveFocusModeSelectedApps(selectedApps.toList())
+        savedPreferencesLoader.saveFocusModeData(
+            com.alhaq.amnishield.blockers.FocusModeBlocker.FocusModeData(
+                isTurnedOn = true,
+                endTime = endTime,
+                modeType = mode,
+                selectedApps = HashSet(selectedApps)
+            )
+        )
+        savedPreferencesLoader.saveFocusSessionStartTime(startTime, endTime)
+        sendRefreshRequest(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE)
+
+        val timer = com.alhaq.amnishield.utils.NotificationTimerManager(this)
+        timer.startTimer(
+            totalMillis = durationMillis,
+            onFinishCallback = {
+                stopAdaptiveFocusSession()
+            }
+        )
+        adaptiveViewModel.loadState(adaptiveViewModel.state.value.copy(isFocusModeActive = true))
+
+        if (savedPreferencesLoader.getFocusModeInterceptionStyle() == Constants.FOCUS_INTERCEPTION_STYLE_WORKSPACE) {
+            val workspaceIntent = Intent(this, AmniSpaceActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_FOCUS_LAUNCHER)
+                putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Focus Session Active")
+            }
+            startActivity(workspaceIntent)
+        }
+    }
+
+    private fun stopAdaptiveFocusSession() {
+        savedPreferencesLoader.stopFocusSession()
+        val timer = com.alhaq.amnishield.utils.NotificationTimerManager(this)
+        timer.stopTimer()
+        sendRefreshRequest(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE)
+        adaptiveViewModel.loadState(adaptiveViewModel.state.value.copy(isFocusModeActive = false))
+    }
+
+    private fun showBackupRestoreDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Backup & Restore")
+            .setMessage("Choose an action:")
+            .setPositiveButton("Backup") { _, _ ->
+                if (::directoryPicker.isInitialized) {
+                    ZipUtils.showDirectoryPicker(directoryPicker)
+                }
+            }
+            .setNegativeButton("Restore") { _, _ ->
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/zip"
+                }
+                restoreFileLauncher.launch(intent)
+            }
+            .setNeutralButton("Cancel", null)
+            .show()
+    }
+
     fun mountAdaptiveComposeShell() {
+        syncAdaptiveProfileState()
         setContent {
             val state by adaptiveViewModel.state.collectAsState()
-            AmniShieldTheme {
+            val isGoogleSignedIn by isGoogleSignedInState
+            AmniShieldTheme(appTheme = state.currentTheme) {
                 AmniShieldAdaptiveApp(
                     viewModel = adaptiveViewModel,
                     state = state,
-                    isGoogleSignedIn = false,
+                    isGoogleSignedIn = isGoogleSignedIn,
+                    onGoogleSignIn = { signInWithGoogle() },
+                    onGoogleSignOut = { signOut() },
                     onOpenAccessibilitySettings = {
                         try {
                             startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -229,13 +393,21 @@ class MainActivity : AppCompatActivity() {
                             Toast.makeText(this@MainActivity, "Unable to open Accessibility Settings", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    onStartFocusMode = { _, _, _ -> },
-                    onStopFocusMode = {},
-                    onBackupRestore = {},
+                    onStartFocusMode = { durationMinutes, mode, selectedApps ->
+                        startAdaptiveFocusSession(durationMinutes, mode, selectedApps)
+                    },
+                    onStopFocusMode = {
+                        stopAdaptiveFocusSession()
+                    },
+                    onBackupRestore = {
+                        showBackupRestoreDialog()
+                    },
                     onShareCrashLogs = {
                         shareCrashLog(this@MainActivity)
                     },
-                    onHelpFAQ = {},
+                    onHelpFAQ = {
+                        showFAQDialog()
+                    },
                     onAbout = {
                         showAboutDialog()
                     }
@@ -254,8 +426,28 @@ class MainActivity : AppCompatActivity() {
         
         enableEdgeToEdge()
 
+        try {
+            googleSignInHelper = GoogleSignInHelper(this)
+        } catch (e: Throwable) {
+            android.util.Log.w("MainActivity", "Failed to initialize GoogleSignInHelper", e)
+        }
+        options = ActivityOptionsCompat.makeCustomAnimation(this, R.anim.fade_in, R.anim.fade_out)
+        setupActivityLaunchers()
+
         if (savedPreferencesLoader.isAdaptiveShellEnabled() || intent?.getBooleanExtra("EXTRA_USE_ADAPTIVE_SHELL", false) == true) {
+            try {
+                initializeNotificationChannels()
+                restorePremiumPurchases()
+                scheduleDailyReportsIfPremium()
+                com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+                }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainActivity", "Adaptive shell background init warning", e)
+            }
             mountAdaptiveComposeShell()
+            handleDeepLink(intent)
             return
         }
 
@@ -372,17 +564,25 @@ class MainActivity : AppCompatActivity() {
                     try {
                         val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
                         val result = rest.claimPairingToken(pairPin, deviceName, "android")
+                        if (result.success) {
+                            savedPreferencesLoader.setConsoleManaged(true, result.deviceId, result.ownerId)
+                            if (result.policyPayload != null) {
+                                savedPreferencesLoader.saveCachedPolicyPayload(result.policyPayload.toString())
+                                com.alhaq.amnishield.data.sync.PolicySyncManager.applyPolicyPayload(
+                                    this@MainActivity,
+                                    result.policyPayload
+                                )
+                            }
+                            com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+                        }
                         withContext(Dispatchers.Main) {
                             if (result.success) {
-                                val prefs = getSharedPreferences("AppPreferences", MODE_PRIVATE)
-                                prefs.edit()
-                                    .putString("paired_device_id", result.deviceId)
-                                    .putString("paired_owner_id", result.ownerId)
-                                    .putBoolean("is_paired_with_console", true)
-                                    .apply()
+                                syncAdaptiveProfileState()
                                 Toast.makeText(this@MainActivity, "Device Linked to Cloud Sync Hub!", Toast.LENGTH_LONG).show()
                                 showDevicePairingSuccessDialog(pairPin, deviceName, result.isManaged)
-                                binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                                if (::binding.isInitialized) {
+                                    binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
+                                }
                             } else {
                                 Toast.makeText(this@MainActivity, "Pairing Failed: ${result.message}", Toast.LENGTH_LONG).show()
                             }
@@ -630,7 +830,10 @@ class MainActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
-        updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
+        if (::binding.isInitialized) {
+            updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
+        }
+        syncAdaptiveProfileState()
         checkAppLock()
         // Permissions will now be handled by PermissionsBottomSheet on first launch, 
         // or user can access them through settings if needed.
@@ -1798,7 +2001,18 @@ class MainActivity : AppCompatActivity() {
             .setMessage(getString(R.string.sign_out_confirmation))
             .setPositiveButton(getString(R.string.sign_out)) { _, _ ->
                 googleSignInHelper.signOut {
-                    updateNavigationHeader(null)
+                    val prefs = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                    prefs.edit().apply {
+                        remove("profile_name")
+                        remove("profile_email")
+                        putBoolean("is_google_signed_in", false)
+                        apply()
+                    }
+                    isGoogleSignedInState.value = false
+                    syncAdaptiveProfileState()
+                    if (::binding.isInitialized) {
+                        updateNavigationHeader(null)
+                    }
                     Toast.makeText(this, "Signed out successfully", Toast.LENGTH_SHORT).show()
                 }
             }
