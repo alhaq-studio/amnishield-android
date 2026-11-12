@@ -103,7 +103,7 @@
                     style="@style/TextAppearance.Material3.TitleMedium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⏱️ Focus Reminders"
+                    android:text="Focus Reminders"
                     android:textStyle="bold" />
 
                 <TextView

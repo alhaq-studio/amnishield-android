@@ -56,7 +56,7 @@ import kotlinx.coroutines.withContext
 private enum class DiagnosticFilter(val label: String) {
     ALL("All"),
     ERRORS_ONLY("Errors Only"),
-    SYNC("Sync"),
+    SYNC("Sync (Coming Soon)"),
     BLOCKERS("Blockers"),
     WARNINGS("Warnings")
 }

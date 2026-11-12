@@ -441,7 +441,7 @@ class SettingsFragment : Fragment() {
                 • App Launch Limits &amp; Usage Statistics<br/>
                 • Smart Notifications, Reminders &amp; Daily Reports<br/><br/>
                 
-                <b>⭐ Premium Security Features:</b><br/>
+                <b>Premium Security Features:</b><br/>
                 • Anti-Uninstall Protection (Device Admin protection)<br/>
                 • 4-Digit Security PIN &amp; App Lock (Master PIN lock for settings)<br/>
                 • Bypass PIN Lock (Require PIN confirmation to edit active blocks)<br/><br/>

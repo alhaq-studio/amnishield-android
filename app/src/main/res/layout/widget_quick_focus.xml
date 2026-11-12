@@ -83,7 +83,7 @@
             android:layout_height="36dp"
             android:background="@drawable/widget_stop_button"
             android:gravity="center"
-            android:text="⏹️ Stop Focus Session"
+            android:text="Stop Focus Session"
             android:textColor="#FFFFFF"
             android:textSize="12sp"
             android:textStyle="bold" />

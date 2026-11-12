@@ -322,14 +322,17 @@ class MainActivity : AppCompatActivity() {
         // Schedule daily reports for premium users
         scheduleDailyReportsIfPremium()
 
-        // Schedule background policy & rules sync engine
+        // Cloud sync engine (under active development for Milestone V1.1 - Premium Feature)
         try {
-            com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
-            lifecycleScope.launch(Dispatchers.IO) {
-                com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+            val isPairedWithConsole = getSharedPreferences("AppPreferences", MODE_PRIVATE)
+                .getBoolean("is_paired_with_console", false)
+            if (isPairedWithConsole) {
+                android.util.Log.d("MainActivity", "Cloud policy sync is under active development for Milestone V1.1. On-device local protections active.")
+            } else {
+                android.util.Log.d("MainActivity", "Cloud sync dormant: device not paired with console.")
             }
         } catch (e: Throwable) {
-            android.util.Log.w("MainActivity", "Failed to initialize SyncWorker", e)
+            android.util.Log.w("MainActivity", "Failed to check cloud sync state", e)
         }
 
         // Setup navigation drawer
@@ -361,38 +364,15 @@ class MainActivity : AppCompatActivity() {
                 (path.contains("activate") || path.contains("license") || path.contains("auth") || path.contains("verify") || path.contains("pair") || host == "pair" || data.getQueryParameter("key") != null || data.getQueryParameter("token") != null || data.getQueryParameter("code") != null || data.getQueryParameter("pin") != null)
 
         if (isAmnScheme || isWebActivation) {
-            val isPairRequest = host == "pair" || path.contains("pair") || (data.getQueryParameter("owner") != null && data.getQueryParameter("token") != null)
-            val pairPin = data.getQueryParameter("token") ?: data.getQueryParameter("pin") ?: data.getQueryParameter("code")
+            val isPairRequest = host == "pair" || host == "sync" || path.contains("pair") || path.contains("sync") || (data.getQueryParameter("owner") != null && data.getQueryParameter("token") != null) || data.getQueryParameter("pin") != null
 
-            // 0. Ephemeral Device Pairing via Web Console QR Code or PIN Link
-            if (isPairRequest && !pairPin.isNullOrBlank()) {
-                val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
-                Toast.makeText(this, "Linking device with PIN: $pairPin...", Toast.LENGTH_SHORT).show()
-                lifecycleScope.launch(Dispatchers.IO) {
-                    try {
-                        val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                        val result = rest.claimPairingToken(pairPin, deviceName, "android")
-                        withContext(Dispatchers.Main) {
-                            if (result.success) {
-                                val prefs = getSharedPreferences("AppPreferences", MODE_PRIVATE)
-                                prefs.edit()
-                                    .putString("paired_device_id", result.deviceId)
-                                    .putString("paired_owner_id", result.ownerId)
-                                    .putBoolean("is_paired_with_console", true)
-                                    .apply()
-                                Toast.makeText(this@MainActivity, "Device Linked to Cloud Sync Hub!", Toast.LENGTH_LONG).show()
-                                showDevicePairingSuccessDialog(pairPin, deviceName, result.isManaged)
-                                binding.bottomNavigation.selectedItemId = binding.bottomNavigation.selectedItemId
-                            } else {
-                                Toast.makeText(this@MainActivity, "Pairing Failed: ${result.message}", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Pairing error: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
+            // 0. Ephemeral Device Pairing via Web Console QR Code or PIN Link [COMING SOON]
+            if (isPairRequest) {
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(R.string.cloud_sync_coming_soon_title))
+                    .setMessage(getString(R.string.cloud_sync_coming_soon_message))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
                 return
             }
 
@@ -489,7 +469,7 @@ class MainActivity : AppCompatActivity() {
         val expiryDate = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(java.util.Date(payload.expires))
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle("Pro License Activated!")
-            .setMessage("Welcome to AmniShield Pro!\n\n• Account: ${payload.email}\n• Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n• Valid Until: $expiryDate\n\nAll premium features, advanced rules, and cross-device sync are now fully unlocked on this device.")
+            .setMessage("Welcome to AmniShield Pro!\n\n• Account: ${payload.email}\n• Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n• Valid Until: $expiryDate\n\nAll premium security features, advanced rules, and tamper protections are now fully unlocked on this device. Cross-device cloud sync is coming soon in Pro (Milestone V1.1).")
             .setPositiveButton("Continue", null)
             .show()
     }

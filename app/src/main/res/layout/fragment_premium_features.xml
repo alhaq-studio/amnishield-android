@@ -48,7 +48,7 @@
                 android:layout_marginTop="6dp"
                 android:gravity="center"
                 android:lineSpacingExtra="2dp"
-                android:text="Core content blocking is 100% Free. Upgrade to Pro to unlock advanced security &amp; cloud features."
+                android:text="Core content blocking is 100% Free. Upgrade to Pro to unlock advanced security features &amp; upcoming cloud sync."
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- Active Premium Banner (Shown when user IS Premium) -->
@@ -142,7 +142,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:lineSpacingExtra="3dp"
-                            android:text="• Cross-Platform Cloud Sync (Android, Windows, Web)\n• Anti-Uninstall &amp; Removal Enforcement\n• Passcode &amp; PIN Settings Protection\n• Support Open-Source AI Filter Development"
+                            android:text="• Cross-Platform Cloud Sync (Android, Windows, Web) [COMING SOON]\n• Anti-Uninstall &amp; Removal Enforcement\n• Passcode &amp; PIN Settings Protection\n• Support Open-Source AI Filter Development"
                             android:textColor="?attr/colorOnSurface" />
 
                     </LinearLayout>
@@ -232,7 +232,7 @@
                                 style="@style/TextAppearance.Material3.LabelMedium"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="ANNUAL PASS ⭐"
+                                android:text="ANNUAL PASS"
                                 android:textColor="?attr/colorPrimary"
                                 android:textStyle="bold" />
 
