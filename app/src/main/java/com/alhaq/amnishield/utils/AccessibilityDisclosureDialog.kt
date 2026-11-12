@@ -45,20 +45,19 @@ object AccessibilityDisclosureDialog {
 
         val dialog = MaterialAlertDialogBuilder(context)
             .setView(binding.root)
-            .setCancelable(true)
-            .setOnCancelListener {
-                onDecline()
-            }
+            .setCancelable(false)
             .create()
 
-        // Positive Button: "Agree & Enable" (Only action that proceeds to Settings)
+        // Positive Button: "Agree & Enable" (Persists affirmative consent before proceeding to Settings)
         binding.btnAgree.setOnClickListener {
+            SavedPreferencesLoader(context.applicationContext).setAccessibilityDisclosureAccepted(true)
             dialog.dismiss()
             onAgree()
         }
 
         // Negative Button: "Deny" (Dismisses dialog and stays in-app)
         binding.btnDecline.setOnClickListener {
+            SavedPreferencesLoader(context.applicationContext).setAccessibilityDisclosureAccepted(false)
             dialog.dismiss()
             onDecline()
         }

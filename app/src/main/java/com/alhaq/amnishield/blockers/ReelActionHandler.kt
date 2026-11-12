@@ -20,23 +20,17 @@ class ReelActionHandler(
 ) {
     fun handleReelBlock(
         result: ReelBlocker.ReelBlockerResult,
+        rootNode: AccessibilityNodeInfo?,
+        packageName: String,
         onPressHome: () -> Unit,
-        onPressBack: () -> Unit,
-        getRootInActiveWindow: () -> AccessibilityNodeInfo?
+        onPressBack: () -> Unit
     ) {
         if (!result.isBlocked) return
 
         when (result.blockResponseMode) {
             ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT -> {
-                val root = getRootInActiveWindow()
-                val navigated = if (root != null) {
-                    val pkg = root.packageName?.toString().orEmpty()
-                    val success = homeFeedNavigator.navigateToHomeFeed(root, pkg)
-                    try {
-                        @Suppress("DEPRECATION")
-                        root.recycle()
-                    } catch (_: Exception) {}
-                    success
+                val navigated = if (rootNode != null && packageName.isNotEmpty()) {
+                    homeFeedNavigator.navigateToHomeFeed(rootNode, packageName)
                 } else false
                 if (!navigated) onPressBack()
                 return
@@ -46,18 +40,12 @@ class ReelActionHandler(
                 return
             }
             ReelBlocker.BlockResponseMode.MINDFUL_PAUSE -> {
-                val root = getRootInActiveWindow()
-                val pkg = root?.packageName?.toString().orEmpty()
-                try {
-                    @Suppress("DEPRECATION")
-                    root?.recycle()
-                } catch (_: Exception) {}
                 val amnispaceIntent = Intent(context, com.alhaq.amnishield.ui.activity.AmniSpaceActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
                     putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Reels Interception")
-                    if (pkg.isNotEmpty()) {
-                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, pkg)
+                    if (packageName.isNotEmpty()) {
+                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
                     }
                 }
                 context.startActivity(amnispaceIntent)

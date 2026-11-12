@@ -13,7 +13,7 @@ Last updated: October 2026
 
 ---
 
-## V1.0 - V2.0 Roadmap
+## Technical Roadmap
 
 ### Completed Milestones (Current Baseline - v0.3.1 / Code 145)
 
@@ -32,7 +32,7 @@ Last updated: October 2026
 
 ---
 
-### Active / Upcoming Milestones (V1.1 - V2.0)
+### Active / Upcoming Milestones (v0.3.2 - v0.3.5)
 
 - [ ] **Multi-Platform Cloud Policy Sync [Under Development - Premium Feature]:**
   - Planned end-to-end encrypted rule and policy synchronization across Android, Windows, and Web Console for AmniShield Premium.
@@ -59,6 +59,27 @@ Last updated: October 2026
   - Separate tiers for parental/enterprise console lockdown and personal cross-device sync.
 - [ ] **Advanced Bulk List Import & Export (CSV/TXT) [In Active Development - V1.1]:**
   - Structured CSV/TXT import and export engine for custom Keyword and Website blocklists.
+#### Milestone 0.3.2: Accessibility Engine Hardening & Binder Safety
+- [x] **In-Memory Schedule Caching & Broadcast Alignment:** Eliminate reflection-based `Gson().fromJson()` deserialization on the Main Binder Thread during `onAccessibilityEvent` in `AmniShieldAccessibilityService.kt` and `SavedPreferencesLoader.kt`, and fix `WebsiteBlockerConfigScreen.kt` to broadcast `INTENT_ACTION_REFRESH_WEBSITE_BLOCKER` / unified schedule refresh via `ServiceBroadcastManager.kt`.
+- [x] **Deferred Pipeline Temporal Window Guard:** Enforce strict package-identity verification (`rootPackage.equals(packageName, ignoreCase = true)`) and `SystemExclusionManager.isExempt(...)` in `AmniShieldAccessibilityService.processDeferredChecks()` to prevent false-positive interceptions when users rapidly switch windows.
+- [x] **Polling Decoupling & Background Disk I/O:** Eliminate continuous `rootInActiveWindow` queries on 1-second and 2-second Handler timers in `ReelsSessionTracker.kt` and `BrowserSessionTracker.kt`, transitioning to event-driven surface tracking and offloading usage persistence writes to `Dispatchers.IO`.
+- [x] **Node Traversal Exception Safety:** Implement robust `try ... finally` blocks and null-safe child node recycling across `AntiUninstallDetector.kt` and `ReelDetectionEngine.kt`.
+- [x] **Manifest Security Hardening:** Set `android:exported="false"` on `LauncherActivity` in `AndroidManifest.xml` (line 76) to prevent unauthorized external intent launching.
+
+#### Milestone 0.3.3: Store Compliance & Layout Resilience
+- [x] **Prominent Disclosure Overhaul:** Implement a `ScrollView` content container with a sticky bottom action bar, `wrap_content` (`minHeight="48dp"`) button sizing in `dialog_accessibility_disclosure.xml`, and `.setCancelable(false)` in `AccessibilityDisclosureDialog.kt` to guarantee compliance in landscape orientation and 200% font scaling.
+- [x] **Persistent Affirmative Consent:** Persist the accessibility disclosure acceptance flag and timestamp (`setAccessibilityDisclosureAccepted`) in `SavedPreferencesLoader.kt` to guarantee auditability.
+- [x] **Mandatory Accessibility Onboarding Gate:** Close the onboarding bypass loophole in `PermissionsScreen.kt` (line 115) so `canProceed` strictly requires `isAccessibilityGranted`.
+- [x] **Screen Rotation State Preservation:** Add `rememberSaveable` state handling in `AmniSpaceActivity.kt` and `AmniSpaceBreathingCircle.kt`, implement `onSaveInstanceState` timer preservation in `WarningActivity.kt`, and dynamically adapt window insets and orientation offsets in `UsageStatOverlayManager.kt`.
+
+#### Milestone 0.3.4: Dual-Host Cleanup & Navigation Decoupling
+- [x] **Type-Safe Intent Routing:** Implement a sealed route contract (`FragmentDestination.kt`) between `MainActivity.kt` and `FragmentActivity.kt`, replacing loosely-typed string extras (`feature_type`, `fragment`), plus defense-in-depth hardening in `ApiPermissionActivity.kt`, `BootAndAlarmReceiver.kt`, and `AndroidManifest.xml`.
+- [x] **SharedPreferences Synchronization Lock:** Implement static companion mutex synchronization locks (`rulesLock`, `statsLock`) in `SavedPreferencesLoader.kt` to prevent concurrent multi-threaded read/write file races across instances.
+- [x] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions (`main-pipeline.yml`) to execute parallel matrix builds and unit tests across `playstore`, `fdroid`, and `universal`.
+
+#### Milestone 0.3.5: Pure Compose & Storage Architecture Epic (Prep for V1.0)
+- [x] **Room & DataStore Migration Epic:** Relational SQLite persistence engine (`AmniShieldRuleDatabase`, `AppBlockRule`, `ScreenTimeLimitRule`, `AmniShieldDatabaseMigrations`) and reactive Preferences DataStore (`AmniShieldDataStore`) integrated with `SavedPreferencesLoader.kt` for seamless migration and zero Main Binder thread latency.
+- [x] **Pure-Compose Navigation Epic:** Reconnected and verified `AmniShieldAdaptiveApp.kt` using modern Compose Navigation, adaptive multi-pane scaffolds (`BlocksManagerAdaptiveScreen`, `StatsAdaptiveScreen`), type-safe sub-destinations (`AppDestinations.kt`), and dynamic mounting in `MainActivity.kt` (`mountAdaptiveComposeShell()`).
 
 ---
 

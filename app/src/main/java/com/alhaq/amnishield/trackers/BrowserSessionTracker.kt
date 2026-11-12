@@ -13,11 +13,17 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.alhaq.amnishield.CrashLogger
 import com.alhaq.amnishield.blockers.WebsiteBlockerDetector
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 
 /**
  * Dedicated tracker for monitoring browser website domain engagement.
- * Manages background 2-second active window polling when browsers are in foreground,
- * records duration per domain in SavedPreferencesLoader, and supports screen on/off power saving.
+ * Captures active browser domains from accessibility events passed by AmniShieldAccessibilityService,
+ * attributes 2-second engagement intervals off the main thread on Dispatchers.IO,
+ * and supports screen on/off power saving.
  */
 class BrowserSessionTracker(
     private val service: AccessibilityService,
@@ -27,15 +33,21 @@ class BrowserSessionTracker(
 ) {
     private var isScreenOn = true
     private var isTrackingRunning = false
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    @Volatile
+    private var activeBrowserPackage: String? = null
+    @Volatile
+    private var activeDomain: String? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val pollingRunnable = object : Runnable {
         override fun run() {
             if (!isScreenOn || !isTrackingRunning) return
             try {
-                pollActiveWindowForBrowser()
+                recordActiveBrowserSlice()
             } catch (e: Exception) {
-                crashLogger.logNonFatalError("BrowserSessionTracker", "Error during browser tracking polling", e)
+                crashLogger.logNonFatalError("BrowserSessionTracker", "Error during browser usage recording", e)
             }
             if (isTrackingRunning && isScreenOn) {
                 handler.postDelayed(this, 2000L)
@@ -54,7 +66,7 @@ class BrowserSessionTracker(
                     isScreenOn = true
                     if (isTrackingRunning) {
                         handler.removeCallbacks(pollingRunnable)
-                        handler.post(pollingRunnable)
+                        handler.postDelayed(pollingRunnable, 2000L)
                     }
                 }
             }
@@ -73,54 +85,69 @@ class BrowserSessionTracker(
         service.registerReceiver(screenReceiver, filter)
 
         handler.removeCallbacks(pollingRunnable)
-        handler.post(pollingRunnable)
+        handler.postDelayed(pollingRunnable, 2000L)
     }
 
     fun stop() {
         if (!isTrackingRunning) return
         isTrackingRunning = false
+        activeBrowserPackage = null
+        activeDomain = null
         handler.removeCallbacks(pollingRunnable)
+        ioScope.coroutineContext.cancelChildren()
         try {
             service.unregisterReceiver(screenReceiver)
         } catch (_: Exception) {}
     }
 
     /**
-     * Handles window state change events to immediately capture newly navigated domains.
+     * Handles window and view events to capture active browser domains without polling Binder IPC.
      * Note: Adheres strictly to the Node Lifecycle Invariant - NEVER recycles [rootNode].
      */
     fun onAccessibilityEvent(event: AccessibilityEvent, rootNode: AccessibilityNodeInfo?) {
-        if (!savedPreferencesLoader.isWebsiteUsageTrackingEnabled(true)) return
+        if (!savedPreferencesLoader.isWebsiteUsageTrackingEnabled(true)) {
+            activeBrowserPackage = null
+            activeDomain = null
+            return
+        }
 
         val pkg = event.packageName?.toString().orEmpty()
-        if (WebsiteBlockerDetector.BROWSER_URL_BAR_IDS.containsKey(pkg) &&
-            event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-        ) {
+        if (pkg.isEmpty()) return
+
+        if (WebsiteBlockerDetector.BROWSER_URL_BAR_IDS.containsKey(pkg)) {
+            activeBrowserPackage = pkg
             val root = rootNode ?: return
             val domain = websiteBlockerDetector.extractCurrentDomain(root, pkg)
             if (domain != null) {
-                savedPreferencesLoader.recordWebsiteUsage(domain, 1000L)
+                val previousDomain = activeDomain
+                activeDomain = domain
+                if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && domain != previousDomain) {
+                    ioScope.launch {
+                        savedPreferencesLoader.recordWebsiteUsage(domain, 1000L)
+                    }
+                }
+            }
+        } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val isTransientSystemWindow = pkg.equals("com.android.systemui", ignoreCase = true) ||
+                pkg.equals("android", ignoreCase = true) ||
+                pkg.equals(service.packageName, ignoreCase = true) ||
+                pkg.equals("com.alhaq.amnishield", ignoreCase = true) ||
+                pkg.equals("com.alhaq.deenshield", ignoreCase = true)
+            if (!isTransientSystemWindow) {
+                activeBrowserPackage = null
+                activeDomain = null
             }
         }
     }
 
-    private fun pollActiveWindowForBrowser() {
+    private fun recordActiveBrowserSlice() {
         if (!savedPreferencesLoader.isWebsiteUsageTrackingEnabled(true)) return
+        val pkg = activeBrowserPackage ?: return
+        if (!WebsiteBlockerDetector.BROWSER_URL_BAR_IDS.containsKey(pkg)) return
+        val domain = activeDomain ?: return
 
-        val root = service.rootInActiveWindow ?: return
-        try {
-            val pkg = root.packageName?.toString().orEmpty()
-            if (WebsiteBlockerDetector.BROWSER_URL_BAR_IDS.containsKey(pkg)) {
-                val domain = websiteBlockerDetector.extractCurrentDomain(root, pkg)
-                if (domain != null) {
-                    savedPreferencesLoader.recordWebsiteUsage(domain, 2000L)
-                }
-            }
-        } finally {
-            try {
-                @Suppress("DEPRECATION")
-                root.recycle()
-            } catch (_: Exception) {}
+        ioScope.launch {
+            savedPreferencesLoader.recordWebsiteUsage(domain, 2000L)
         }
     }
 }

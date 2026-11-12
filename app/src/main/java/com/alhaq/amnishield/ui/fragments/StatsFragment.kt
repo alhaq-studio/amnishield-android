@@ -106,8 +106,10 @@ class StatsFragment : Fragment() {
                         },
                         onRefresh = { loadStats() },
                         onViewDetailedUsage = {
-                            val intent = Intent(requireContext(), FragmentActivity::class.java)
-                            intent.putExtra("fragment", AllAppsUsageFragment.FRAGMENT_ID)
+                            val intent = FragmentActivity.createIntent(
+                                requireContext(),
+                                com.alhaq.amnishield.ui.navigation.FragmentDestination.AllAppsUsage
+                            )
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -116,8 +118,10 @@ class StatsFragment : Fragment() {
                             startActivity(intent, options.toBundle())
                         },
                         onViewWebUsageDetails = {
-                            val intent = Intent(requireContext(), FragmentActivity::class.java)
-                            intent.putExtra("fragment", AllAppsUsageFragment.FRAGMENT_ID)
+                            val intent = FragmentActivity.createIntent(
+                                requireContext(),
+                                com.alhaq.amnishield.ui.navigation.FragmentDestination.AllAppsUsage
+                            )
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -126,8 +130,10 @@ class StatsFragment : Fragment() {
                             startActivity(intent, options.toBundle())
                         },
                         onViewReelsMetrics = {
-                            val intent = Intent(requireContext(), FragmentActivity::class.java)
-                            intent.putExtra("feature_type", "reels_metrics")
+                            val intent = FragmentActivity.createIntent(
+                                requireContext(),
+                                com.alhaq.amnishield.ui.navigation.FragmentDestination.ReelsMetrics
+                            )
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -136,9 +142,14 @@ class StatsFragment : Fragment() {
                             startActivity(intent, options.toBundle())
                         },
                         onAppClick = { packageName ->
-                            val intent = Intent(requireContext(), FragmentActivity::class.java)
-                            intent.putExtra("fragment", AllAppsUsageFragment.FRAGMENT_ID)
-                            intent.putExtra("target_package_name", packageName)
+                            val extras = Bundle().apply {
+                                putString("target_package_name", packageName)
+                            }
+                            val intent = FragmentActivity.createIntent(
+                                requireContext(),
+                                com.alhaq.amnishield.ui.navigation.FragmentDestination.AllAppsUsage,
+                                extras
+                            )
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -167,10 +178,10 @@ class StatsFragment : Fragment() {
             .setTitle(R.string.premium_required_title)
             .setMessage(getString(R.string.premium_required_message))
             .setPositiveButton(R.string.premium_view_plans) { _, _ ->
-                val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                    putExtra("feature_type", "premium_features")
-                }
-                startActivity(intent)
+                FragmentActivity.launch(
+                    requireContext(),
+                    com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures
+                )
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

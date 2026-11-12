@@ -253,9 +253,14 @@ class ReelDetectionEngine {
 
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i) ?: continue
-                val match = checkNode(child, depth - 1)
-                @Suppress("DEPRECATION")
-                child.recycle()
+                val match = try {
+                    checkNode(child, depth - 1)
+                } finally {
+                    try {
+                        @Suppress("DEPRECATION")
+                        child.recycle()
+                    } catch (_: Exception) {}
+                }
                 if (match != null) return match
             }
             return null
@@ -316,9 +321,14 @@ class ReelDetectionEngine {
         if (packageName == "com.facebook.katana" || packageName == "com.facebook.lite") {
             val reelsTab = findElementByDescription(rootNode, "Reels tab details")
             if (reelsTab != null) {
-                val text = getNodeSubtreeText(reelsTab, maxDepth = 6)
-                @Suppress("DEPRECATION")
-                reelsTab.recycle()
+                val text = try {
+                    getNodeSubtreeText(reelsTab, maxDepth = 6)
+                } finally {
+                    try {
+                        @Suppress("DEPRECATION")
+                        reelsTab.recycle()
+                    } catch (_: Exception) {}
+                }
                 if (text.isNotBlank()) return text
             }
             val fbShorts = readNodeSubtreeText(rootNode, "$packageName:id/fb_shorts_container")
@@ -384,9 +394,14 @@ class ReelDetectionEngine {
             for (i in 0 until node.childCount) {
                 if (collected.size >= 10) break
                 val child = node.getChild(i) ?: continue
-                collectText(child, depth - 1)
-                @Suppress("DEPRECATION")
-                child.recycle()
+                try {
+                    collectText(child, depth - 1)
+                } finally {
+                    try {
+                        @Suppress("DEPRECATION")
+                        child.recycle()
+                    } catch (_: Exception) {}
+                }
             }
         }
 
@@ -553,9 +568,14 @@ class ReelDetectionEngine {
         }
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            val childText = getNodeSubtreeText(child, maxDepth - 1)
-            @Suppress("DEPRECATION")
-            child.recycle()
+            val childText = try {
+                getNodeSubtreeText(child, maxDepth - 1)
+            } finally {
+                try {
+                    @Suppress("DEPRECATION")
+                    child.recycle()
+                } catch (_: Exception) {}
+            }
             if (childText.isNotBlank()) {
                 sb.append(childText).append(" ")
             }
@@ -572,9 +592,14 @@ class ReelDetectionEngine {
         }
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            val found = findElementByDescription(child, desc)
-            @Suppress("DEPRECATION")
-            child.recycle()
+            val found = try {
+                findElementByDescription(child, desc)
+            } finally {
+                try {
+                    @Suppress("DEPRECATION")
+                    child.recycle()
+                } catch (_: Exception) {}
+            }
             if (found != null) return found
         }
         return null

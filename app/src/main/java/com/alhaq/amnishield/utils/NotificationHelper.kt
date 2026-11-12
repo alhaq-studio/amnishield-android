@@ -34,12 +34,14 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_ID_ACHIEVEMENTS = "achievements"
         const val CHANNEL_ID_TIPS = "wellness_tips"
         const val CHANNEL_ID_BLOCK_ALERTS = "blocking_alerts"
+        const val CHANNEL_ID_SECURITY_ALERTS = "security_alerts"
 
         const val NOTIFICATION_ID_DAILY_REPORT = 1001
         const val NOTIFICATION_ID_REMINDER = 2001
         const val NOTIFICATION_ID_ACHIEVEMENT = 3001
         const val NOTIFICATION_ID_WELLNESS_TIP = 4001
         const val NOTIFICATION_ID_BLOCK_ALERT = 5001
+        const val NOTIFICATION_ID_PROTECTION_PAUSED = 6001
 
         @Volatile
         private var instance: NotificationHelper? = null
@@ -117,8 +119,26 @@ class NotificationHelper(private val context: Context) {
                 enableVibration(false)
             }
 
+            // 6. Protection Paused & Security Alerts Channel
+            val securityAlertsChannel = NotificationChannel(
+                CHANNEL_ID_SECURITY_ALERTS,
+                "Protection Paused",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Critical alerts when accessibility protection is paused or disabled after device restart"
+                enableLights(true)
+                enableVibration(true)
+            }
+
             notificationManager.createNotificationChannels(
-                listOf(reportsChannel, remindersChannel, achievementsChannel, tipsChannel, blockAlertsChannel)
+                listOf(
+                    reportsChannel,
+                    remindersChannel,
+                    achievementsChannel,
+                    tipsChannel,
+                    blockAlertsChannel,
+                    securityAlertsChannel
+                )
             )
         }
     }
@@ -436,6 +456,52 @@ class NotificationHelper(private val context: Context) {
                     "Time Saver",
                     "You've avoided 30+ time-wasting reels/views today!"
                 )
+            }
+        }
+    }
+
+    /**
+     * Show high-priority alert when Accessibility Service is disabled after boot or killed by OEM battery saver.
+     */
+    fun showProtectionPausedNotification() {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            NOTIFICATION_ID_PROTECTION_PAUSED,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = "Protection Paused"
+        val message = "AmniShield accessibility service is inactive. Tap to reopen AmniShield and restore active blocking protection."
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_SECURITY_ALERTS)
+            .setSmallIcon(R.drawable.ic_logo_mini)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        with(NotificationManagerCompat.from(context)) {
+            try {
+                notify(NOTIFICATION_ID_PROTECTION_PAUSED, notification)
+                NotificationInboxStore.add(
+                    context,
+                    title = title,
+                    message = message,
+                    category = NotificationInboxStore.Category.REMINDER
+                )
+            } catch (e: SecurityException) {
+                // Ignore missing POST_NOTIFICATIONS
             }
         }
     }

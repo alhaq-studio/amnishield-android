@@ -159,8 +159,13 @@ class AdvancedFragment : BaseFeatureFragment() {
             return
         }
 
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("feature_type", featureType)
+        val destination = com.alhaq.amnishield.ui.navigation.FragmentDestination.fromKey(featureType)
+        val intent = if (destination != null) {
+            FragmentActivity.createIntent(requireContext(), destination)
+        } else {
+            Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("feature_type", featureType)
+            }
         }
         startActivity(intent, activityOptions.toBundle())
     }
@@ -172,9 +177,10 @@ class AdvancedFragment : BaseFeatureFragment() {
             .setTitle(R.string.premium_required_title)
             .setMessage(getString(R.string.premium_required_message))
             .setPositiveButton(R.string.premium_view_plans) { _, _ ->
-                val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                    putExtra("feature_type", "premium_features")
-                }
+                val intent = FragmentActivity.createIntent(
+                    requireContext(),
+                    com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures
+                )
                 startActivity(intent, activityOptions.toBundle())
             }
             .setNegativeButton(android.R.string.cancel, null)

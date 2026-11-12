@@ -110,9 +110,10 @@ class SettingsFragment : Fragment() {
                         state = state,
                         viewModel = viewModel,
                         onNavigateToProfile = {
-                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                                putExtra("fragment", "profile")
-                            }
+                            val intent = FragmentActivity.createIntent(
+                                requireContext(),
+                                com.alhaq.amnishield.ui.navigation.FragmentDestination.Profile
+                            )
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -132,9 +133,10 @@ class SettingsFragment : Fragment() {
                         },
                         onShareCrashLogs = { shareCrashLogs() },
                         onDiagnostics = {
-                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                                putExtra("feature_type", "diagnostics")
-                            }
+                            val intent = FragmentActivity.createIntent(
+                                requireContext(),
+                                com.alhaq.amnishield.ui.navigation.FragmentDestination.Diagnostics
+                            )
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -512,10 +514,10 @@ class SettingsFragment : Fragment() {
     }
 
     private fun openPremiumScreen() {
-        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-            putExtra("feature_type", "premium_features")
-        }
-        startActivity(intent)
+        FragmentActivity.launch(
+            requireContext(),
+            com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures
+        )
     }
 
     private fun openUrl(url: String) {

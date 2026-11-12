@@ -16,6 +16,7 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <permission android:name="${applicationId}.permission.BIND_API" android:protectionLevel="signature" />
+    <permission android:name="com.alhaq.deenshield.permission.GUARDIAN_IPC" android:protectionLevel="signature" />
 
     <application android:name=".AmniShield" android:allowBackup="true" android:dataExtractionRules="@xml/data_extraction_rules" android:fullBackupContent="@xml/backup_rules" android:hardwareAccelerated="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/Theme.AmniShield" android:resizeableActivity="true" android:localeConfig="@xml/locales_config" tools:targetApi="36">
         <activity android:name=".ui.activity.ShortcutActivity" android:excludeFromRecents="true" android:launchMode="singleTop" android:theme="@style/Theme.AmniShield.TransparentDialog" android:exported="false" />
@@ -48,11 +49,6 @@
                 <data android:scheme="amnishield" android:host="verify" />
                 <data android:scheme="amnishield" android:host="login" />
                 <data android:scheme="amnishield" android:host="pair" />
-                <data android:scheme="amnishield" android:host="activate" />
-                <data android:scheme="amnishield" android:host="license" />
-                <data android:scheme="amnishield" android:host="auth" />
-                <data android:scheme="amnishield" android:host="verify" />
-                <data android:scheme="amnishield" android:host="pair" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -63,17 +59,13 @@
                 <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/app/activate" />
                 <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/pair" />
                 <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/pair" />
-                <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/activate" />
-                <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/activate" />
-                <data android:scheme="https" android:host="app.amnishield.com" android:pathPrefix="/pair" />
-                <data android:scheme="https" android:host="amnishield.com" android:pathPrefix="/pair" />
                 <data android:scheme="http" android:host="app.amnishield.com" android:pathPrefix="/activate" />
                 <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/activate" />
                 <data android:scheme="http" android:host="app.amnishield.com" android:pathPrefix="/pair" />
                 <data android:scheme="http" android:host="amnishield.com" android:pathPrefix="/pair" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.activity.LauncherActivity" android:exported="true" android:launchMode="singleTask" />
+        <activity android:name=".ui.activity.LauncherActivity" android:exported="false" android:launchMode="singleTask" />
 
         <service android:name=".services.AmniShieldAccessibilityService" android:exported="true" android:label="@string/app_name" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
@@ -182,6 +174,11 @@
                 <action android:name="${applicationId}.notifications.QUICK_BLOCK_APP" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name="com.alhaq.amnishield.provider.GuardianContentProvider"
+            android:authorities="com.alhaq.deenshield.guardian.provider"
+            android:exported="true" />
 
     </application>
 

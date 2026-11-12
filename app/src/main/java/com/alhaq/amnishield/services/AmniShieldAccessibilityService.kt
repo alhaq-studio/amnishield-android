@@ -68,6 +68,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
     companion object {
         const val INTENT_ACTION_REFRESH_APP_BLOCKER = "amnishield.refresh.appblocker"
+        const val INTENT_ACTION_REFRESH_WEBSITE_BLOCKER = "amnishield.refresh.websiteblocker"
         const val INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN = "amnishield.refresh.appblocker.cooldown"
         const val INTENT_ACTION_REFRESH_FOCUS_MODE = "amnishield.refresh.focusmode"
         const val INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST = "amnishield.refresh.keywords"
@@ -103,6 +104,17 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
     private var cachedDefaultLauncher: String? = null
     private var lastTrackedLaunchPackage: String? = null
+
+    @Volatile
+    private var cachedScheduleRules: List<AppBlockScheduleRule> = emptyList()
+    @Volatile
+    private var cachedBlockedWebsites: Set<String> = emptySet()
+    @Volatile
+    private var cachedBlockedSocialApps: Set<String> = emptySet()
+    @Volatile
+    private var cachedBlockedKeywords: Set<String> = emptySet()
+    @Volatile
+    private var isWebsiteBlockerMasterEnabled: Boolean = false
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
@@ -140,6 +152,8 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 .onFailure { Log.e("AmniShieldService", "Failed schedule migration", it) }
             runCatching { setupAppBlocker() }
                 .onFailure { Log.e("AmniShieldService", "Failed setupAppBlocker", it) }
+            runCatching { setupWebsiteBlocker() }
+                .onFailure { Log.e("AmniShieldService", "Failed setupWebsiteBlocker", it) }
             runCatching { setupFocusMode() }
                 .onFailure { Log.e("AmniShieldService", "Failed setupFocusMode", it) }
             runCatching { setupKeywordBlocker() }
@@ -169,6 +183,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 context = this,
                 callbacks = object : ServiceBroadcastManager.Callbacks {
                     override fun onRefreshAppBlocker() = setupAppBlocker()
+                    override fun onRefreshWebsiteBlocker() = setupWebsiteBlocker()
                     override fun onRefreshBlockedKeywordList() = setupKeywordBlocker()
                     override fun onRefreshViewBlocker() = setupReelBlocker()
                     override fun onRefreshViewBlockerCooldown(resultId: String?, interval: Int) {
@@ -194,6 +209,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     }
                     override fun onRefreshUnifiedFeatureSchedules() {
                         setupAppBlocker()
+                        setupWebsiteBlocker()
                         setupReelBlocker()
                         setupKeywordBlocker()
                         setupFocusMode()
@@ -255,9 +271,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             }
 
             rootNode = rootInActiveWindow ?: runCatching { event.source }.getOrNull()
-            if (rootNode != null && (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
-                event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
-                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) {
+            if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+                (rootNode != null && (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
+                    event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED))
+            ) {
                 reelsSessionTracker.onAccessibilityEvent(event, rootNode)
                 browserSessionTracker.onAccessibilityEvent(event, rootNode)
             }
@@ -347,10 +364,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                 }
             }
 
-            if (savedPreferencesLoader.isWebsiteBlockerEnabled(false) && isFeatureCurrentlyActive("website_blocker")) {
+            if ((isWebsiteBlockerMasterEnabled || savedPreferencesLoader.isWebsiteBlockerEnabled(false)) && isFeatureCurrentlyActive("website_blocker")) {
                 val activeWebsites = getActiveBlockedWebsites()
                 if (activeWebsites.isNotEmpty()) {
-                    val blockedSocialApps = savedPreferencesLoader.loadBlockedWebsitesApps()
+                    val blockedSocialApps = cachedBlockedSocialApps.ifEmpty { savedPreferencesLoader.loadBlockedWebsitesApps() }
                     if (blockedSocialApps.contains(packageName)) {
                         blockingStatsManager.recordAppBlock(packageName, "Blocked by Website Blocker")
                         val webStyle = savedPreferencesLoader.getWebsiteBlockerWarningStyle()
@@ -491,15 +508,29 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         val packageName = event.packageName?.toString() ?: return
         val rootNode = rootInActiveWindow ?: return
         try {
-            val rootPackage = rootNode.packageName?.toString() ?: packageName
+            val rootPackage = rootNode.packageName?.toString() ?: return
+
+            // 1. Temporal Window Guard: Abort if active window transitioned away from event package
+            if (!rootPackage.equals(packageName, ignoreCase = true)) {
+                return
+            }
 
             val myPackageName = this.packageName
-            if (packageName.equals(myPackageName, ignoreCase = true) ||
-                packageName.equals("com.alhaq.amnishield", ignoreCase = true) ||
-                rootPackage.equals(myPackageName, ignoreCase = true) ||
+            if (rootPackage.equals(myPackageName, ignoreCase = true) ||
                 rootPackage.equals("com.alhaq.amnishield", ignoreCase = true) ||
-                packageName.equals("com.android.systemui", ignoreCase = true) ||
+                rootPackage.equals("com.alhaq.deenshield", ignoreCase = true) ||
                 rootPackage.equals("com.android.systemui", ignoreCase = true)
+            ) {
+                return
+            }
+
+            // 2. Safety Exemption Guard: Never run deferred blockers on dialers, keyboards, launchers, or system apps
+            if (SystemExclusionManager.isExempt(
+                    rootPackage,
+                    this,
+                    savedPreferencesLoader = savedPreferencesLoader,
+                    cachedDefaultLauncher = cachedDefaultLauncher
+                )
             ) {
                 return
             }
@@ -550,9 +581,10 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                         )
                         reelActionHandler.handleReelBlock(
                             result = reelBlockerResult,
+                            rootNode = rootNode,
+                            packageName = rootPackage,
                             onPressHome = { pressHome() },
-                            onPressBack = { pressBack() },
-                            getRootInActiveWindow = { rootInActiveWindow }
+                            onPressBack = { pressBack() }
                         )
                         return
                     }
@@ -565,19 +597,35 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
         }
     }
 
+    private fun refreshScheduleRulesCache(): List<AppBlockScheduleRule> {
+        val freshRules = savedPreferencesLoader.refreshScheduleRulesSnapshot()
+        cachedScheduleRules = freshRules
+        return freshRules
+    }
+
+    private fun setupWebsiteBlocker() {
+        refreshScheduleRulesCache()
+        isWebsiteBlockerMasterEnabled = savedPreferencesLoader.isWebsiteBlockerEnabled(false)
+        cachedBlockedWebsites = savedPreferencesLoader.loadBlockedWebsites()
+        cachedBlockedSocialApps = savedPreferencesLoader.loadBlockedWebsitesApps()
+    }
+
     private fun setupAppBlocker() {
+        val rules = refreshScheduleRulesCache()
         appBlockerWarningConfig = savedPreferencesLoader.loadAppBlockerWarningInfo()
         appBlocker.blockedApps = savedPreferencesLoader.loadBlockedApps().toHashSet()
         appBlocker.restoreCooldowns(savedPreferencesLoader.loadAppBlockerCooldownData())
-        appBlocker.refreshScheduleRules(savedPreferencesLoader.loadAppBlockerScheduleRules())
+        appBlocker.refreshScheduleRules(rules.toMutableList())
         savedPreferencesLoader.saveAppBlockerCooldownData(appBlocker.getCooldownSnapshot())
     }
 
     private fun setupKeywordBlocker() {
+        refreshScheduleRulesCache()
         keywordBlockerWarningConfig = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
         val userKeywords = savedPreferencesLoader.loadBlockedKeywords()
             .map { it.trim().lowercase(Locale.ROOT) }
             .filter { it.isNotEmpty() }
+        cachedBlockedKeywords = userKeywords.toSet()
         keywordBlocker.blockedKeyword = HashSet(userKeywords)
 
         val keywordPrefs = getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
@@ -673,6 +721,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
 
 
     private fun setupFocusMode() {
+        refreshScheduleRulesCache()
         val focusModeData = savedPreferencesLoader.getFocusModeData()
         focusModeBlocker.update(focusModeData)
         com.alhaq.amnishield.ui.widgets.QuickFocusWidgetProvider.updateAllWidgets(this)
@@ -695,7 +744,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
             else -> BlockerType.fromPackageName(featureKey)
         }
 
-        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val rawRules = cachedScheduleRules
 
         val featureRules = rawRules.filter {
             it.blockerType == targetType ||
@@ -766,7 +815,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun getActiveBlockedWebsites(): Set<String> {
-        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val rawRules = cachedScheduleRules
         val websiteRules = rawRules.filter {
             it.blockerType == BlockerType.WEBSITE ||
             it.packageName.equals("website_blocker", ignoreCase = true) ||
@@ -800,7 +849,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     activeWebsites.addAll(targets)
                 } else {
                     // Fallback for legacy rules created before per-rule websites were introduced
-                    activeWebsites.addAll(savedPreferencesLoader.loadBlockedWebsites())
+                    activeWebsites.addAll(cachedBlockedWebsites.ifEmpty { savedPreferencesLoader.loadBlockedWebsites() })
                 }
             }
         }
@@ -809,7 +858,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun getActiveBlockedKeywords(): Set<String> {
-        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val rawRules = cachedScheduleRules
         val keywordRules = rawRules.filter {
             it.blockerType == BlockerType.KEYWORD ||
             it.packageName.equals("keyword_blocker", ignoreCase = true) ||
@@ -843,7 +892,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
                     activeKeywords.addAll(targets)
                 } else {
                     // Fallback for legacy rules created before per-rule keywords were introduced
-                    activeKeywords.addAll(savedPreferencesLoader.loadBlockedKeywords())
+                    activeKeywords.addAll(cachedBlockedKeywords.ifEmpty { savedPreferencesLoader.loadBlockedKeywords() })
                 }
             }
         }
@@ -852,7 +901,7 @@ class AmniShieldAccessibilityService : BaseBlockingService() {
     }
 
     private fun getActiveFocusModeRule(): AppBlockScheduleRule? {
-        val rawRules = savedPreferencesLoader.loadAppBlockerScheduleRules()
+        val rawRules = cachedScheduleRules
         val focusRules = rawRules.filter {
             it.blockerType == BlockerType.FOCUS_MODE ||
             it.packageName.equals("FOCUS_MODE", ignoreCase = true) ||

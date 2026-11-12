@@ -256,59 +256,72 @@ class AntiUninstallDetector(private val context: Context) {
         val stack = ArrayDeque<AccessibilityNodeInfo>()
         stack.push(root)
 
-        while (stack.isNotEmpty()) {
-            val current = stack.pop()
+        try {
+            while (stack.isNotEmpty()) {
+                val current = stack.pop()
+                try {
+                    val nodeText = current.text?.toString()?.lowercase(Locale.ROOT).orEmpty()
+                    val nodeDesc = current.contentDescription?.toString()?.lowercase(Locale.ROOT).orEmpty()
+                    val className = current.className?.toString() ?: ""
 
-            val nodeText = current.text?.toString()?.lowercase(Locale.ROOT).orEmpty()
-            val nodeDesc = current.contentDescription?.toString()?.lowercase(Locale.ROOT).orEmpty()
-            val className = current.className?.toString() ?: ""
+                    if (nodeText.isNotBlank()) {
+                        sb.append(nodeText).append(" ")
+                    }
+                    if (nodeDesc.isNotBlank() && nodeDesc != nodeText) {
+                        sb.append(nodeDesc).append(" ")
+                    }
 
-            if (nodeText.isNotBlank()) {
-                sb.append(nodeText).append(" ")
-            }
-            if (nodeDesc.isNotBlank() && nodeDesc != nodeText) {
-                sb.append(nodeDesc).append(" ")
-            }
+                    if (nodeText.contains("uninstall") || nodeDesc.contains("uninstall") ||
+                        nodeText.contains("remove") || nodeDesc.contains("remove") ||
+                        nodeText.contains("delete") || nodeDesc.contains("delete")
+                    ) {
+                        hasUninstall = true
+                    }
 
-            if (nodeText.contains("uninstall") || nodeDesc.contains("uninstall") ||
-                nodeText.contains("remove") || nodeDesc.contains("remove") ||
-                nodeText.contains("delete") || nodeDesc.contains("delete")
-            ) {
-                hasUninstall = true
-            }
+                    if (nodeText.contains("deactivate") || nodeDesc.contains("deactivate") ||
+                        nodeText.contains("turn off") || nodeDesc.contains("turn off") ||
+                        nodeText.contains("disable") || nodeDesc.contains("disable")
+                    ) {
+                        hasDeactivate = true
+                    }
 
-            if (nodeText.contains("deactivate") || nodeDesc.contains("deactivate") ||
-                nodeText.contains("turn off") || nodeDesc.contains("turn off") ||
-                nodeText.contains("disable") || nodeDesc.contains("disable")
-            ) {
-                hasDeactivate = true
-            }
+                    if (nodeText.contains("use service") || nodeText.contains("use amnishield") ||
+                        nodeText.contains("shortcut") ||
+                        nodeText.contains("stop") || nodeText.contains("turn on")
+                    ) {
+                        hasToggle = true
+                    }
 
-            if (nodeText.contains("use service") || nodeText.contains("use amnishield") ||
-                nodeText.contains("use amnishield") || nodeText.contains("shortcut") ||
-                nodeText.contains("stop") || nodeText.contains("turn on")
-            ) {
-                hasToggle = true
-            }
+                    if (className.contains("Switch") || className.contains("ToggleButton") ||
+                        className.contains("CheckBox") || className.contains("Button") || current.isClickable
+                    ) {
+                        hasSwitchOrButton = true
+                    }
 
-            if (className.contains("Switch") || className.contains("ToggleButton") ||
-                className.contains("CheckBox") || className.contains("Button") || current.isClickable
-            ) {
-                hasSwitchOrButton = true
-            }
-
-            for (i in 0 until current.childCount) {
-                val child = current.getChild(i)
-                if (child != null) {
-                    stack.push(child)
+                    for (i in 0 until current.childCount) {
+                        val child = current.getChild(i)
+                        if (child != null) {
+                            stack.push(child)
+                        }
+                    }
+                } finally {
+                    if (current != root) {
+                        try {
+                            @Suppress("DEPRECATION")
+                            current.recycle()
+                        } catch (_: Exception) {}
+                    }
                 }
             }
-
-            if (current != root) {
-                try {
-                    @Suppress("DEPRECATION")
-                    current.recycle()
-                } catch (_: Exception) {}
+        } finally {
+            while (stack.isNotEmpty()) {
+                val leakedNode = stack.pop()
+                if (leakedNode != root) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        leakedNode.recycle()
+                    } catch (_: Exception) {}
+                }
             }
         }
 

@@ -171,7 +171,7 @@ fun WebsiteBlockerConfigScreen(
                             isFeatureEnabled = checked
                             loader.setWebsiteBlockerEnabled(checked, updateManual = true)
 
-                            val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER).apply {
+                            val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).apply {
                                 setPackage(context.packageName)
                             }
                             context.sendBroadcast(refreshIntent)
@@ -411,6 +411,10 @@ fun WebsiteBlockerConfigScreen(
                                     Log.i(TAG, "Selected website blocker warning style: $styleCode ($title)")
                                     warningStyle = styleCode
                                     loader.setWebsiteBlockerWarningStyle(styleCode)
+                                    val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).apply {
+                                        setPackage(context.packageName)
+                                    }
+                                    context.sendBroadcast(refreshIntent)
                                     showWarningStyleDialog = false
                                 }
                         ) {
@@ -423,6 +427,10 @@ fun WebsiteBlockerConfigScreen(
                                     onClick = {
                                         warningStyle = styleCode
                                         loader.setWebsiteBlockerWarningStyle(styleCode)
+                                        val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).apply {
+                                            setPackage(context.packageName)
+                                        }
+                                        context.sendBroadcast(refreshIntent)
                                         showWarningStyleDialog = false
                                     }
                                 )

@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.alhaq.amnishield.permissions.PermissionsManager
+import com.alhaq.amnishield.utils.NotificationHelper
+import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 class BootAndAlarmReceiver : BroadcastReceiver() {
 
@@ -30,6 +33,15 @@ class BootAndAlarmReceiver : BroadcastReceiver() {
                 val scheduler = SmartNotificationScheduler(context)
                 scheduler.scheduleDailyReport(hour, minute)
                 Log.d(TAG, "Rescheduled daily report alarm after $action")
+            }
+
+            if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+                val loader = SavedPreferencesLoader(context)
+                val permissionsManager = PermissionsManager(context)
+                if (loader.isAccessibilityDisclosureAccepted() && !permissionsManager.isAccessibilityServiceEnabled()) {
+                    Log.w(TAG, "Accessibility service inactive after $action; notifying user")
+                    NotificationHelper.getInstance(context).showProtectionPausedNotification()
+                }
             }
         }
     }

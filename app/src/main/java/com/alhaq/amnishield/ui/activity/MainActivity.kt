@@ -97,7 +97,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
+import androidx.activity.compose.setContent
+import com.alhaq.amnishield.ui.AmniShieldAdaptiveApp
 import com.alhaq.amnishield.ui.theme.AmniShieldTheme
+import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import com.alhaq.amnishield.ui.state.AppTheme
 
 
@@ -189,6 +192,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var directoryPicker: ActivityResultLauncher<Intent>
 
 
+    private val adaptiveViewModel by lazy {
+        AmniShieldViewModel().apply {
+            bindPersistence(this@MainActivity, savedPreferencesLoader)
+        }
+    }
     private val savedPreferencesLoader = SavedPreferencesLoader(this)
     private val premiumManager by lazy { PremiumManager.getInstance(this) }
     private lateinit var options: ActivityOptionsCompat
@@ -206,6 +214,36 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+    fun mountAdaptiveComposeShell() {
+        setContent {
+            val state by adaptiveViewModel.state.collectAsState()
+            AmniShieldTheme {
+                AmniShieldAdaptiveApp(
+                    viewModel = adaptiveViewModel,
+                    state = state,
+                    isGoogleSignedIn = false,
+                    onOpenAccessibilitySettings = {
+                        try {
+                            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        } catch (e: Exception) {
+                            Toast.makeText(this@MainActivity, "Unable to open Accessibility Settings", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onStartFocusMode = { _, _, _ -> },
+                    onStopFocusMode = {},
+                    onBackupRestore = {},
+                    onShareCrashLogs = {
+                        shareCrashLog(this@MainActivity)
+                    },
+                    onHelpFAQ = {},
+                    onAbout = {
+                        showAboutDialog()
+                    }
+                )
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             ThemeUtils.applyTheme(this)
@@ -215,6 +253,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
+
+        if (savedPreferencesLoader.isAdaptiveShellEnabled() || intent?.getBooleanExtra("EXTRA_USE_ADAPTIVE_SHELL", false) == true) {
+            mountAdaptiveComposeShell()
+            return
+        }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -300,8 +343,7 @@ class MainActivity : AppCompatActivity() {
         setupFragmentNavigation(savedInstanceState)
 
         if (!isFirstLaunchComplete()) {
-            val intent = Intent(this, FragmentActivity::class.java)
-            intent.putExtra("fragment", WelcomeFragment.FRAGMENT_ID)
+            val intent = FragmentActivity.createIntent(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Welcome)
             startActivity(intent, options.toBundle())
             finish()
             return
@@ -1119,10 +1161,7 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
         dialogView.findViewById<View>(R.id.card_pro_pass)?.setOnClickListener {
-            val intent = Intent(this, FragmentActivity::class.java).apply {
-                putExtra("feature_type", "premium_features")
-            }
-            startActivity(intent)
+            FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures)
             dialog.dismiss()
         }
 
@@ -1451,10 +1490,7 @@ class MainActivity : AppCompatActivity() {
                     openPremiumScreen()
                 }
                 R.id.nav_roadmap -> {
-                    val intent = Intent(this, FragmentActivity::class.java).apply {
-                        putExtra("feature_type", "roadmap")
-                    }
-                    startActivity(intent)
+                    FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Roadmap)
                 }
                 R.id.nav_donate -> {
                     showSupportOptionsDialog()
@@ -1728,10 +1764,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPremiumScreen() {
-        val intent = Intent(this, FragmentActivity::class.java).apply {
-            putExtra("feature_type", "premium_features")
-        }
-        startActivity(intent)
+        FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures)
     }
 
     private fun signInWithGoogle() {
@@ -1754,9 +1787,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun openProfileScreen() {
-        val intent = Intent(this, FragmentActivity::class.java)
-        intent.putExtra("fragment", "profile")
-        startActivity(intent)
+        FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Profile)
     }
     
     private fun showFAQDialog() {

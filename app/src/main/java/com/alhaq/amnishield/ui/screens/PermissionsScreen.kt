@@ -112,7 +112,7 @@ fun PermissionsScreen(
                 tonalElevation = 8.dp,
                 shadowElevation = 8.dp
             ) {
-                val canProceed = isAccessibilityGranted || (isBatteryGranted && (isOverlayGranted || isUsageGranted))
+                val canProceed = isAccessibilityGranted
                 var grantedCount = 0
                 if (isAccessibilityGranted) grantedCount++
                 if (isOverlayGranted) grantedCount++

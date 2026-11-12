@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.alhaq.amnishield.contract.GuardianContract
 
 /**
  * Manager for tracking, storing, and aggregating Reels & Shorts metrics:
@@ -90,6 +91,11 @@ class ReelsStatsManager private constructor(private val context: Context) {
             .putString("reels_stats_date", dateStr)
             .putInt("reels_scrolled_today", currentScrolled)
             .apply()
+
+        try {
+            context.contentResolver.notifyChange(GuardianContract.URI_REELS, null)
+        } catch (e: Exception) {
+        }
     }
 
     /**
@@ -122,6 +128,11 @@ class ReelsStatsManager private constructor(private val context: Context) {
             .putString("reels_stats_date", dateStr)
             .putLong("reels_watch_time_seconds_today", updatedWatchTime)
             .apply()
+
+        try {
+            context.contentResolver.notifyChange(GuardianContract.URI_REELS, null)
+        } catch (e: Exception) {
+        }
     }
 
     /**

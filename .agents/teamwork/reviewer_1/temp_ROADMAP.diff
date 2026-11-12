@@ -1,0 +1,35 @@
+﻿diff --git a/ROADMAP.md b/ROADMAP.md
+index 7a9e218..c3d4f89 100644
+--- a/ROADMAP.md
++++ b/ROADMAP.md
+@@ -37,11 +37,35 @@ Last updated: October 2026
+ ---
+ 
+-### Active / Upcoming Milestones (V1.1 - V2.0)
++### Active / Upcoming Milestones (v0.3.2 - v0.3.5)
+ 
+-- [ ] **Windows Elevated Background Service:** Background Windows service managing UAC-free network `hosts` resolution and system-level firewall rules.
+-- [ ] **Opt-in DNS Sinkhole Engine:** Local VPN-based DNS sinkhole filter powered by the `AmniGuard-FireWall` packet filtering engine for network-wide tracking and ad/adult domain mitigation.
+-- [ ] **On-Device Mobile NPU Vision Blur Engine:** Realtime shortform media content filtering powered by LiteRT / Mobile NPU (`AmniBlur` / `AmniGaze` pipeline optimization).
+-- [ ] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions to run automated instrumented UI tests across `playstoreDebug`, `fdroidDebug`, and `universalDebug`.
++#### Milestone 0.3.2: Accessibility Engine Hardening & Binder Safety
++- [ ] **In-Memory Schedule Caching:** Eliminate reflection-based `Gson().fromJson()` deserialization on the Main Binder Thread during `onAccessibilityEvent` in `AmniShieldAccessibilityService.kt` and `SavedPreferencesLoader.kt`.
++- [ ] **Polling Decoupling:** Eliminate continuous `rootInActiveWindow` queries on 1-second and 2-second Handler timers in `ReelsSessionTracker.kt` and `BrowserSessionTracker.kt`, transitioning to event-driven state checks.
++- [ ] **Node Traversal Exception Safety:** Implement robust `try ... finally` blocks and null-safe node recycling across `AntiUninstallDetector.kt` and `ReelDetectionEngine.kt`.
++- [ ] **Manifest Security Hardening:** Set `android:exported="false"` on `LauncherActivity` in `AndroidManifest.xml` (line 76) to prevent unauthorized external intent launching.
++
++#### Milestone 0.3.3: Store Compliance & Layout Resilience
++- [ ] **Prominent Disclosure Overhaul:** Implement scrollable container and adaptive sizing for the accessibility prominent disclosure dialog to ensure compliance in landscape orientation and 200% font scaling.
++- [ ] **Persistent Affirmative Consent:** Persist the accessibility disclosure acceptance timestamp and version flag in `SharedPreferences` to guarantee auditability.
++- [ ] **Screen Rotation State Preservation:** Add `rememberSaveable` state handling in `AmniSpaceActivity.kt`, implement `onSaveInstanceState` in `WarningActivity.kt`, and dynamically adapt window insets in `UsageStatOverlayManager.kt`.
++
++#### Milestone 0.3.4: Dual-Host Cleanup & Navigation Decoupling
++- [ ] **Type-Safe Intent Routing:** Implement a sealed route contract between `MainActivity.kt` and `FragmentActivity.kt`, replacing loosely-typed string extras (`feature_type`, `fragment`).
++- [ ] **SharedPreferences Synchronization Lock:** Implement mutex synchronization locks in `SavedPreferencesLoader.kt` to prevent concurrent multi-threaded read/write file races.
++- [ ] **Automated Multi-Flavor Matrix Testing:** Expand CI GitHub Actions to run automated instrumented UI tests across `playstoreDebug`, `fdroidDebug`, and `universalDebug`.
++
++#### Milestone 0.3.5: Pure Compose & Storage Architecture Epic (Prep for V1.0)
++- [ ] **Room & DataStore Migration Epic:** Formalize a phased migration path from the 29+ SharedPreferences XML files to Room DB (relational blocking rules) and Preferences DataStore (flags and tokens).
++- [ ] **Pure-Compose Navigation Epic:** Reconnect and finalize `AmniShieldAdaptiveApp.kt` using modern Compose Navigation 2.8+, safely retiring the dual-host split (`MainActivity.kt` + `FragmentActivity.kt`).
+ 
+ ---
