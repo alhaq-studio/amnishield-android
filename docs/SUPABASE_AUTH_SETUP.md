@@ -4,7 +4,7 @@ This guide details how to configure Supabase Authentication for AmniShield to en
 
 ---
 
-## 📧 1. Supabase Cloud Dashboard Email Template Setup
+## 1. Supabase Cloud Dashboard Email Template Setup
 
 In your [Supabase Dashboard](https://supabase.com/dashboard) under **Project > Authentication > Email Templates**:
 
@@ -22,7 +22,7 @@ In your [Supabase Dashboard](https://supabase.com/dashboard) under **Project > A
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#f4f6f9;margin:0;padding:0;color:#1e293b;">
   <div style="max-width:540px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.05);border:1px solid #e2e8f0;">
     <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);padding:32px 24px;text-align:center;color:#ffffff;">
-      <div style="display:inline-block;width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:12px;margin-bottom:12px;font-size:24px;line-height:48px;">🛡️</div>
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:12px;margin-bottom:12px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="AmniShield"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
       <h1 style="margin:0;font-size:22px;font-weight:700;">AmniShield Verification</h1>
     </div>
     <div style="padding:32px 24px;text-align:center;">
@@ -40,11 +40,11 @@ In your [Supabase Dashboard](https://supabase.com/dashboard) under **Project > A
       <p style="font-weight:600;color:#1e293b;margin-bottom:8px;">Or verify automatically with 1-tap:</p>
       
       <a href="{{ .ConfirmationURL }}" style="display:inline-block;width:100%;box-sizing:border-box;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 24px;border-radius:10px;margin-top:8px;">
-        ⚡ Verify &amp; Activate AmniShield
+        Verify &amp; Activate AmniShield
       </a>
 
       <a href="amnishield://activate?token={{ .Token }}&email={{ .Email }}" style="display:inline-block;width:100%;box-sizing:border-box;background:#f1f5f9;color:#334155;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:10px;margin-top:10px;border:1px solid #cbd5e1;">
-        📱 Open Directly in Android App
+        Open Directly in Android App
       </a>
     </div>
     <div style="background:#f8fafc;padding:18px 24px;text-align:center;font-size:12px;color:#94a3b8;border-top:1px solid #f1f5f9;">
@@ -64,7 +64,7 @@ In your [Supabase Dashboard](https://supabase.com/dashboard) under **Project > A
 
 ---
 
-## 🌐 2. Supabase Auth URL Configuration
+## 2. Supabase Auth URL Configuration
 
 Under **Authentication > URL Configuration**:
 - **Site URL**: `https://app.amnishield.com`

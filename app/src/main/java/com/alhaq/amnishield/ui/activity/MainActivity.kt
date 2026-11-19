@@ -165,6 +165,15 @@ class MainActivity : AppCompatActivity() {
                     try {
                         val session = rest.signInWithGoogleIdToken(account.idToken)
                         if (session != null) {
+                            com.alhaq.amnishield.data.sync.SecureKeyStore(this@MainActivity).apply {
+                                accessToken = session.accessToken
+                                refreshToken = session.refreshToken
+                            }
+                            savedPreferencesLoader.saveUserProfile(
+                                session.userId,
+                                session.email ?: account.email.orEmpty(),
+                                account.displayName
+                            )
                             profile = rest.fetchProfile(session)
                         }
                     } catch (e: Exception) {
@@ -439,9 +448,11 @@ class MainActivity : AppCompatActivity() {
                 initializeNotificationChannels()
                 restorePremiumPurchases()
                 scheduleDailyReportsIfPremium()
-                com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
-                lifecycleScope.launch(Dispatchers.IO) {
-                    com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+                if (!savedPreferencesLoader.isStandaloneMode()) {
+                    com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+                    }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("MainActivity", "Adaptive shell background init warning", e)
@@ -516,9 +527,11 @@ class MainActivity : AppCompatActivity() {
 
         // Schedule background policy & rules sync engine
         try {
-            com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
-            lifecycleScope.launch(Dispatchers.IO) {
-                com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+            if (!savedPreferencesLoader.isStandaloneMode()) {
+                com.alhaq.amnishield.data.sync.SyncWorker.schedule(this)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    com.alhaq.amnishield.data.sync.PolicySyncManager.syncNow(this@MainActivity)
+                }
             }
         } catch (e: Throwable) {
             android.util.Log.w("MainActivity", "Failed to initialize SyncWorker", e)
@@ -563,9 +576,16 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
                         val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                        val result = rest.claimPairingToken(pairPin, deviceName, "android")
+                        val currentUserId = savedPreferencesLoader.getUserId()
+                        val currentDeviceId = com.alhaq.amnishield.data.sync.SecureKeyStore(this@MainActivity).deviceId
+                        val localPayload = com.alhaq.amnishield.data.sync.PolicySyncManager.exportLocalPolicyPayload(this@MainActivity)
+                        val result = rest.claimPairingToken(pairPin, deviceName, "android", currentUserId, currentDeviceId, localPayload)
                         if (result.success) {
-                            savedPreferencesLoader.setConsoleManaged(true, result.deviceId, result.ownerId)
+                            if (result.isManaged) {
+                                savedPreferencesLoader.setConsoleManaged(true, result.deviceId, result.ownerId)
+                            } else {
+                                savedPreferencesLoader.setPairedPersonalSync(result.deviceId, result.ownerId)
+                            }
                             if (result.policyPayload != null) {
                                 savedPreferencesLoader.saveCachedPolicyPayload(result.policyPayload.toString())
                                 com.alhaq.amnishield.data.sync.PolicySyncManager.applyPolicyPayload(
@@ -627,6 +647,13 @@ class MainActivity : AppCompatActivity() {
                     try {
                         val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
                         val session = rest.verifyOtp(email, token, "email")
+                        val keyStore = com.alhaq.amnishield.data.sync.SecureKeyStore(this@MainActivity)
+                        keyStore.accessToken = session.accessToken
+                        keyStore.refreshToken = session.refreshToken
+                        savedPreferencesLoader.saveUserProfile(
+                            session.userId,
+                            session.email ?: email
+                        )
                         val profile = rest.fetchProfile(session)
                         withContext(Dispatchers.Main) {
                             if (profile != null && !profile.licenseKey.isNullOrBlank()) {
@@ -666,6 +693,15 @@ class MainActivity : AppCompatActivity() {
                     email = userEmail,
                     expiresAt = System.currentTimeMillis() + 3600_000L
                 )
+                val keyStore = com.alhaq.amnishield.data.sync.SecureKeyStore(this@MainActivity)
+                keyStore.accessToken = session.accessToken
+                if (session.refreshToken.isNotBlank()) keyStore.refreshToken = session.refreshToken
+                if (userId.isNotBlank() || !userEmail.isNullOrBlank()) {
+                    savedPreferencesLoader.saveUserProfile(
+                        userId,
+                        userEmail.orEmpty()
+                    )
+                }
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
                         val rest = com.alhaq.amnishield.data.sync.SupabaseRest()

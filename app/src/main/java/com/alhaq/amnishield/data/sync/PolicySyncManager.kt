@@ -25,6 +25,8 @@ object PolicySyncManager {
     private const val TAG = "PolicySyncManager"
     private const val BASE_URL = "https://jrgpmcomvibgklmvnxud.supabase.co"
     private const val ANON_KEY = SupabaseRest.ANON_KEY
+    const val MAX_PAIRED_DEVICES = 5
+    const val ERR_DEVICE_LIMIT_REACHED = "ERR_DEVICE_LIMIT_REACHED"
     const val INTENT_ACTION_REFRESH_KEYWORD_BLOCKER =
         AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST
 
@@ -69,6 +71,13 @@ object PolicySyncManager {
         mode: ApplyMode = ApplyMode.MERGE
     ): SyncSummary = withContext(Dispatchers.IO) {
         val savedPrefs = SavedPreferencesLoader(context)
+        if (savedPrefs.isStandaloneMode()) {
+            return@withContext SyncSummary(
+                success = false,
+                mode = mode,
+                message = "Offline Standalone Mode is active. Enable Cloud Sync or pair a device first."
+            )
+        }
         val appPrefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         val pairedDeviceId = appPrefs.getString("paired_device_id", null)?.trim()
         val pairedOwnerId = appPrefs.getString("paired_owner_id", null)?.trim()
@@ -504,6 +513,29 @@ object PolicySyncManager {
             savedPrefs.setReelsBlockerFeatureEnabled(reelBlockerOn)
         }
 
+        // I. Master PIN / Security Lock Configuration
+        val remotePinEnabled = payload.get("masterPinEnabled")?.takeIf { !it.isJsonNull }?.asBoolean
+            ?: payload.get("master_pin_enabled")?.takeIf { !it.isJsonNull }?.asBoolean
+        val remotePinHash = payload.get("masterPinHash")?.takeIf { !it.isJsonNull }?.asString
+            ?: payload.get("master_pin_hash")?.takeIf { !it.isJsonNull }?.asString
+
+        if (remotePinEnabled != null) {
+            savedPrefs.setPinSecurityEnabled(remotePinEnabled)
+            savedPrefs.setAppLockEnabled(remotePinEnabled)
+            savedPrefs.setBypassPinLockEnabled(remotePinEnabled)
+            if (remotePinEnabled && !remotePinHash.isNullOrBlank()) {
+                savedPrefs.setPinCode(remotePinHash)
+            } else if (!remotePinEnabled && mode == ApplyMode.FORCE_REPLACE) {
+                savedPrefs.setPinCode("")
+                savedPrefs.setAppLockEnabled(false)
+                savedPrefs.setBypassPinLockEnabled(false)
+            }
+        }
+
+        SavedPreferencesLoader.invalidateScheduleRulesCache()
+        sendRefreshBroadcast(context, AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+        sendRefreshBroadcast(context, AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
+
         return SyncSummary(
             success = true,
             appsCount = remoteApps.size,
@@ -587,11 +619,31 @@ object PolicySyncManager {
                 launchLimitsArr.add(serializeLaunchLimitRuleToJson(limit))
             }
             add("launch_limits", launchLimitsArr)
+
+            val pinEnabled = savedPrefs.isPinSecurityEnabled()
+            addProperty("masterPinEnabled", pinEnabled)
+            addProperty("master_pin_enabled", pinEnabled)
+            val pinCode = savedPrefs.getPinCode()
+            if (pinEnabled && pinCode.isNotBlank()) {
+                val hash = if (pinCode.startsWith("v3$") || pinCode.startsWith("v2$")) {
+                    pinCode
+                } else {
+                    com.alhaq.amnishield.utils.PasswordHasher.hash(pinCode)
+                }
+                addProperty("masterPinHash", hash)
+                addProperty("master_pin_hash", hash)
+            } else {
+                add("masterPinHash", com.google.gson.JsonNull.INSTANCE)
+                add("master_pin_hash", com.google.gson.JsonNull.INSTANCE)
+            }
         }
     }
 
     suspend fun pushLocalPolicyToCloud(context: Context): Boolean = withContext(Dispatchers.IO) {
         val savedPrefs = SavedPreferencesLoader(context)
+        if (savedPrefs.isStandaloneMode()) {
+            return@withContext false
+        }
         val appPrefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         val payload = exportLocalPolicyPayload(context)
         savedPrefs.saveCachedPolicyPayload(payload.toString())

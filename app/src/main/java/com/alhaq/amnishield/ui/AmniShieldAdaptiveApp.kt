@@ -256,8 +256,33 @@ fun AmniShieldAdaptiveApp(
 
             composable(AppRoutes.ONBOARDING_PERMISSIONS) {
                 PermissionsScreen(
-                    onContinue = { navController.navigate(AppRoutes.ACCESSIBILITY_GUIDE) },
+                    onContinue = {
+                        val preferencesLoader = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
+                        if (!preferencesLoader.isAccountModeChosen()) {
+                            navController.navigate(AppRoutes.SETUP_MODE)
+                        } else {
+                            navController.navigate(AppRoutes.ACCESSIBILITY_GUIDE)
+                        }
+                    },
                     onRestoreBackup = onBackupRestore
+                )
+            }
+
+            composable(AppRoutes.SETUP_MODE) {
+                val preferencesLoader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context) }
+                SetupModeScreen(
+                    onContinueOffline = {
+                        preferencesLoader.setStandaloneMode()
+                        navController.navigate(AppRoutes.ACCESSIBILITY_GUIDE)
+                    },
+                    onContinueCloudSync = {
+                        preferencesLoader.setPersonalCloudSyncEnabled(true)
+                        runCatching {
+                            com.alhaq.amnishield.data.sync.SyncWorker.schedule(context)
+                        }
+                        navController.navigate(AppRoutes.ACCESSIBILITY_GUIDE)
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 

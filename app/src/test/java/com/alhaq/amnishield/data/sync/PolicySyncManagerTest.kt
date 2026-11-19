@@ -11,8 +11,16 @@ import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
 import com.alhaq.amnishield.data.blockers.BlockerType
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
+import com.alhaq.amnishield.premium.LicensePayload
+import com.alhaq.amnishield.premium.LicenseValidator
+import com.google.gson.Gson
 import com.google.gson.JsonParser
+import java.security.KeyFactory
+import java.security.Signature
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Base64
 import java.util.Calendar
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -579,5 +587,223 @@ class PolicySyncManagerTest {
         assertEquals(savedPrefs.getReelBlockerDailyLimit(), freshPrefs.getReelBlockerDailyLimit())
         assertEquals(savedPrefs.loadAppBlockerScheduleRules().size, freshPrefs.loadAppBlockerScheduleRules().size)
         assertEquals(savedPrefs.loadAppLaunchLimitRules().size, freshPrefs.loadAppLaunchLimitRules().size)
+    }
+
+    @Test
+    fun testStandaloneModePersistenceAndSwitching() {
+        // Initial state before onboarding choice
+        assertTrue(savedPrefs.isStandaloneMode())
+        assertFalse(savedPrefs.isAccountModeChosen())
+        assertEquals("OFFLINE_STANDALONE", savedPrefs.getAccountSetupChoice())
+
+        // Set standalone mode
+        savedPrefs.setStandaloneMode()
+        assertTrue(savedPrefs.isStandaloneMode())
+        assertTrue(savedPrefs.isAccountModeChosen())
+        assertEquals("OFFLINE_STANDALONE", savedPrefs.getAccountSetupChoice())
+        assertFalse(savedPrefs.isPersonalSyncEnabled())
+        assertFalse(savedPrefs.isConsoleManaged())
+
+        // Enable personal cloud sync
+        savedPrefs.setPersonalSyncEnabled(true)
+        assertTrue(savedPrefs.isPersonalSyncEnabled())
+        assertFalse(savedPrefs.isStandaloneMode())
+        assertEquals("CLOUD_SYNC", savedPrefs.getAccountSetupChoice())
+
+        // Enable console managed mode
+        savedPrefs.setConsoleManaged(true, deviceId = "test_dev_01", ownerId = "test_owner_01")
+        assertTrue(savedPrefs.isConsoleManaged())
+        assertFalse(savedPrefs.isStandaloneMode())
+        assertEquals("CONSOLE_MANAGED", savedPrefs.getAccountSetupChoice())
+
+        // Switch back to standalone mode
+        savedPrefs.setStandaloneMode()
+        assertTrue(savedPrefs.isStandaloneMode())
+        assertEquals("OFFLINE_STANDALONE", savedPrefs.getAccountSetupChoice())
+        assertFalse(savedPrefs.isPersonalSyncEnabled())
+        assertFalse(savedPrefs.isConsoleManaged())
+    }
+
+    @Test
+    fun testPolicySyncManagerNetworkGateInStandaloneMode() = runBlocking {
+        savedPrefs.setStandaloneMode()
+        assertTrue(savedPrefs.isStandaloneMode())
+
+        val mergeSummary = PolicySyncManager.syncNow(context, PolicySyncManager.ApplyMode.MERGE)
+        assertFalse("syncNow must fail in standalone mode", mergeSummary.success)
+        assertEquals("Offline Standalone Mode is active. Enable Cloud Sync or pair a device first.", mergeSummary.message)
+
+        val forceSummary = PolicySyncManager.forcePullAndApply(context, PolicySyncManager.ApplyMode.FORCE_REPLACE)
+        assertFalse("forcePullAndApply must fail in standalone mode", forceSummary.success)
+        assertEquals("Offline Standalone Mode is active. Enable Cloud Sync or pair a device first.", forceSummary.message)
+
+        val pushResult = PolicySyncManager.pushLocalPolicyToCloud(context)
+        assertFalse("pushLocalPolicyToCloud must return false in standalone mode", pushResult)
+    }
+
+    @Test
+    fun testRealtimeClientDisconnectAllInStandaloneMode() {
+        val client = RealtimeClient(
+            userId = "unit_test_user",
+            accessToken = "unit_test_token",
+            onChange = {}
+        )
+        client.start()
+        assertTrue("RealtimeClient instance must register as active", RealtimeClient.getActiveClientCount() > 0)
+
+        RealtimeClient.disconnectAll()
+        assertEquals("disconnectAll must clear all active RealtimeClient instances", 0, RealtimeClient.getActiveClientCount())
+    }
+
+    @Test
+    fun testOfflineLicenseValidatorOperatesInStandaloneMode() {
+        savedPrefs.setStandaloneMode()
+        assertTrue(savedPrefs.isStandaloneMode())
+
+        val email = "standalone-supporter@alhaq.org"
+        val expires = System.currentTimeMillis() + 86400000L
+        val type = "lifetime"
+        val payload = LicensePayload(email = email, type = type, expires = expires, version = 1)
+
+        val licenseKey = generateLicenseKeyForTest(payload)
+        val verified = LicenseValidator.verifyLicense(licenseKey)
+
+        assertNotNull("Offline ECDSA license verification must succeed without network", verified)
+        assertEquals(email, verified?.email)
+        assertEquals(type, verified?.type)
+        assertEquals(expires, verified?.expires)
+    }
+
+    @Test
+    fun testMasterPinSerializationInExportAndApplicationInSync() {
+        savedPrefs.setPinSecurityEnabled(true)
+        savedPrefs.setPinCode("v3\$10000\$saltsaltsalt\$hashhashhash")
+
+        val exported = PolicySyncManager.exportLocalPolicyPayload(context)
+        assertTrue("masterPinEnabled must be true", exported.get("masterPinEnabled").asBoolean)
+        assertTrue("master_pin_enabled must be true", exported.get("master_pin_enabled").asBoolean)
+        assertEquals("v3\$10000\$saltsaltsalt\$hashhashhash", exported.get("masterPinHash").asString)
+
+        // Remote applies updated PIN
+        val remoteJson = """
+            {
+              "schema_version": 2,
+              "masterPinEnabled": true,
+              "masterPinHash": "v3${'$'}10000${'$'}newsalt${'$'}newhash"
+            }
+        """.trimIndent()
+        val remotePayload = JsonParser.parseString(remoteJson).asJsonObject
+        val summary = PolicySyncManager.applyPolicyPayload(context, remotePayload, PolicySyncManager.ApplyMode.MERGE)
+        assertTrue(summary.success)
+        assertTrue(savedPrefs.isPinSecurityEnabled())
+        assertEquals("v3\$10000\$newsalt\$newhash", savedPrefs.getPinCode())
+
+        // Remote disables PIN in FORCE_REPLACE
+        val disabledJson = """
+            {
+              "schema_version": 2,
+              "masterPinEnabled": false,
+              "masterPinHash": null
+            }
+        """.trimIndent()
+        val disabledPayload = JsonParser.parseString(disabledJson).asJsonObject
+        val forceSummary = PolicySyncManager.applyPolicyPayload(context, disabledPayload, PolicySyncManager.ApplyMode.FORCE_REPLACE)
+        assertTrue(forceSummary.success)
+        assertFalse(savedPrefs.isPinSecurityEnabled())
+        assertEquals("", savedPrefs.getPinCode())
+    }
+
+    @Test
+    fun testFiveDeviceQuotaConstantsAndErrorCodes() {
+        assertEquals(5, PolicySyncManager.MAX_PAIRED_DEVICES)
+        assertEquals("ERR_DEVICE_LIMIT_REACHED", PolicySyncManager.ERR_DEVICE_LIMIT_REACHED)
+    }
+
+    @Test
+    fun testStandaloneModeGatesRemotePolicyPull() = runBlocking {
+        savedPrefs.setStandaloneMode()
+        assertTrue(savedPrefs.isStandaloneMode())
+
+        val summary = PolicySyncManager.syncNow(context, PolicySyncManager.ApplyMode.MERGE)
+        assertFalse(summary.success)
+        assertTrue(summary.message.contains("Offline Standalone Mode is active"))
+    }
+
+    @Test
+    fun testSyncedMasterPinEnablesAppAndBypassLocksMirrorsAntiUninstallAndVerifies() {
+        val realHash = com.alhaq.amnishield.utils.PasswordHasher.hash("847291")
+        val remoteJson = """
+            {
+              "schema_version": 2,
+              "masterPinEnabled": true,
+              "masterPinHash": "$realHash"
+            }
+        """.trimIndent()
+        val remotePayload = JsonParser.parseString(remoteJson).asJsonObject
+        val summary = PolicySyncManager.applyPolicyPayload(context, remotePayload, PolicySyncManager.ApplyMode.MERGE)
+
+        assertTrue(summary.success)
+        assertTrue(savedPrefs.isPinSecurityEnabled())
+        assertTrue(savedPrefs.isAppLockEnabled())
+        assertTrue(savedPrefs.isBypassPinLockEnabled())
+        assertEquals(realHash, savedPrefs.getPinCode())
+        assertEquals(
+            realHash,
+            context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE).getString("password", "")
+        )
+        assertTrue("Master PIN verification must succeed for 6-digit v3 hash", savedPrefs.verifyMasterPin("847291"))
+        assertFalse("Wrong Master PIN must be rejected", savedPrefs.verifyMasterPin("000000"))
+
+        // FORCE_REPLACE with masterPinEnabled=false clears all lock flags and anti_uninstall password
+        val disableJson = """
+            {
+              "schema_version": 2,
+              "masterPinEnabled": false,
+              "masterPinHash": null
+            }
+        """.trimIndent()
+        val disableSummary = PolicySyncManager.applyPolicyPayload(
+            context,
+            JsonParser.parseString(disableJson).asJsonObject,
+            PolicySyncManager.ApplyMode.FORCE_REPLACE
+        )
+        assertTrue(disableSummary.success)
+        assertFalse(savedPrefs.isPinSecurityEnabled())
+        assertFalse(savedPrefs.isAppLockEnabled())
+        assertFalse(savedPrefs.isBypassPinLockEnabled())
+        assertEquals("", savedPrefs.getPinCode())
+        assertEquals(
+            "",
+            context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE).getString("password", "")
+        )
+    }
+
+    @Test
+    fun testPairedPersonalSyncSetsModePersonalSync() {
+        savedPrefs.setPairedPersonalSync("dev-123", "owner-456")
+        assertEquals(SavedPreferencesLoader.MODE_PERSONAL_SYNC, savedPrefs.getDeviceOperationMode())
+        assertEquals("dev-123", savedPrefs.getPairedDeviceId())
+        assertEquals("owner-456", savedPrefs.getPairedOwnerId())
+        assertTrue(savedPrefs.isPersonalSyncEnabled())
+    }
+
+    private fun generateLicenseKeyForTest(payload: LicensePayload): String {
+        val privateKeyBase64 = "MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCADPX9tuEQ27m1lup+nj/tar6XV7sqbp3IHCWE/7Yh1qQ=="
+        val gson = Gson()
+        val payloadJson = gson.toJson(payload)
+        val payloadBase64 = Base64.getEncoder().encodeToString(payloadJson.toByteArray(Charsets.UTF_8))
+
+        val sig = Signature.getInstance("SHA256withECDSA")
+        val privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64)
+        val keySpec = PKCS8EncodedKeySpec(privateKeyBytes)
+        val keyFactory = KeyFactory.getInstance("EC")
+        val privateKey = keyFactory.generatePrivate(keySpec)
+
+        sig.initSign(privateKey)
+        sig.update(Base64.getDecoder().decode(payloadBase64))
+        val signatureBytes = sig.sign()
+        val signatureBase64 = Base64.getEncoder().encodeToString(signatureBytes)
+
+        return "$payloadBase64.$signatureBase64"
     }
 }

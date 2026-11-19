@@ -79,6 +79,26 @@ AmniShield provides optional multi-platform policy synchronization across Androi
 
 ---
 
+## Offline-First Architecture & 3-Mode Ecosystem (Milestone 0.4.0)
+
+AmniShield implements an offline-first, privacy-by-default architecture offering complete functionality without any user account or cloud infrastructure.
+
+1. **Operation Modes (`MODE_STANDALONE`, `MODE_PERSONAL_SYNC`, `MODE_CONSOLE_ENFORCED`):**
+   - **`MODE_STANDALONE` (Default / Recommended):** 100% local operation. All website, keyword, app, schedule, and reel blocking runs on-device. Zero network requests, zero telemetry, and background sync workers are deactivated (`SyncWorker.cancel(context)`). Offline ECDSA NIST P-256 license validation operates fully air-gapped.
+   - **`MODE_PERSONAL_SYNC`:** Optional multi-device synchronization via Supabase REST/Realtime for user accounts and paired devices.
+   - **`MODE_CONSOLE_ENFORCED`:** Managed organizational or parental supervision with policy enforcement locks.
+
+2. **Complete Network Gate in Standalone Mode:**
+   - **`PolicySyncManager.syncNow()`:** Aborts immediately with zero network requests if `savedPrefs.isStandaloneMode()`.
+   - **`PlaystoreSyncProvider`:** Short-circuits `refresh()` and `pushNow()` when standalone mode is active.
+   - **`SyncWorker`:** Evaluates standalone status on each invocation, immediately unregisters itself via `WorkManager.cancelUniqueWork("amnishield_sync")`, and prevents rescheduling.
+   - **`RealtimeClient`:** Thread-safe registry tracking all active WebSocket connections with `RealtimeClient.disconnectAll()` immediately terminating any active sessions when transitioning to standalone mode.
+
+3. **Air-Gapped Policy Transfer & Schema Parity (Upcoming):**
+   - Offline export and import of `PolicyPayload v2` JSON files for secure, cross-platform rule migration across Android, Browser Extension, and Windows without cloud dependencies.
+
+---
+
 ## Blocker Pipeline & Chain of Responsibility
 
 The `AmniShieldAccessibilityService` orchestrates accessibility window inspection through explicit priority-ordered interceptors:
@@ -121,6 +141,10 @@ AmniShield maintains a strict **zero-external-telemetry** logging policy.
 
 > [!NOTE]
 > **Persistence Architecture:** Persistence is supported by a synchronized hybrid engine: `SavedPreferencesLoader.kt` orchestrates 30 SharedPreferences XML files with companion mutex locks (`rulesLock`, `statsLock`) and in-memory `@Volatile` schedule caching for zero Main Binder thread latency. Relational rules are persisted in SQLite via `AmniShieldRuleDatabase`, core toggles in `AmniShieldDataStore`, and cloud sync tokens in `SecureKeyStore.kt` (`EncryptedSharedPreferences`).
+
+> [!NOTE]
+> **Cloud Sync & Handshake Quota (`PolicyPayload v2`):**
+> Bidirectional sync enforces a strict 5-device quota per account (`MAX_PAIRED_DEVICES = 5`). Handshakes abort with `ERR_DEVICE_LIMIT_REACHED` if active paired devices count >= 5 unless the current `device_id` is re-pairing idempotently. `PolicyPayload v2` round-trips salted Master PIN hashes (`masterPinEnabled`, `masterPinHash`), triggering runtime rule invalidation and broadcasts (`INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES`) on update.
 
 > [!NOTE]
 > **Dual-Host & Adaptive Presentation:** UI presentation is hosted by `MainActivity.kt` (supporting both legacy 4 bottom navigation tabs and the pure-Compose adaptive shell `AmniShieldAdaptiveApp.kt` via `mountAdaptiveComposeShell()`), while `FragmentActivity.kt` provides secondary sub-screen routing via the type-safe `FragmentDestination.kt` sealed route contract.

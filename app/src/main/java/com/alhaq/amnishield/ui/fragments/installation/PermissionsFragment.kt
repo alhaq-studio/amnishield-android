@@ -121,7 +121,7 @@ class PermissionsFragment : Fragment() {
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(
                     R.id.fragment_holder,
-                    SupportAlHaqFragment()
+                    SetupModeOnboardingFragment()
                 )
                 .addToBackStack(null)
                 .commit()

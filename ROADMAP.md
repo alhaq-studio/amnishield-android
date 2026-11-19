@@ -66,6 +66,12 @@ Last updated: October 2026
 - [x] **Adaptive UI & Profile Alignment:** Account authentication, pairing modal, and manual/auto sync toggles in `ProfileScreen.kt`, `SettingsScreen.kt`, and `AmniShieldAdaptiveApp.kt` with live status indicators and zero telemetry compliance.
 - [x] **Comprehensive Sync Unit Testing:** Added rigorous suite (`PolicySyncManagerTest.kt`) verifying schema migration, payload transformation, schedule conversion, and null-safe deserialization.
 
+#### Milestone 0.4.0: Offline-First Architecture & Zero-Account Ecosystem (Curbox Parity)
+- [x] **First-Class Onboarding Choice:** Single Compose onboarding mode selector (`SetupModeScreen.kt` wrapped in `ComposeView` inside `SetupModeOnboardingFragment.kt`) offering immediate user choice between Complete Offline Standalone Mode (No Account Required) and Ecosystem Cloud Sync/Console Pairing with `MODE_STANDALONE` wiring.
+- [x] **Complete `MODE_STANDALONE` Network Gate:** Absolute network gate across `SyncWorker`, `PolicySyncManager.syncNow()`, `PlaystoreSyncProvider`, and `RealtimeClient.disconnectAll()` guaranteeing zero outbound network connections or background polling while keeping offline ECDSA `LicenseValidator` 100% functional.
+- [ ] **Air-Gapped Policy Transfer:** Offline `PolicyPayload v2` JSON file export and import between Android, Browser Extension, and Windows Desktop with schema validation and pre-sync rollback snapshots.
+- [ ] **F-Droid & Zero-Connection Flavor Hardening:** Strict compile-time and runtime isolation ensuring zero telemetry and zero network calls for offline and F-Droid distributions.
+
 
 ---
 

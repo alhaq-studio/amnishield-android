@@ -187,12 +187,12 @@ async function sendDeliveryEmail(email: string, licenseKey: string, expiryTimest
         subject: `Your AmniShield Pro ${planTitle} License Key`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
-            <h2 style="color: #0f172a; margin-top: 0;">👑 Welcome to AmniShield Pro!</h2>
+            <h2 style="color: #0f172a; margin-top: 0;">Welcome to AmniShield Pro!</h2>
             <p>Thank you for supporting our mission of privacy, focus, and digital wellness. Your <b>${planTitle}</b> is now fully active.</p>
             
             <div style="text-align: center; margin: 24px 0;">
               <a href="${deepLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
-                ⚡ One-Click Mobile Activation
+                One-Click Mobile Activation
               </a>
             </div>
 

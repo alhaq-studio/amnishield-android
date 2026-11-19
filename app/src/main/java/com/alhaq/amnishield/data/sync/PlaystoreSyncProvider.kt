@@ -24,11 +24,12 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
     override val status: StateFlow<SyncStatus> get() = _status
 
     override val isAvailable: Boolean
-        get() = keys.accessToken != null
+        get() = !savedPrefs.isStandaloneMode() && keys.accessToken != null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override suspend fun refresh() {
+        if (savedPrefs.isStandaloneMode()) return
         val session = getOrRefreshSession() ?: return
         _status.value = SyncStatus(isSyncing = true)
         try {
@@ -64,6 +65,7 @@ class PlaystoreSyncProvider(private val context: Context) : SyncProvider {
     }
 
     override suspend fun pushNow() {
+        if (savedPrefs.isStandaloneMode()) return
         val session = getOrRefreshSession() ?: return
         _status.value = SyncStatus(isSyncing = true)
         try {

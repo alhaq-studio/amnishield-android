@@ -1758,8 +1758,26 @@ open class SavedPreferencesLoader(
     }
 
     fun setPinCode(pin: String) {
+        val clean = pin.trim()
+        val storedValue = when {
+            clean.isEmpty() -> ""
+            clean.startsWith("v3$") || clean.startsWith("v2$") -> clean
+            else -> PasswordHasher.hash(clean)
+        }
         context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-            .edit().putString("profile_pin", pin).apply()
+            .edit().putString("profile_pin", storedValue).apply()
+        context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            .edit().putString("password", storedValue).apply()
+    }
+
+    fun verifyMasterPin(candidate: String): Boolean {
+        val appPin = getPinCode()
+        val stored = appPin.ifBlank {
+            context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+                .getString("password", "") ?: ""
+        }
+        if (stored.isBlank()) return false
+        return PasswordHasher.verify(candidate, stored)
     }
 
     fun isAppLockEnabled(): Boolean {
@@ -1784,9 +1802,11 @@ open class SavedPreferencesLoader(
         context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .edit().putBoolean("pin_bypass_lock", enabled).apply()
 
-        val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
-            .setPackage(context.packageName)
-        context.sendBroadcast(intent)
+        runCatching {
+            val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+        }
     }
 
     // --- PIN Reset Cooldown Settings & State (Hard minimum 2 minutes) ---
@@ -1928,9 +1948,11 @@ open class SavedPreferencesLoader(
             .remove(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP)
             .apply()
 
-        val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
-            .setPackage(context.packageName)
-        context.sendBroadcast(intent)
+        runCatching {
+            val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+        }
     }
 
     fun isEmergencyWindowActive(): Boolean {
@@ -1953,9 +1975,11 @@ open class SavedPreferencesLoader(
             .remove(PREF_EMERGENCY_OVERRIDE_REQUESTED_TIMESTAMP)
             .apply()
 
-        val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
-            .setPackage(context.packageName)
-        context.sendBroadcast(intent)
+        runCatching {
+            val intent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+        }
     }
 
     fun getEnforcementMode(): String {
@@ -1970,20 +1994,49 @@ open class SavedPreferencesLoader(
 
     fun getDeviceOperationMode(): Int {
         val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-        val isManaged = prefs.getBoolean("is_console_managed", false) || prefs.getBoolean("is_paired_with_console", false)
+        val isExplicitManaged = prefs.getBoolean("is_console_managed", false)
+        val isLegacyPaired = prefs.getBoolean("is_paired_with_console", false)
+        val personalSync = prefs.getBoolean("personal_cloud_sync_enabled", false)
         val pairedDeviceId = prefs.getString("paired_device_id", null)
 
-        if (isManaged && !pairedDeviceId.isNullOrBlank()) {
+        if ((isExplicitManaged || (isLegacyPaired && !personalSync)) && !pairedDeviceId.isNullOrBlank()) {
             return MODE_CONSOLE_ENFORCED
         }
 
-        val personalSync = prefs.getBoolean("personal_cloud_sync_enabled", false)
         val licenseKey = prefs.getString("license_key", null)
         if (personalSync || (!licenseKey.isNullOrBlank() && personalSync)) {
             return MODE_PERSONAL_SYNC
         }
 
         return MODE_STANDALONE
+    }
+
+    fun isStandaloneMode(): Boolean {
+        return getDeviceOperationMode() == MODE_STANDALONE
+    }
+
+    fun isAccountModeChosen(): Boolean {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getBoolean("account_mode_chosen", false)
+    }
+
+    fun getAccountSetupChoice(): String {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("account_setup_choice", "OFFLINE_STANDALONE") ?: "OFFLINE_STANDALONE"
+    }
+
+    fun setStandaloneMode() {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("personal_cloud_sync_enabled", false)
+            .putBoolean("is_console_managed", false)
+            .putBoolean("is_paired_with_console", false)
+            .putBoolean("account_mode_chosen", true)
+            .putString("account_setup_choice", "OFFLINE_STANDALONE")
+            .apply()
+
+        runCatching { com.alhaq.amnishield.data.sync.SyncWorker.cancel(context) }
+        runCatching { com.alhaq.amnishield.data.sync.RealtimeClient.disconnectAll() }
     }
 
     fun isConsoleManaged(): Boolean {
@@ -1996,12 +2049,31 @@ open class SavedPreferencesLoader(
         prefs.putBoolean("is_paired_with_console", managed)
         if (deviceId != null) prefs.putString("paired_device_id", deviceId)
         if (ownerId != null) prefs.putString("paired_owner_id", ownerId)
-        if (!managed) {
+        if (managed) {
+            prefs.putBoolean("account_mode_chosen", true)
+            prefs.putString("account_setup_choice", "CONSOLE_MANAGED")
+        } else {
             prefs.remove("paired_device_id")
             prefs.remove("paired_owner_id")
             prefs.remove("cached_policy_payload")
         }
         prefs.apply()
+        if (managed) {
+            runCatching { com.alhaq.amnishield.data.sync.SyncWorker.schedule(context) }
+        }
+    }
+
+    fun setPairedPersonalSync(deviceId: String?, ownerId: String?) {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).edit()
+        prefs.putBoolean("is_console_managed", false)
+        prefs.putBoolean("is_paired_with_console", true)
+        prefs.putBoolean("personal_cloud_sync_enabled", true)
+        if (deviceId != null) prefs.putString("paired_device_id", deviceId)
+        if (ownerId != null) prefs.putString("paired_owner_id", ownerId)
+        prefs.putBoolean("account_mode_chosen", true)
+        prefs.putString("account_setup_choice", "PERSONAL_SYNC")
+        prefs.apply()
+        runCatching { com.alhaq.amnishield.data.sync.SyncWorker.schedule(context) }
     }
 
     fun isPersonalSyncEnabled(): Boolean {
@@ -2010,8 +2082,16 @@ open class SavedPreferencesLoader(
     }
 
     fun setPersonalSyncEnabled(enabled: Boolean) {
-        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-            .edit().putBoolean("personal_cloud_sync_enabled", enabled).apply()
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).edit()
+        prefs.putBoolean("personal_cloud_sync_enabled", enabled)
+        if (enabled) {
+            prefs.putBoolean("account_mode_chosen", true)
+            prefs.putString("account_setup_choice", "CLOUD_SYNC")
+        }
+        prefs.apply()
+        if (enabled) {
+            runCatching { com.alhaq.amnishield.data.sync.SyncWorker.schedule(context) }
+        }
     }
 
     fun isPersonalCloudSyncEnabled(): Boolean = isPersonalSyncEnabled()

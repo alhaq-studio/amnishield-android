@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.premium.PremiumManager
+import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.components.AmniShieldButton
 import com.alhaq.amnishield.ui.components.AmniShieldButtonStyle
 import com.alhaq.amnishield.ui.components.AmniShieldInputField
@@ -191,18 +192,27 @@ fun ProfileScreen(
                 val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
                 coroutineScope.launch(Dispatchers.IO) {
                     val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                    val result = rest.claimPairingToken(extractedPin, deviceName, "android")
+                    val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
+                    val currentUserId = savedPrefs.getUserId()
+                    val currentDeviceId = com.alhaq.amnishield.data.sync.SecureKeyStore(context).deviceId
+                    val localPayload = com.alhaq.amnishield.data.sync.PolicySyncManager.exportLocalPolicyPayload(context)
+                    val result = rest.claimPairingToken(extractedPin, deviceName, "android", currentUserId, currentDeviceId, localPayload)
                     withContext(Dispatchers.Main) {
                         isPairingInProgress = false
                         if (result.success) {
                             isPairingSuccess = true
                             pairingStatusMsg = "[SUCCESS] Linked to Cloud Sync Hub successfully!"
-                            val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
-                            savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
+                            if (result.isManaged) {
+                                savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
+                            } else {
+                                savedPrefs.setPairedPersonalSync(result.deviceId, result.ownerId)
+                            }
                             if (result.policyPayload != null) {
                                 savedPrefs.saveCachedPolicyPayload(result.policyPayload.toString())
                                 com.alhaq.amnishield.data.sync.PolicySyncManager.applyPolicyPayload(context, result.policyPayload)
                             }
+                            context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES))
+                            context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER))
                             isPairedWithConsole = true
                             pairedDeviceId = result.deviceId
                             lastSyncTimestamp = savedPrefs.getLastPolicySyncTimestamp()
@@ -2106,18 +2116,27 @@ fun ProfileScreen(
                             val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
                             coroutineScope.launch(Dispatchers.IO) {
                                 val rest = com.alhaq.amnishield.data.sync.SupabaseRest()
-                                val result = rest.claimPairingToken(pairingPinInput, deviceName, "android")
+                                val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
+                                val currentUserId = savedPrefs.getUserId()
+                                val currentDeviceId = com.alhaq.amnishield.data.sync.SecureKeyStore(context).deviceId
+                                val localPayload = com.alhaq.amnishield.data.sync.PolicySyncManager.exportLocalPolicyPayload(context)
+                                val result = rest.claimPairingToken(pairingPinInput, deviceName, "android", currentUserId, currentDeviceId, localPayload)
                                 withContext(Dispatchers.Main) {
                                     isPairingInProgress = false
                                     if (result.success) {
                                         isPairingSuccess = true
                                         pairingStatusMsg = "[SUCCESS] Linked to Cloud Sync Hub successfully!"
-                                        val savedPrefs = com.alhaq.amnishield.utils.SavedPreferencesLoader(context)
-                                        savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
+                                        if (result.isManaged) {
+                                            savedPrefs.setConsoleManaged(true, result.deviceId, result.ownerId)
+                                        } else {
+                                            savedPrefs.setPairedPersonalSync(result.deviceId, result.ownerId)
+                                        }
                                         if (result.policyPayload != null) {
                                             savedPrefs.saveCachedPolicyPayload(result.policyPayload.toString())
                                             com.alhaq.amnishield.data.sync.PolicySyncManager.applyPolicyPayload(context, result.policyPayload)
                                         }
+                                        context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES))
+                                        context.sendBroadcast(Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER))
                                         isPairedWithConsole = true
                                         pairedDeviceId = result.deviceId
                                         lastSyncTimestamp = savedPrefs.getLastPolicySyncTimestamp()

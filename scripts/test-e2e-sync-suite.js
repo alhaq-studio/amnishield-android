@@ -11,11 +11,11 @@
 const assert = require('assert');
 
 console.log('====================================================');
-console.log('🚀 AmniShield Ecosystem Sync E2E Verification Suite');
+console.log('[INFO] AmniShield Ecosystem Sync E2E Verification Suite');
 console.log('====================================================\n');
 
 // 1. TEST: Union-Merge for Blocked Apps
-console.log('▶ Test 1: Multi-Android Device Blocked Apps Union-Merge');
+console.log('[RUN] Test 1: Multi-Android Device Blocked Apps Union-Merge');
 {
   const deviceALocalApps = new Set(['com.instagram.android', 'com.zhiliaoapp.musically']);
   const deviceBLocalApps = new Set(['com.facebook.katana', 'com.twitter.android']);
@@ -36,11 +36,11 @@ console.log('▶ Test 1: Multi-Android Device Blocked Apps Union-Merge');
   assert.ok(deviceBMergedApps.has('com.facebook.katana'), 'Device B must retain Facebook');
   assert.ok(deviceBMergedApps.has('com.twitter.android'), 'Device B must retain Twitter');
   assert.ok(deviceBMergedApps.has('com.zhiliaoapp.musically'), 'Device B must have TikTok');
-  console.log('  ✅ PASSED: Blocked apps merged additively without dropping local rules.\n');
+  console.log('  [OK] PASSED: Blocked apps merged additively without dropping local rules.\n');
 }
 
 // 2. TEST: Union-Merge for Blocked Domains & Keywords
-console.log('▶ Test 2: Multi-Device Blocked Keywords & Domains Union-Merge');
+console.log('[RUN] Test 2: Multi-Device Blocked Keywords & Domains Union-Merge');
 {
   const localKeywords = new Set(['distraction', 'gambling']);
   const remoteDomains = ['tiktok.com', 'instagram.com'];
@@ -55,11 +55,11 @@ console.log('▶ Test 2: Multi-Device Blocked Keywords & Domains Union-Merge');
   assert.ok(mergedKeywords.has('tiktok.com'));
   assert.ok(mergedKeywords.has('casino'));
   assert.ok(mergedKeywords.has('gambling'));
-  console.log('  ✅ PASSED: Keywords and web domains union-merged successfully.\n');
+  console.log('  [OK] PASSED: Keywords and web domains union-merged successfully.\n');
 }
 
 // 3. TEST: Schedule Conflict Resolution (LWW)
-console.log('▶ Test 3: Last-Write-Wins (LWW) Schedule Synchronization');
+console.log('[RUN] Test 3: Last-Write-Wins (LWW) Schedule Synchronization');
 {
   const localSchedule = {
     id: 'cloud_sync_schedule',
@@ -78,11 +78,11 @@ console.log('▶ Test 3: Last-Write-Wins (LWW) Schedule Synchronization');
   const effectiveSchedule = remoteSchedule.updatedAt > localSchedule.updatedAt ? remoteSchedule : localSchedule;
   assert.strictEqual(effectiveSchedule.start, '09:00');
   assert.strictEqual(effectiveSchedule.end, '17:00');
-  console.log('  ✅ PASSED: Latest schedule snapshot selected via LWW timestamp.\n');
+  console.log('  [OK] PASSED: Latest schedule snapshot selected via LWW timestamp.\n');
 }
 
 // 4. TEST: Web Extension Dual-Sync Ingestion
-console.log('▶ Test 4: Web Extension Cloud Sync Ingestion');
+console.log('[RUN] Test 4: Web Extension Cloud Sync Ingestion');
 {
   const extensionStorage = {
     guardianCustomDomains: ['reddit.com'],
@@ -103,11 +103,11 @@ console.log('▶ Test 4: Web Extension Cloud Sync Ingestion');
 
   assert.strictEqual(extensionStorage.guardianCustomDomains.length, 3);
   assert.strictEqual(extensionStorage.adultPackActive, true);
-  console.log('  ✅ PASSED: Web Extension successfully adopted cloud rules.\n');
+  console.log('  [OK] PASSED: Web Extension successfully adopted cloud rules.\n');
 }
 
 // 5. TEST: Transparent Token Refresh Logic
-console.log('▶ Test 5: Transparent Background Token Refresh');
+console.log('[RUN] Test 5: Transparent Background Token Refresh');
 {
   let currentSession = {
     accessToken: 'old_access_token',
@@ -130,9 +130,9 @@ console.log('▶ Test 5: Transparent Background Token Refresh');
   const activeSession = getOrRefreshSession(currentSession);
   assert.strictEqual(activeSession.accessToken, 'new_refreshed_access_token');
   assert.ok(activeSession.expiresAt > Date.now());
-  console.log('  ✅ PASSED: Expired session transparently refreshed.\n');
+  console.log('  [OK] PASSED: Expired session transparently refreshed.\n');
 }
 
 console.log('====================================================');
-console.log('🎉 ALL 5 ECOSYSTEM SYNC E2E TESTS PASSED SUCCESSFULLY!');
+console.log('[OK] ALL 5 ECOSYSTEM SYNC E2E TESTS PASSED SUCCESSFULLY!');
 console.log('====================================================');

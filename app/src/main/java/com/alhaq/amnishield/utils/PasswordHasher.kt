@@ -89,8 +89,21 @@ object PasswordHasher {
             stored.startsWith(PREFIX_V2) -> {
                 val parts = stored.removePrefix(PREFIX_V2).split('$')
                 if (parts.size != 2) return false
-                val salt = runCatching { decodeB64(parts[0]) }.getOrNull() ?: return false
-                val expected = runCatching { decodeB64(parts[1]) }.getOrNull() ?: return false
+                val saltStr = parts[0]
+                val expectedStr = parts[1]
+
+                // Support Extension's legacy v2 hex format: sha256("${salt}|${input}")
+                if (expectedStr.length == 64 && expectedStr.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) {
+                    val actualBytes = sha256("$saltStr|$input".toByteArray(Charsets.UTF_8))
+                    val actualHex = actualBytes.joinToString("") { "%02x".format(it) }
+                    return MessageDigest.isEqual(
+                        expectedStr.lowercase().toByteArray(Charsets.UTF_8),
+                        actualHex.toByteArray(Charsets.UTF_8)
+                    )
+                }
+
+                val salt = runCatching { decodeB64(saltStr) }.getOrNull() ?: return false
+                val expected = runCatching { decodeB64(expectedStr) }.getOrNull() ?: return false
 
                 val actual = sha256(salt + input.toByteArray(Charsets.UTF_8))
                 MessageDigest.isEqual(expected, actual)

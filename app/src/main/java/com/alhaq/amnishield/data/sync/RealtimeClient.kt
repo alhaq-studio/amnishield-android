@@ -1,5 +1,7 @@
 package com.alhaq.amnishield.data.sync
 
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -26,10 +28,12 @@ class RealtimeClient(
 
     fun start() {
         if (!running.compareAndSet(false, true)) return
+        activeInstances.add(this)
         connect()
     }
 
     fun stop() {
+        activeInstances.remove(this)
         running.set(false)
         onConnected(false)
         runCatching { ws?.close(1000, null) }
@@ -133,5 +137,20 @@ class RealtimeClient(
             reconnecting.set(false)
             if (running.get()) connect()
         }.apply { isDaemon = true }.start()
+    }
+
+    companion object {
+        private val activeInstances: MutableSet<RealtimeClient> =
+            Collections.newSetFromMap(ConcurrentHashMap<RealtimeClient, Boolean>())
+
+        fun disconnectAll() {
+            val snapshot = synchronized(activeInstances) { activeInstances.toList() }
+            for (client in snapshot) {
+                runCatching { client.stop() }
+            }
+            activeInstances.clear()
+        }
+
+        fun getActiveClientCount(): Int = activeInstances.size
     }
 }

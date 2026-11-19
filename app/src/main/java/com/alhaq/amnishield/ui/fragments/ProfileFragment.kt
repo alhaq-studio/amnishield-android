@@ -71,6 +71,15 @@ class ProfileFragment : Fragment() {
                     try {
                         val session = rest.signInWithGoogleIdToken(account.idToken)
                         if (session != null) {
+                            com.alhaq.amnishield.data.sync.SecureKeyStore(appContext).apply {
+                                accessToken = session.accessToken
+                                refreshToken = session.refreshToken
+                            }
+                            com.alhaq.amnishield.utils.SavedPreferencesLoader(appContext).saveUserProfile(
+                                session.userId,
+                                session.email ?: account.email.orEmpty(),
+                                account.displayName
+                            )
                             profile = rest.fetchProfile(session)
                         }
                     } catch (e: Exception) {

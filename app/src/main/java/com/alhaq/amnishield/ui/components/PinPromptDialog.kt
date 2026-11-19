@@ -24,11 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.alhaq.amnishield.utils.PasswordHasher
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import kotlinx.coroutines.delay
 
@@ -109,6 +111,8 @@ fun PinPromptContent(
     var pinText by remember { mutableStateOf("") }
     var firstEnteredPin by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf("") }
+    var useExtendedPasswordEntry by remember { mutableStateOf(false) }
+    var extendedPinInput by remember { mutableStateOf("") }
     var remainingMillis by remember { mutableStateOf(loader.getPinResetRemainingMillis()) }
 
     // Live countdown ticker if in countdown mode
@@ -195,42 +199,83 @@ fun PinPromptContent(
                     }
 
                     PinDialogMode.VERIFY -> {
-                        PinKeypadContent(
-                            title = title,
-                            subtitle = subtitle,
-                            pinText = pinText,
-                            errorText = errorText,
-                            showForgotPin = allowForgotPin,
-                            onCharClick = { char ->
-                                if (pinText.length < 4) {
-                                    pinText += char
+                        if (useExtendedPasswordEntry) {
+                            ExtendedPinVerifyContent(
+                                title = title,
+                                subtitle = "Enter your Master PIN or password synced with your account",
+                                value = extendedPinInput,
+                                errorText = errorText,
+                                showForgotPin = allowForgotPin,
+                                onValueChange = {
+                                    extendedPinInput = it
                                     errorText = ""
-                                    if (pinText.length == 4) {
-                                        val expectedPin = correctPin.ifEmpty { loader.getPinCode() }
-                                        if (pinText == expectedPin) {
-                                            onPinSuccess(pinText)
-                                        } else {
-                                            pinText = ""
-                                            errorText = "Incorrect PIN code"
+                                },
+                                onSubmit = {
+                                    val expectedPin = correctPin.ifEmpty { loader.getPinCode() }
+                                    if (PasswordHasher.verify(extendedPinInput, expectedPin)) {
+                                        onPinSuccess(extendedPinInput)
+                                    } else {
+                                        extendedPinInput = ""
+                                        errorText = "Incorrect PIN or password"
+                                    }
+                                },
+                                onSwitchToKeypad = {
+                                    useExtendedPasswordEntry = false
+                                    errorText = ""
+                                    pinText = ""
+                                },
+                                onCancelClick = onDismiss,
+                                onForgotPinClick = {
+                                    loader.requestPinReset()
+                                    remainingMillis = loader.getPinResetRemainingMillis()
+                                    currentMode = PinDialogMode.RESET_COUNTDOWN
+                                    onPinResetRequested?.invoke()
+                                }
+                            )
+                        } else {
+                            PinKeypadContent(
+                                title = title,
+                                subtitle = subtitle,
+                                pinText = pinText,
+                                errorText = errorText,
+                                showForgotPin = allowForgotPin,
+                                showExtendedPinSwitch = true,
+                                onSwitchToExtendedPin = {
+                                    useExtendedPasswordEntry = true
+                                    errorText = ""
+                                    extendedPinInput = ""
+                                },
+                                onCharClick = { char ->
+                                    if (pinText.length < 4) {
+                                        pinText += char
+                                        errorText = ""
+                                        if (pinText.length == 4) {
+                                            val expectedPin = correctPin.ifEmpty { loader.getPinCode() }
+                                            if (PasswordHasher.verify(pinText, expectedPin)) {
+                                                onPinSuccess(pinText)
+                                            } else {
+                                                pinText = ""
+                                                errorText = "Incorrect PIN code"
+                                            }
                                         }
                                     }
+                                },
+                                onDeleteClick = {
+                                    if (pinText.isNotEmpty()) pinText = pinText.dropLast(1)
+                                },
+                                onClearClick = {
+                                    pinText = ""
+                                    errorText = ""
+                                },
+                                onCancelClick = onDismiss,
+                                onForgotPinClick = {
+                                    loader.requestPinReset()
+                                    remainingMillis = loader.getPinResetRemainingMillis()
+                                    currentMode = PinDialogMode.RESET_COUNTDOWN
+                                    onPinResetRequested?.invoke()
                                 }
-                            },
-                            onDeleteClick = {
-                                if (pinText.isNotEmpty()) pinText = pinText.dropLast(1)
-                            },
-                            onClearClick = {
-                                pinText = ""
-                                errorText = ""
-                            },
-                            onCancelClick = onDismiss,
-                            onForgotPinClick = {
-                                loader.requestPinReset()
-                                remainingMillis = loader.getPinResetRemainingMillis()
-                                currentMode = PinDialogMode.RESET_COUNTDOWN
-                                onPinResetRequested?.invoke()
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -343,12 +388,132 @@ private fun PinCountdownContent(
 }
 
 @Composable
+private fun ExtendedPinVerifyContent(
+    title: String,
+    subtitle: String,
+    value: String,
+    errorText: String,
+    showForgotPin: Boolean,
+    onValueChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onSwitchToKeypad: () -> Unit,
+    onCancelClick: () -> Unit,
+    onForgotPinClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text("Master PIN / Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (errorText.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = errorText,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onSubmit,
+            enabled = value.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Unlock", fontWeight = FontWeight.Bold)
+        }
+
+        TextButton(onClick = onSwitchToKeypad) {
+            Text("Use 4-Digit Keypad", color = MaterialTheme.colorScheme.primary)
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onCancelClick) {
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            if (showForgotPin) {
+                TextButton(onClick = onForgotPinClick) {
+                    Icon(
+                        imageVector = Icons.Default.LockReset,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Forgot PIN?",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PinKeypadContent(
     title: String,
     subtitle: String,
     pinText: String,
     errorText: String,
     showForgotPin: Boolean,
+    showExtendedPinSwitch: Boolean = false,
+    onSwitchToExtendedPin: () -> Unit = {},
     onCharClick: (String) -> Unit,
     onDeleteClick: () -> Unit,
     onClearClick: () -> Unit,
@@ -476,6 +641,16 @@ private fun PinKeypadContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        if (showExtendedPinSwitch) {
+            TextButton(onClick = onSwitchToExtendedPin) {
+                Text(
+                    text = "Use Password / 6+ Digit PIN",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),

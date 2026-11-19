@@ -65,6 +65,7 @@ object AppRoutes {
     const val ADVANCED_SETTINGS = "advanced_settings"
     const val REELS_METRICS = "reels_metrics"
     const val ONBOARDING_PERMISSIONS = "onboarding_permissions"
+    const val SETUP_MODE = "setup_mode"
     const val ACCESSIBILITY_GUIDE = "accessibility_guide"
     const val REMINDERS = "reminders"
 }
