@@ -24,6 +24,8 @@ class HomeFeedNavigator {
             // Instagram — bottom nav home icon
             "com.instagram.android" to listOf(
                 "com.instagram.android:id/tab_home",
+                "com.instagram.android:id/feed_tab",
+                "com.instagram.android:id/tab_bar_home",
                 "com.instagram.android:id/ig_nav_tab_home",
                 "desc:Home"
             ),
@@ -105,17 +107,26 @@ class HomeFeedNavigator {
             val node = findNode(rootNode, targetId)
             if (node != null) {
                 try {
-                    if (node.isClickable) {
-                        val clicked = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                        if (clicked) return true
+                    if (node.isSelected) {
+                        return true
                     }
-                    // Try parent if the icon itself is not directly clickable
                     val parent = node.parent
-                    if (parent != null) {
-                        val parentClicked = parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    try {
+                        if (parent?.isSelected == true) {
+                            return true
+                        }
+                        if (node.isClickable) {
+                            val clicked = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                            if (clicked) return true
+                        }
+                        // Try parent if the icon itself is not directly clickable
+                        if (parent != null) {
+                            val parentClicked = parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                            if (parentClicked) return true
+                        }
+                    } finally {
                         @Suppress("DEPRECATION")
-                        parent.recycle()
-                        if (parentClicked) return true
+                        parent?.recycle()
                     }
                 } finally {
                     @Suppress("DEPRECATION")

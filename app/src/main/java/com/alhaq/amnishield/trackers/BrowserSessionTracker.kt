@@ -73,7 +73,6 @@ class BrowserSessionTracker(
         }
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun start() {
         if (isTrackingRunning) return
         isTrackingRunning = true
@@ -82,7 +81,12 @@ class BrowserSessionTracker(
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
         }
-        service.registerReceiver(screenReceiver, filter)
+        androidx.core.content.ContextCompat.registerReceiver(
+            service,
+            screenReceiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         handler.removeCallbacks(pollingRunnable)
         handler.postDelayed(pollingRunnable, 2000L)

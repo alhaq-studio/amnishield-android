@@ -28,7 +28,8 @@ import java.util.Locale
 
 open class WebsiteBlockerDetector(
     private val savedPreferencesLoader: SavedPreferencesLoader? = null,
-    private val blockedWebsitesProvider: (() -> Set<String>)? = null
+    private val blockedWebsitesProvider: (() -> Set<String>)? = null,
+    private val domainBlocklistEngine: DomainBlocklistEngine? = null
 ) : BaseBlocker() {
 
     companion object {
@@ -42,8 +43,22 @@ open class WebsiteBlockerDetector(
             "com.brave.browser" to listOf("url_bar"),
             "com.brave.browser_beta" to listOf("url_bar"),
             "com.microsoft.emmx" to listOf("url_bar"),
-            "com.sec.android.app.sbrowser" to listOf("location_bar_edit_text"),
-            "com.sec.android.app.sbrowser.beta" to listOf("location_bar_edit_text"),
+            "com.sec.android.app.sbrowser" to listOf(
+                "location_bar_edit_text",
+                "url_bar",
+                "url_text",
+                "location_bar_text",
+                "toolbar_url_bar",
+                "url_edit_text"
+            ),
+            "com.sec.android.app.sbrowser.beta" to listOf(
+                "location_bar_edit_text",
+                "url_bar",
+                "url_text",
+                "location_bar_text",
+                "toolbar_url_bar",
+                "url_edit_text"
+            ),
             "org.mozilla.firefox" to listOf("mozac_browser_toolbar_url_view"),
             "org.mozilla.focus" to listOf("mozac_browser_toolbar_url_view"),
             "com.opera.browser" to listOf("url_field"),
@@ -80,13 +95,26 @@ open class WebsiteBlockerDetector(
             val rawText = urlNode.text?.toString() ?: urlNode.contentDescription?.toString()
             val urlText = rawText.orEmpty().lowercase(Locale.ROOT).trim()
             if (urlText.isNotBlank()) {
+                val host = cleanUrlToDomain(urlText)
+                if (host != null) {
+                    val engineMatch = domainBlocklistEngine?.findMatchingSuffix(host)
+                    if (engineMatch != null && !isUnderCooldown(engineMatch)) {
+                        return engineMatch
+                    }
+                }
                 val candidateWebsites = activeWebsites
                     ?: blockedWebsitesProvider?.invoke()
                     ?: savedPreferencesLoader?.loadBlockedWebsites()
                     ?: emptySet()
                 for (site in candidateWebsites) {
                     val siteLower = site.trim().lowercase(Locale.ROOT)
-                    if (siteLower.isNotEmpty() && urlText.contains(siteLower) && !isUnderCooldown(siteLower)) {
+                    if (siteLower.isEmpty() || isUnderCooldown(siteLower)) continue
+                    val matched = if (host != null) {
+                        host == siteLower || host.endsWith(".$siteLower")
+                    } else {
+                        urlText.contains(siteLower)
+                    }
+                    if (matched) {
                         return site
                     }
                 }
@@ -109,11 +137,57 @@ open class WebsiteBlockerDetector(
                 if (node != null) return node
             }
         }
-        // Fallback: Check active input focus if inside a known browser
+        // Fallback: Check active input focus and bounded BFS if inside a known browser
         if (BROWSER_URL_BAR_IDS.containsKey(packageName)) {
             val focused = try { rootNode.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) } catch (_: Exception) { null }
-            if (focused != null && focused.isEditable) {
-                return focused
+            if (focused != null) {
+                val hasText = !focused.text.isNullOrBlank()
+                if (focused.isEditable || hasText) {
+                    return focused
+                }
+                try {
+                    @Suppress("DEPRECATION")
+                    focused.recycle()
+                } catch (_: Exception) {}
+            }
+
+            val queue = java.util.ArrayDeque<AccessibilityNodeInfo>()
+            try {
+                for (i in 0 until rootNode.childCount) {
+                    rootNode.getChild(i)?.let { queue.add(it) }
+                }
+                var visited = 0
+                while (queue.isNotEmpty() && visited < 40) {
+                    val node = queue.removeFirst()
+                    visited++
+                    val resId = node.viewIdResourceName?.lowercase(Locale.ROOT).orEmpty()
+                    val cls = node.className?.toString().orEmpty()
+                    val isTextOrEdit = cls == "android.widget.EditText" || cls == "android.widget.TextView" || node.isEditable
+                    val isUrlId = resId.contains("url") ||
+                        resId.contains("location_bar") ||
+                        resId.contains("omnibox") ||
+                        resId.contains("address")
+                    val hasNonBlankContent = !node.text.isNullOrBlank() || !node.contentDescription.isNullOrBlank()
+                    if (isTextOrEdit && isUrlId && hasNonBlankContent) {
+                        return node
+                    }
+                    if (visited < 40) {
+                        for (i in 0 until node.childCount) {
+                            node.getChild(i)?.let { queue.add(it) }
+                        }
+                    }
+                    try {
+                        @Suppress("DEPRECATION")
+                        node.recycle()
+                    } catch (_: Exception) {}
+                }
+            } finally {
+                while (queue.isNotEmpty()) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        queue.removeFirst().recycle()
+                    } catch (_: Exception) {}
+                }
             }
         }
         return null
@@ -162,5 +236,42 @@ open class WebsiteBlockerDetector(
         } else {
             null
         }
+    }
+
+    /**
+     * Checks whether the current browser window is an incognito / private browsing session.
+     * Node Lifecycle Invariant: NEVER recycles [rootNode]; recycles only child nodes returned by find*.
+     */
+    fun isIncognitoOrPrivateTab(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
+        if (!BROWSER_URL_BAR_IDS.containsKey(packageName)) return false
+        val markers = listOf("Incognito", "You've gone incognito", "Private browsing", "Secret mode", "InPrivate")
+        for (marker in markers) {
+            val nodes = runCatching { rootNode.findAccessibilityNodeInfosByText(marker) }.getOrNull()
+            if (!nodes.isNullOrEmpty()) {
+                nodes.forEach { child ->
+                    try {
+                        @Suppress("DEPRECATION")
+                        child.recycle()
+                    } catch (_: Exception) {}
+                }
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Identifies known obscure/unsupported Android browsers not in [BROWSER_URL_BAR_IDS].
+     */
+    fun isUnsupportedBrowserPackage(packageName: String): Boolean {
+        if (BROWSER_URL_BAR_IDS.containsKey(packageName)) return false
+        val lower = packageName.lowercase(Locale.ROOT)
+        return lower.contains("browser") ||
+            lower.contains("ucmobile") ||
+            lower.contains("puffin") ||
+            lower.contains("torbrowser") ||
+            lower.contains("dolphin") ||
+            lower.contains("yandex.browser") ||
+            lower.contains("alohabrowser")
     }
 }

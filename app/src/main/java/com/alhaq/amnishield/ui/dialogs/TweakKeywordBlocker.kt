@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity.RESULT_OK
 import androidx.core.app.ActivityOptionsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.alhaq.amnishield.R
+import com.alhaq.amnishield.blockers.KeywordBlocker
 import com.alhaq.amnishield.databinding.DialogKeywordBlockerConfigBinding
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.activity.SelectAppsActivity
@@ -82,7 +83,7 @@ class TweakKeywordBlocker(savedPreferencesLoader: SavedPreferencesLoader) :
         dialogManageKeywordBlocker.redirectUrl.setText(
             sharedPreferences.getString(
                 "redirect_url",
-                "https://www.youtube.com/watch?v=x31tDT-4fQw&t=1s"
+                KeywordBlocker.DEFAULT_REDIRECT_URL
             )
         )
 

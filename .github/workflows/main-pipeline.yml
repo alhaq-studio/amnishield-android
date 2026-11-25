@@ -14,28 +14,11 @@ permissions:
 
 jobs:
   # =========================================================================
-  # Target 1: Android Client CI Matrix (PlayStore, F-Droid, Universal)
+  # Target 1: Android Client CI (PlayStore, F-Droid, Universal)
   # =========================================================================
   android-ci:
-    name: Android Test & Build (${{ matrix.flavor }})
+    name: Android Test & Build Validation
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        flavor: [playstore, fdroid, universal]
-        include:
-          - flavor: playstore
-            taskPrefix: Playstore
-            artifactName: AmniShield-Playstore-Debug
-            apkPath: app/build/outputs/apk/playstore/debug/app-playstore-debug.apk
-          - flavor: fdroid
-            taskPrefix: Fdroid
-            artifactName: AmniShield-Fdroid-Debug
-            apkPath: app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
-          - flavor: universal
-            taskPrefix: Universal
-            artifactName: AmniShield-Universal-Debug
-            apkPath: app/build/outputs/apk/universal/debug/app-universal-debug.apk
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -49,38 +32,74 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run Unit Tests (${{ matrix.flavor }})
+      - name: Run Unit Tests (PlayStore Flavor)
         run: |
           set -o pipefail
           chmod +x ./gradlew
-          ./gradlew test${{ matrix.taskPrefix }}DebugUnitTest --stacktrace 2>&1 | tee gradle-${{ matrix.flavor }}.log || {
-            echo "### Gradle ${{ matrix.taskPrefix }} Test Failure" >> $GITHUB_STEP_SUMMARY
+          ./gradlew testPlaystoreDebugUnitTest --stacktrace 2>&1 | tee gradle-playstore.log || {
+            echo "### Gradle PlayStore Test Failure" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 120 gradle-${{ matrix.flavor }}.log >> $GITHUB_STEP_SUMMARY
+            tail -n 120 gradle-playstore.log >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             exit 1
           }
 
-      - name: Upload Test Reports (${{ matrix.flavor }})
+      - name: Run Unit Tests (F-Droid FOSS Flavor)
+        run: |
+          set -o pipefail
+          ./gradlew testFdroidDebugUnitTest --stacktrace 2>&1 | tee gradle-fdroid.log || {
+            echo "### Gradle F-Droid Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 gradle-fdroid.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
+
+      - name: Run Unit Tests (Universal Flavor)
+        run: |
+          set -o pipefail
+          ./gradlew testUniversalDebugUnitTest --stacktrace 2>&1 | tee gradle-universal.log || {
+            echo "### Gradle Universal Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 gradle-universal.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
+
+      - name: Upload Test Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-test-reports-${{ matrix.flavor }}
+          name: android-test-reports
           path: |
             app/build/reports/tests/
             app/build/test-results/
             *.log
           if-no-files-found: ignore
 
-      - name: Assemble Debug APK (${{ matrix.flavor }})
+      - name: Assemble Debug Artifacts (Compile Verification)
         run: |
-          ./gradlew assemble${{ matrix.taskPrefix }}Debug --stacktrace
+          ./gradlew assemblePlaystoreDebug --stacktrace
+          ./gradlew assembleFdroidDebug --stacktrace
+          ./gradlew assembleUniversalDebug --stacktrace
 
-      - name: Upload Debug APK (${{ matrix.flavor }})
+      - name: Upload PlayStore Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifactName }}
-          path: ${{ matrix.apkPath }}
+          name: AmniShield-Playstore-Debug
+          path: app/build/outputs/apk/playstore/debug/app-playstore-debug.apk
+
+      - name: Upload F-Droid Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmniShield-Fdroid-Debug
+          path: app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
+
+      - name: Upload Universal Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmniShield-Universal-Debug
+          path: app/build/outputs/apk/universal/debug/app-universal-debug.apk
 
   # =========================================================================
   # Target 2: Supabase Backend CI (Deno Edge Functions & DB Migrations)

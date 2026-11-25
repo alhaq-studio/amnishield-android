@@ -159,8 +159,10 @@ class CrashLogger(private val context: Context) : Thread.UncaughtExceptionHandle
         val sanitizedMsg = sanitize(throwable.message ?: "No error message")
 
         val sb = StringBuilder()
+        @Suppress("DEPRECATION")
+        val threadId = thread.id
         sb.append("\n").append("═".repeat(80)).append("\n")
-        sb.append("[$timestamp] [FATAL] [CRASH] Thread: ${thread.name} (ID: ${thread.id})\n")
+        sb.append("[$timestamp] [FATAL] [CRASH] Thread: ${thread.name} (ID: $threadId)\n")
         sb.append("Device: ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})\n")
         sb.append("App: ${context.packageName}\n")
         sb.append("Exception: ${throwable.javaClass.name}: $sanitizedMsg\n")

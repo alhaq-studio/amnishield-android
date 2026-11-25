@@ -15,12 +15,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Shield
@@ -87,6 +89,23 @@ fun RemindersScreen(
     }
 
     val scheduler = remember { SmartNotificationScheduler(context) }
+    val smartBrain = remember { com.alhaq.amnishield.notifications.SmartBehavioralBrain(context) }
+    val prefsLoader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context) }
+    var userName by remember { mutableStateOf(prefsLoader.getProfileName()) }
+    var dailyGoalMinutes by remember { mutableIntStateOf(prefsLoader.getProfileGoalMinutes()) }
+    val shortAppId = remember { prefsLoader.getShortAppId() }
+    var inboxItems by remember { mutableStateOf(com.alhaq.amnishield.utils.NotificationInboxStore.getAll(context)) }
+    val unreadInboxCount = remember(inboxItems) { inboxItems.count { !it.read } }
+
+    fun openNotificationInbox(expandItemId: Long = -1L) {
+        val intent = Intent(context, com.alhaq.amnishield.ui.activity.NotificationsActivity::class.java).apply {
+            if (expandItemId != -1L) {
+                putExtra(com.alhaq.amnishield.ui.activity.NotificationsActivity.EXTRA_EXPAND_ITEM_ID, expandItemId)
+            }
+        }
+        context.startActivity(intent)
+    }
+
     var hasNotifPermission by remember {
         mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled())
     }
@@ -104,12 +123,12 @@ fun RemindersScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Notifications & Reminders",
+                            text = "Smart Reminders",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
-                            text = "Configure alerts, nudge schedules & daily reports",
+                            text = "Synced for $userName • $shortAppId",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -118,6 +137,26 @@ fun RemindersScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    FilledTonalButton(
+                        onClick = { openNotificationInbox() },
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "Open Notification Inbox",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (unreadInboxCount > 0) "Inbox ($unreadInboxCount)" else "Inbox (${inboxItems.size})",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -138,6 +177,124 @@ fun RemindersScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Quick Cross-Navigation Card -> Notification Center & Reports
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Notification Inbox & Reports",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${inboxItems.size} saved reports ($unreadInboxCount unread) • Tap to inspect inline breakdowns",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Button(
+                        onClick = { openNotificationInbox() },
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text("Open Inbox", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+
+            // Synced Profile & Daily Screen Time Goal Card
+            val goalH = dailyGoalMinutes / 60
+            val goalM = dailyGoalMinutes % 60
+            val goalDisplay = when {
+                goalH > 0 && goalM > 0 -> "${goalH}h ${goalM}m"
+                goalH > 0 -> "${goalH}h"
+                else -> "${goalM}m"
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "$userName's Daily Screen Time Goal",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Smart alerts & daily recaps track against your $goalDisplay goal",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                val updated = (dailyGoalMinutes - 15).coerceIn(30, 480)
+                                dailyGoalMinutes = updated
+                                prefsLoader.setProfileGoalMinutes(updated)
+                            },
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease goal", modifier = Modifier.size(16.dp))
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = goalDisplay,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                        FilledTonalIconButton(
+                            onClick = {
+                                val updated = (dailyGoalMinutes + 15).coerceIn(30, 480)
+                                dailyGoalMinutes = updated
+                                prefsLoader.setProfileGoalMinutes(updated)
+                            },
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase goal", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
             // Master Notification Switch Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -187,7 +344,13 @@ fun RemindersScreen(
                         checked = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             masterNotificationsEnabled = checked
-                            sharedPreferences.edit().putBoolean("master_notifications_enabled", checked).apply()
+                            sharedPreferences.edit()
+                                .putBoolean("master_notifications_enabled", checked)
+                                .putBoolean("reminders_enabled", checked)
+                                .apply()
+                            if (checked) {
+                                scheduler.startSmartPeriodicChecks()
+                            }
                         }
                     )
                 }
@@ -256,26 +419,32 @@ fun RemindersScreen(
                     }
 
                     SwitchSettingRow(
-                        title = "Doomscroll Spike Alerts",
-                        subtitle = "Notify when Reels/Shorts scrolling exceeds 25 mins with 1-tap Focus action",
+                        title = "Doomscroll & Peak Usage Alerts",
+                        subtitle = "Notify when screen time or Reels/Shorts scrolling spikes with 1-tap Focus action",
                         checked = doomscrollAlertsEnabled && masterNotificationsEnabled,
                         enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             doomscrollAlertsEnabled = checked
-                            sharedPreferences.edit().putBoolean("doomscroll_alerts_enabled", checked).apply()
+                            sharedPreferences.edit()
+                                .putBoolean("doomscroll_alerts_enabled", checked)
+                                .putBoolean("smart_DailyInsights", checked)
+                                .apply()
                         }
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
                     SwitchSettingRow(
-                        title = "5-Minute Pre-Block Warnings",
-                        subtitle = "Receive an alert 5 minutes before scheduled block rules take effect",
+                        title = "5-Minute Pre-Block & Protection Warnings",
+                        subtitle = "Receive an alert before scheduled rules or when shield protection is paused",
                         checked = preBlockWarningsEnabled && masterNotificationsEnabled,
                         enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             preBlockWarningsEnabled = checked
-                            sharedPreferences.edit().putBoolean("pre_block_warnings_enabled", checked).apply()
+                            sharedPreferences.edit()
+                                .putBoolean("pre_block_warnings_enabled", checked)
+                                .putBoolean("smart_ProtectionStatus", checked)
+                                .apply()
                         }
                     )
                 }
@@ -385,6 +554,8 @@ fun RemindersScreen(
                         onCheckedChange = { checked ->
                             blockingAlertsEnabled = checked
                             sharedPreferences.edit().putBoolean("blocking_alerts_enabled", checked).apply()
+                            context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+                                .edit().putBoolean("blocking_alerts_enabled", checked).apply()
                         }
                     )
                 }
@@ -408,13 +579,16 @@ fun RemindersScreen(
                     }
 
                     SwitchSettingRow(
-                        title = "Productivity Milestones",
+                        title = "Productivity Milestones & Streaks",
                         subtitle = "Celebrate focus streaks and daily shield defense achievements",
                         checked = achievementEnabled && masterNotificationsEnabled,
                         enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             achievementEnabled = checked
-                            sharedPreferences.edit().putBoolean("achievement_enabled", checked).apply()
+                            sharedPreferences.edit()
+                                .putBoolean("achievement_enabled", checked)
+                                .putBoolean("smart_StreakMotivation", checked)
+                                .apply()
                         }
                     )
 
@@ -427,7 +601,10 @@ fun RemindersScreen(
                         enabled = masterNotificationsEnabled,
                         onCheckedChange = { checked ->
                             wellnessTipsEnabled = checked
-                            sharedPreferences.edit().putBoolean("wellness_tips_enabled", checked).apply()
+                            sharedPreferences.edit()
+                                .putBoolean("wellness_tips_enabled", checked)
+                                .putBoolean("smart_FeatureDiscovery", checked)
+                                .apply()
                         }
                     )
                 }
@@ -452,15 +629,18 @@ fun RemindersScreen(
                 Text("Open Android System Channel Settings", fontWeight = FontWeight.SemiBold)
             }
 
-            // Test Notification Button
+            // Test Smart Report Notification Button
             Button(
                 onClick = {
-                    val notificationHelper = NotificationHelper.getInstance(context)
-                    notificationHelper.showFocusReminder(
-                        "Doomscroll Spike Alert",
-                        "You've scrolled 42 Reels in 25 mins. Tap below to start 25m Focus Session!"
-                    )
-                    Toast.makeText(context, "Test notification sent!", Toast.LENGTH_SHORT).show()
+                    val payload = smartBrain.generateInstantSmartSnapshot()
+                    val createdItem = scheduler.fireNotification(payload)
+                    inboxItems = com.alhaq.amnishield.utils.NotificationInboxStore.getAll(context)
+                    Toast.makeText(context, "Smart Report generated! Opening Inbox...", Toast.LENGTH_SHORT).show()
+                    if (createdItem != null) {
+                        openNotificationInbox(createdItem.id)
+                    } else {
+                        openNotificationInbox()
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -469,7 +649,7 @@ fun RemindersScreen(
             ) {
                 Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Send Test Notification", fontWeight = FontWeight.Bold)
+                Text("Send Smart Report & Inspect in Inbox", fontWeight = FontWeight.Bold)
             }
         }
     }

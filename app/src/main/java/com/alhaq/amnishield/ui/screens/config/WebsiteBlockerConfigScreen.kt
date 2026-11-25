@@ -1,39 +1,32 @@
 package com.alhaq.amnishield.ui.screens.config
 
-import android.content.Context
-import android.content.Intent
-import android.util.Log
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.alhaq.amnishield.Constants
-import com.alhaq.amnishield.services.AmniShieldAccessibilityService
-import com.alhaq.amnishield.ui.activity.FragmentActivity
-import com.alhaq.amnishield.ui.fragments.BlocksManagerFragment
+import com.alhaq.amnishield.data.blockers.PreloadedPacks
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
-import com.alhaq.amnishield.data.blockers.BlockerType
-import com.alhaq.amnishield.ui.components.bounceClick
-
-private const val TAG = "WebsiteBlockerConfig"
-
 /**
- * Dedicated Jetpack Compose configuration screen for Website Blocker.
+ * Engine behavior & browser inspection reference screen for Website Blocker.
+ *
+ * Domain lists, built-in domain blocklists (51 Adult Domains, 40 Gambling Domains,
+ * 12 Social, 10 Streaming, 8 Gaming domains), schedules, pause friction, and warning styles
+ * are configured per Block Card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,26 +34,37 @@ fun WebsiteBlockerConfigScreen(
     isServiceEnabled: Boolean,
     onEnableServiceClick: () -> Unit,
     onBack: () -> Unit,
-    onConfigureWarning: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
 
-    var isFeatureEnabled by remember { mutableStateOf(loader.isWebsiteBlockerEnabled()) }
-    var warningStyle by remember { mutableStateOf(loader.getWebsiteBlockerWarningStyle()) }
-    var showWarningStyleDialog by remember { mutableStateOf(false) }
-
-    val blockedWebsitesCount = remember { loader.loadBlockedWebsites().size }
-    val websiteRulesCount = remember {
-        loader.loadAppBlockerScheduleRules()
-            .filter { it.blockerType == BlockerType.WEBSITE || it.packageName == "website_blocker" || it.title.contains("Website", ignoreCase = true) }
-            .map { it.groupId ?: it.id }
-            .distinct()
-            .size
+    val rules = remember { loader.loadUnifiedBlockRules() }
+    val alwaysOnWebsite = remember { loader.loadAlwaysOnShieldsConfig().website }
+    val activeWebsiteRules = remember(rules) {
+        rules.filter { it.isActiveOrScheduledForContentNow() && it.blockedDomains.isNotEmpty() }
     }
+    val alwaysOnDomains = remember(alwaysOnWebsite) {
+        if (alwaysOnWebsite.enabled) alwaysOnWebsite.effectiveDomains() else emptySet()
+    }
+    val activeDomainsCount = remember(activeWebsiteRules, alwaysOnDomains) {
+        (activeWebsiteRules.flatMap { it.blockedDomains }.map { it.lowercase() } + alwaysOnDomains).toSet().size
+    }
+    val hasAnyWebsiteProtection = activeWebsiteRules.isNotEmpty() || alwaysOnWebsite.enabled
 
-    Log.d(TAG, "Rendering WebsiteBlockerConfigScreen: enabled=$isFeatureEnabled, sitesCount=$blockedWebsitesCount, rulesCount=$websiteRulesCount")
+    val supportedBrowsers = remember {
+        listOf(
+            "Google Chrome" to "com.android.chrome",
+            "Brave Browser" to "com.brave.browser",
+            "Mozilla Firefox" to "org.mozilla.firefox",
+            "Microsoft Edge" to "com.microsoft.emmx",
+            "Samsung Internet" to "com.sec.android.app.sbrowser",
+            "DuckDuckGo" to "com.duckduckgo.mobile.android",
+            "Opera / Opera GX" to "com.opera.browser",
+            "Vivaldi Browser" to "com.vivaldi.browser",
+            "Kiwi Browser" to "com.kiwibrowser.browser"
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -70,31 +74,28 @@ fun WebsiteBlockerConfigScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Website Blocker Settings",
+                            text = "Website Detection Behavior",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
-                            text = "Block distracting domains & adult URLs",
+                            text = "Browser URL inspection & domain blocklists",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("website_config_back_button")
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -105,359 +106,195 @@ fun WebsiteBlockerConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Accessibility Service Banner if disabled
             if (!isServiceEnabled) {
                 ServiceRequiredCard(onEnableClick = onEnableServiceClick)
             }
 
-            // 1. Master Feature Switch Card
+            // Engine Status Banner
             Card(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
+                )
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isFeatureEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (hasAnyWebsiteProtection) Icons.Default.CheckCircle else Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Managed by Always-On Shields & Block Cards",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (hasAnyWebsiteProtection) {
+                                    val guardPrefix = if (alwaysOnWebsite.enabled) "Always-On Website Guard + " else ""
+                                    "${guardPrefix}${activeWebsiteRules.size} active Block Card(s) blocking $activeDomainsCount unique domain(s)."
+                                } else {
+                                    "No Always-On Website Guard or Block Cards are currently blocking website domains."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.12f)
+                    )
+
+                    Text(
+                        text = "Custom domains, built-in Website Blocklists, schedules, pause friction, and warning styles are configured inside each Block Card.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+
+            // Available Built-in Domain Blocklists Summary Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Language,
                             contentDescription = null,
-                            tint = if (isFeatureEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enable Website Blocker",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val dynamicSubtitle = when {
-                            !isServiceEnabled -> "Accessibility Service required"
-                            !isFeatureEnabled -> if (websiteRulesCount > 0) "Feature suspended • $websiteRulesCount rule${if (websiteRulesCount > 1) "s" else ""} preserved" else "Website blocker suspended"
-                            websiteRulesCount == 0 -> "Engine ready • No website rules active"
-                            else -> "Active • Enforcing $websiteRulesCount rule${if (websiteRulesCount > 1) "s" else ""}"
-                        }
-                        Text(
-                            text = dynamicSubtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = isFeatureEnabled,
-                        onCheckedChange = { checked ->
-                            Log.i(TAG, "Website Blocker feature toggle changed: $checked")
-                            isFeatureEnabled = checked
-                            loader.setWebsiteBlockerEnabled(checked, updateManual = true)
-
-                            val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).apply {
-                                setPackage(context.packageName)
-                            }
-                            context.sendBroadcast(refreshIntent)
-                        }
-                    )
-                }
-            }
-
-            // 2. Active Website Rules Link
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Public,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column {
                             Text(
-                                text = "Website Rules & URL Lists",
+                                text = "Built-in Domain Blocklists in Block Creator",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "$websiteRulesCount active rules • $blockedWebsitesCount domains configured",
+                                text = "Available under \"Select what to block -> Websites\" when creating or editing any Block Card:",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = {
-                            Log.d(TAG, "Navigating to Blocks Manager for Website Blocker")
-                            val intent = Intent(context, FragmentActivity::class.java).apply {
-                                putExtra("fragment", BlocksManagerFragment.FRAGMENT_ID)
-                                putExtra("filter_type", "Website Blocker")
+
+                    HorizontalDivider()
+
+                    PreloadedPacks.websitePacks.forEach { pack ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                Text(
+                                    text = pack.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = pack.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bounceClick(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AddCircleOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage Websites & Rules", fontWeight = FontWeight.SemiBold)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = "${pack.items.size} domains",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // 3. Intercept Reaction & Warning Style Card
+            // Supported Browsers Card
             Card(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bounceClick()
-                    .clickable { showWarningStyleDialog = true }
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.SelfImprovement,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Intercept Reaction Style",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val styleTitle = when (warningStyle) {
-                            Constants.BLOCKER_WARNING_STYLE_DIALOG -> "Standard Warning Dialog"
-                            Constants.BLOCKER_WARNING_STYLE_AMNISPACE -> "Mindful Breathing Pause"
-                            else -> "Silent URL Clean & Intercept"
-                        }
-                        Text(
-                            text = "Current: $styleTitle",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Change",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // 4. Warning Screen Dialog Customization (if Dialog mode is selected)
-            if (warningStyle == Constants.BLOCKER_WARNING_STYLE_DIALOG) {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bounceClick()
-                        .clickable { onConfigureWarning() }
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Warning,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
                             Text(
-                                text = "Warning Screen Customization",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = "Supported Browsers (Zero-VPN Inspection)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Customize message, cooldown delays, and motivation",
+                                text = "AmniShield inspects the browser address bar directly via Accessibility without draining battery through a local VPN.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "Configure",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    }
+
+                    HorizontalDivider()
+
+                    supportedBrowsers.forEach { (browserName, pkg) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = browserName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = pkg,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
-    }
-
-    // Intercept Warning Style Dialog
-    if (showWarningStyleDialog) {
-        val warningOptions = listOf(
-            Triple(
-                Constants.BLOCKER_WARNING_STYLE_SILENT,
-                "Silent URL Clean & Intercept (Default)",
-                "Silently clears the restricted website URL from the browser address bar without interrupting your flow or leaving the app."
-            ),
-            Triple(
-                Constants.BLOCKER_WARNING_STYLE_DIALOG,
-                "Standard Warning Dialog",
-                "Displays the classic warning dialog with cooldown timer, customized message, and unlock button."
-            ),
-            Triple(
-                Constants.BLOCKER_WARNING_STYLE_AMNISPACE,
-                "Mindful Breathing Pause",
-                "Disrupts access with a guided mindful breathing pause to choose intentionally before returning to home."
-            )
-        )
-
-        AlertDialog(
-            onDismissRequest = { showWarningStyleDialog = false },
-            title = {
-                Text(
-                    text = "Choose Intercept Reaction",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    warningOptions.forEach { (styleCode, title, desc) ->
-                        val isSelected = warningStyle == styleCode
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    Log.i(TAG, "Selected website blocker warning style: $styleCode ($title)")
-                                    warningStyle = styleCode
-                                    loader.setWebsiteBlockerWarningStyle(styleCode)
-                                    val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).apply {
-                                        setPackage(context.packageName)
-                                    }
-                                    context.sendBroadcast(refreshIntent)
-                                    showWarningStyleDialog = false
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = {
-                                        warningStyle = styleCode
-                                        loader.setWebsiteBlockerWarningStyle(styleCode)
-                                        val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER).apply {
-                                            setPackage(context.packageName)
-                                        }
-                                        context.sendBroadcast(refreshIntent)
-                                        showWarningStyleDialog = false
-                                    }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = desc,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showWarningStyleDialog = false }) {
-                    Text("Close")
-                }
-            }
-        )
     }
 }

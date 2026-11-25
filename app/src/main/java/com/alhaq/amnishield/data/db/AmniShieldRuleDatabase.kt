@@ -6,7 +6,11 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.AppInterceptionLevel
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
+import com.alhaq.amnishield.data.blockers.BlockRuleStatus
+import com.alhaq.amnishield.data.blockers.LimitPeriod
+import com.alhaq.amnishield.data.blockers.UnifiedBlockRule
 import com.alhaq.amnishield.security.AuthType
 import com.alhaq.amnishield.ui.state.ScheduleRule
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -210,6 +214,156 @@ class AmniShieldRuleDatabase private constructor(context: Context) : SQLiteOpenH
 
     fun loadLaunchLimitRules(): List<AppLaunchLimitRule> = synchronized(dbLock) {
         return@synchronized getAllScreenTimeLimitRules().map { it.toLaunchLimitRule() }
+    }
+
+    /**
+     * Projects active/non-archived [UnifiedBlockRule] entries into the relational SQLite
+     * `app_block_rules` and `screen_time_limit_rules` tables so reactive [StateFlow] observers
+     * and SQLite storage remain synchronized with the Unified Block Engine.
+     */
+    fun syncUnifiedBlockRules(rules: List<UnifiedBlockRule>) = synchronized(dbLock) {
+        val nonArchived = rules.filter { it.status != BlockRuleStatus.ARCHIVED }
+        val projectedAppRules = mutableListOf<AppBlockRule>()
+        val projectedLimits = mutableListOf<ScreenTimeLimitRule>()
+
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
+        nonArchived.forEach { rule ->
+            val enabled = rule.isEffectivelyActive(nowElapsed, nowWall)
+            val targetPackages = rule.appTargets
+                .filterValues { it == AppInterceptionLevel.BLOCK_ENTIRE_APP }
+                .keys
+                .ifEmpty { setOf("unified::${rule.id}") }
+
+            if (rule.weeklySchedules.isEmpty()) {
+                targetPackages.forEach { pkg ->
+                    projectedAppRules.add(
+                        AppBlockRule(
+                            id = "${rule.id}::$pkg",
+                            title = rule.name,
+                            packageName = pkg,
+                            type = "BLOCK",
+                            recurrence = "ALWAYS",
+                            startMinute = 0,
+                            endMinute = 1439,
+                            selectedDays = "",
+                            durationHours = 0,
+                            activeUntilMillis = rule.pausedUntilWallClockMillis,
+                            createdAt = rule.createdAt,
+                            groupId = rule.id,
+                            groupTitle = rule.name,
+                            isEnabled = enabled,
+                            authType = rule.authType,
+                            rulePasswordHash = rule.rulePasswordHash,
+                            rulePasswordSalt = rule.rulePasswordSalt
+                        )
+                    )
+                }
+            } else {
+                rule.weeklySchedules.forEach { sched ->
+                    val daysCsv = sched.sanitizedDays().sorted().joinToString(",")
+                    val startMin = if (sched.isAllDay()) 0 else sched.startTimeMinutes
+                    val endMin = if (sched.isAllDay()) 1439 else sched.endTimeMinutes
+                    targetPackages.forEach { pkg ->
+                        projectedAppRules.add(
+                            AppBlockRule(
+                                id = "${rule.id}::${sched.id}::$pkg",
+                                title = rule.name,
+                                packageName = pkg,
+                                type = "BLOCK",
+                                recurrence = "WEEKLY",
+                                startMinute = startMin,
+                                endMinute = endMin,
+                                selectedDays = daysCsv,
+                                durationHours = 0,
+                                activeUntilMillis = rule.pausedUntilWallClockMillis,
+                                createdAt = rule.createdAt,
+                                groupId = rule.id,
+                                groupTitle = rule.name,
+                                isEnabled = enabled,
+                                authType = rule.authType,
+                                rulePasswordHash = rule.rulePasswordHash,
+                                rulePasswordSalt = rule.rulePasswordSalt
+                            )
+                        )
+                    }
+                }
+            }
+
+            val limitPackages = rule.appTargets.keys
+            limitPackages.forEach { pkg ->
+                rule.openLimits.forEach { openLimit ->
+                    projectedLimits.add(
+                        ScreenTimeLimitRule(
+                            id = "${rule.id}::open::${openLimit.id}::$pkg",
+                            packageName = pkg,
+                            maxLaunches = openLimit.maxLaunches,
+                            timePeriod = if (openLimit.period == LimitPeriod.HOURLY) "HOURLY" else "DAILY",
+                            dayOfWeek = 0,
+                            limitMinutes = 0,
+                            createdAt = rule.createdAt,
+                            isEnabled = enabled,
+                            authType = rule.authType,
+                            rulePasswordHash = rule.rulePasswordHash,
+                            rulePasswordSalt = rule.rulePasswordSalt
+                        )
+                    )
+                }
+                rule.screenTimeLimits.forEach { timeLimit ->
+                    projectedLimits.add(
+                        ScreenTimeLimitRule(
+                            id = "${rule.id}::time::${timeLimit.id}::$pkg",
+                            packageName = pkg,
+                            maxLaunches = 0,
+                            timePeriod = if (timeLimit.period == LimitPeriod.HOURLY) "HOURLY" else "DAILY",
+                            dayOfWeek = 0,
+                            limitMinutes = timeLimit.maxMinutes,
+                            createdAt = rule.createdAt,
+                            isEnabled = enabled,
+                            authType = rule.authType,
+                            rulePasswordHash = rule.rulePasswordHash,
+                            rulePasswordSalt = rule.rulePasswordSalt
+                        )
+                    )
+                }
+            }
+        }
+
+        inMemoryAppBlockRules.clear()
+        projectedAppRules.forEach { inMemoryAppBlockRules[it.id] = it }
+        inMemoryScreenTimeRules.clear()
+        projectedLimits.forEach { inMemoryScreenTimeRules[it.id] = it }
+
+        runCatching {
+            val db = writableDatabase
+            if (db != null) {
+                db.beginTransaction()
+                try {
+                    db.delete(TABLE_APP_BLOCK_RULES, null, null)
+                    projectedAppRules.forEach { entity ->
+                        db.insertWithOnConflict(
+                            TABLE_APP_BLOCK_RULES,
+                            null,
+                            entity.toContentValues(),
+                            SQLiteDatabase.CONFLICT_REPLACE
+                        )
+                    }
+                    db.delete(TABLE_SCREEN_TIME_LIMIT_RULES, null, null)
+                    projectedLimits.forEach { entity ->
+                        db.insertWithOnConflict(
+                            TABLE_SCREEN_TIME_LIMIT_RULES,
+                            null,
+                            entity.toContentValues(),
+                            SQLiteDatabase.CONFLICT_REPLACE
+                        )
+                    }
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                }
+            }
+        }
+        emitCurrentFlows()
     }
 
     fun getAllScreenTimeLimitRules(): List<ScreenTimeLimitRule> = synchronized(dbLock) {

@@ -59,7 +59,6 @@ fun FocusModeConfigScreen(
     onBack: () -> Unit,
     onSelectAppsClick: () -> Unit,
     onSelectAlwaysWhitelistedClick: () -> Unit,
-    onConfigureWarning: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current

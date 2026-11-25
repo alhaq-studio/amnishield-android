@@ -48,12 +48,6 @@ class AppBlockerConfigFragment : BaseFeatureFragment() {
                             if (!parentFragmentManager.popBackStackImmediate()) {
                                 activity?.finish()
                             }
-                        },
-                        onConfigureWarning = {
-                            TweakAppBlockerWarning(savedPreferencesLoader).show(
-                                childFragmentManager,
-                                "tweak_app_blocker_warning"
-                            )
                         }
                     )
                 }
@@ -93,12 +87,6 @@ class ReelBlockerConfigFragment : BaseFeatureFragment() {
                             if (!parentFragmentManager.popBackStackImmediate()) {
                                 activity?.finish()
                             }
-                        },
-                        onConfigureWarning = {
-                            TweakViewBlockerWarning(savedPreferencesLoader).show(
-                                childFragmentManager,
-                                "tweak_reel_blocker_warning"
-                            )
                         }
                     )
                 }
@@ -211,18 +199,6 @@ class KeywordBlockerConfigFragment : BaseFeatureFragment() {
                             if (!parentFragmentManager.popBackStackImmediate()) {
                                 activity?.finish()
                             }
-                        },
-                        onConfigureWarning = {
-                            TweakKeywordBlockerWarning(savedPreferencesLoader).show(
-                                childFragmentManager,
-                                "tweak_keyword_warning"
-                            )
-                        },
-                        onConfigureSensitivity = {
-                            TweakKeywordBlocker(savedPreferencesLoader).show(
-                                childFragmentManager,
-                                "tweak_keyword_blocker"
-                            )
                         }
                     )
                 }

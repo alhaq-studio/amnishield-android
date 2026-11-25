@@ -17,6 +17,7 @@ import com.alhaq.amnishield.receivers.AdminReceiver
 import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.activity.MainActivity
 import com.alhaq.amnishield.ui.fragments.features.BaseFeatureFragment
+import com.alhaq.amnishield.ui.navigation.FragmentDestination
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -86,26 +87,39 @@ class AdvancedFragment : BaseFeatureFragment() {
         val serviceEnabled = isAccessibilityServiceEnabled(AmniShieldAccessibilityService::class.java)
         val premiumEnabled = premiumManager.isPremium()
 
-        val appBlockedApps = loader.loadBlockedApps().size
-        val appActive = premiumEnabled && loader.isAppBlockerFeatureEnabled() && appBlockedApps > 0 && serviceEnabled
+        val unifiedRules = loader.loadUnifiedBlockRules()
+        loader.syncUnifiedRulesToLegacyEngines(unifiedRules)
+        val activeUnifiedRules = unifiedRules.filter { it.isActiveOrScheduledForContentNow() }
 
-        val keywordCount = loader.loadBlockedKeywords().size
-        val adultPackEnabled = loader.isKeywordBlockerAdultPackEnabled()
-        val keywordActive = loader.isKeywordBlockerFeatureEnabled() && (keywordCount > 0 || adultPackEnabled) && serviceEnabled
+        val appBlockedApps = loader.loadBlockedApps().size
+        val hasUnifiedAppTargets = activeUnifiedRules.any { rule ->
+            rule.appTargets.values.any { it == com.alhaq.amnishield.data.blockers.AppInterceptionLevel.BLOCK_ENTIRE_APP }
+        }
+        val appActive = (hasUnifiedAppTargets || (loader.isAppBlockerFeatureEnabled() && appBlockedApps > 0)) && serviceEnabled
+
+        val activeKeywords = loader.loadBlockedKeywords()
+        val keywordActive = activeKeywords.isNotEmpty() && serviceEnabled
 
         val focusData = loader.getFocusModeData()
-        val focusActive = premiumEnabled && focusData.isTurnedOn && serviceEnabled
+        val focusActive = focusData.isTurnedOn && serviceEnabled
 
-        val websiteActive = premiumEnabled && loader.isWebsiteBlockerEnabled() && serviceEnabled
+        val activeWebsites = loader.loadBlockedWebsites()
+        val websiteActive = activeWebsites.isNotEmpty() && serviceEnabled
 
         val allSchedules = loader.loadAppBlockerScheduleRules()
-        val scheduleCount = allSchedules.count { it.type == AppBlockScheduleRule.RuleType.BLOCK }
-        val launchLimitCount = loader.loadAppLaunchLimitRules().size
+        val scheduleCount = allSchedules.count { it.type == AppBlockScheduleRule.RuleType.BLOCK } +
+            unifiedRules.count { it.weeklySchedules.isNotEmpty() }
+        val launchLimitCount = loader.loadAppLaunchLimitRules().size +
+            unifiedRules.count { it.screenTimeLimits.isNotEmpty() || it.openLimits.isNotEmpty() }
 
+        val hasUnifiedShortform = activeUnifiedRules.any { rule ->
+            rule.includeInBrowserShortform ||
+                rule.appTargets.values.any { it == com.alhaq.amnishield.data.blockers.AppInterceptionLevel.BLOCK_SHORTFORM_ONLY }
+        }
         val viewBlockerPrefs = requireContext().getSharedPreferences("view_blocker", Context.MODE_PRIVATE)
         val legacyEnabled = viewBlockerPrefs.getBoolean("is_enabled", false)
         val reelBlockerPrefs = requireContext().getSharedPreferences("reel_blocker", Context.MODE_PRIVATE)
-        val reelsActive = reelBlockerPrefs.getBoolean("is_enabled", legacyEnabled) && serviceEnabled
+        val reelsActive = (hasUnifiedShortform || reelBlockerPrefs.getBoolean("is_enabled", legacyEnabled)) && serviceEnabled
 
         val antiUninstallPrefs = requireContext().getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
         val hasDeviceAdmin = isDeviceAdminEnabled(requireContext())
@@ -137,7 +151,7 @@ class AdvancedFragment : BaseFeatureFragment() {
                 isFocusModeActive = focusActive,
                 isScheduleEnabled = scheduleCount > 0,
                 isUsageLimitEnabled = launchLimitCount > 0,
-                keywords = loader.loadBlockedKeywords().toList(),
+                keywords = activeKeywords.toList(),
                 isPinProtectionEnabled = pinEnabled,
                 profilePin = pinCode,
                 isAppLockEnabled = appLockActive,
@@ -159,13 +173,9 @@ class AdvancedFragment : BaseFeatureFragment() {
             return
         }
 
-        val destination = com.alhaq.amnishield.ui.navigation.FragmentDestination.fromKey(featureType)
-        val intent = if (destination != null) {
-            FragmentActivity.createIntent(requireContext(), destination)
-        } else {
-            Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("feature_type", featureType)
-            }
+        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+            putExtra(FragmentDestination.EXTRA_DESTINATION_KEY, featureType)
+            putExtra("feature_type", featureType)
         }
         startActivity(intent, activityOptions.toBundle())
     }
@@ -177,10 +187,9 @@ class AdvancedFragment : BaseFeatureFragment() {
             .setTitle(R.string.premium_required_title)
             .setMessage(getString(R.string.premium_required_message))
             .setPositiveButton(R.string.premium_view_plans) { _, _ ->
-                val intent = FragmentActivity.createIntent(
-                    requireContext(),
-                    com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures
-                )
+                val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                    putExtra("feature_type", "premium_features")
+                }
                 startActivity(intent, activityOptions.toBundle())
             }
             .setNegativeButton(android.R.string.cancel, null)

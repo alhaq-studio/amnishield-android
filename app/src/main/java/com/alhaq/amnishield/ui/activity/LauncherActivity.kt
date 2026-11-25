@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +37,7 @@ class LauncherActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLauncherBinding
     private lateinit var adapter: ApplicationAdapter
     private val pinnedAppPackages = mutableSetOf<String>()
+    private var isPackageReceiverRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         com.alhaq.amnishield.utils.ThemeUtils.applyTheme(this)
@@ -54,16 +56,13 @@ class LauncherActivity : AppCompatActivity() {
             addAction(Intent.ACTION_PACKAGE_REMOVED)
             addDataScheme("package") // Important for detecting package changes
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                packageChangeReceiver,
-                packageChangeIntentFilter,
-                Context.RECEIVER_EXPORTED
-            )
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(packageChangeReceiver, packageChangeIntentFilter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            packageChangeReceiver,
+            packageChangeIntentFilter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        isPackageReceiverRegistered = true
 
         pinnedAppPackages.addAll(loadPinnedApps())
         adapter = ApplicationAdapter(listOf())
@@ -87,6 +86,14 @@ class LauncherActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         binding.clock.text = getCurrentTime()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isPackageReceiverRegistered) {
+            runCatching { unregisterReceiver(packageChangeReceiver) }
+            isPackageReceiverRegistered = false
+        }
     }
     private fun getCurrentTime(): String {
         val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())

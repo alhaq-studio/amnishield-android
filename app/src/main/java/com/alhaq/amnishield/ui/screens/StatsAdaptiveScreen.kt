@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.alhaq.amnishield.ui.state.AmniShieldState
 import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import com.alhaq.amnishield.utils.ReelsStatsManager
+import kotlinx.coroutines.launch
 
 enum class StatsDetailPaneType(
     val title: String,
@@ -49,6 +50,7 @@ fun StatsAdaptiveScreen(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val navigator = rememberListDetailPaneScaffoldNavigator<StatsDetailPaneType>()
     var selectedPane by remember { mutableStateOf<StatsDetailPaneType?>(StatsDetailPaneType.OVERVIEW) }
     val reelsStatsManager = remember { ReelsStatsManager.getInstance(context) }
@@ -85,7 +87,9 @@ fun StatsAdaptiveScreen(
                             OutlinedCard(
                                 onClick = {
                                     selectedPane = paneType
-                                    navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, paneType)
+                                    coroutineScope.launch {
+                                        navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, paneType)
+                                    }
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 border = BorderStroke(
@@ -173,7 +177,9 @@ fun StatsAdaptiveScreen(
                             onViewDetailedUsage = {},
                             onViewReelsMetrics = {
                                 selectedPane = StatsDetailPaneType.REELS
-                                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, StatsDetailPaneType.REELS)
+                                coroutineScope.launch {
+                                    navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, StatsDetailPaneType.REELS)
+                                }
                             }
                         )
                     }
@@ -183,7 +189,11 @@ fun StatsAdaptiveScreen(
                             dailyLimit = 50,
                             isBlockerEnabled = state.isReelsBlockerEnabled,
                             onBack = {
-                                if (navigator.canNavigateBack()) navigator.navigateBack() else onBack()
+                                if (navigator.canNavigateBack()) {
+                                    coroutineScope.launch { navigator.navigateBack() }
+                                } else {
+                                    onBack()
+                                }
                             },
                             onRefresh = {},
                             onConfigureRules = {}

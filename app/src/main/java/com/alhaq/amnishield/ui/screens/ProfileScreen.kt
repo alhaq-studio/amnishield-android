@@ -179,6 +179,8 @@ fun ProfileScreen(
                     .putString("profile_image_uri", savedPath)
                     .putString("profile_avatar_id", "custom_photo")
                     .apply()
+                preferencesLoader.setProfileAvatarId("custom_photo")
+                preferencesLoader.setProfileImageUri(savedPath)
                 viewModel.updateProfilePicture(imageUri = savedPath, avatarId = "custom_photo")
                 showAvatarPickerSheet = false
             } catch (e: Exception) {
@@ -206,6 +208,8 @@ fun ProfileScreen(
                     .putString("profile_image_uri", savedPath)
                     .putString("profile_avatar_id", "custom_photo")
                     .apply()
+                preferencesLoader.setProfileAvatarId("custom_photo")
+                preferencesLoader.setProfileImageUri(savedPath)
                 viewModel.updateProfilePicture(imageUri = savedPath, avatarId = "custom_photo")
                 showAvatarPickerSheet = false
             } catch (e: Exception) {
@@ -398,6 +402,51 @@ fun ProfileScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.SemiBold
                                 )
+                            }
+
+                            // Bound App ID Badge (Tap to Copy)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                modifier = Modifier
+                                    .padding(top = 6.dp)
+                                    .clickable {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                        clipboard?.setPrimaryClip(
+                                            android.content.ClipData.newPlainText(
+                                                "AmniShield App ID",
+                                                preferencesLoader.getDeviceId()
+                                            )
+                                        )
+                                        Toast.makeText(context, "App ID copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    }
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fingerprint,
+                                        contentDescription = "Local App ID",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "App ID: ${preferencesLoader.getShortAppId()}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = "Copy App ID",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
                             }
 
                             if (isFounderActive || preferencesLoader.isFounderBadgeUnlocked()) {
@@ -1456,6 +1505,8 @@ fun ProfileScreen(
                                 .putBoolean("profile_pin_enabled", pinProtectionEnabled)
                                 .putString("profile_pin", profilePin)
                                 .apply()
+                            preferencesLoader.setProfileName(name)
+                            preferencesLoader.setProfileGoalMinutes(goalMinutes)
                             showSuccessMessage = true
                         },
                         style = AmniShieldButtonStyle.Primary,

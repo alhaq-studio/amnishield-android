@@ -25,6 +25,7 @@ import com.alhaq.amnishield.R
 import com.alhaq.amnishield.ui.activity.MainActivity
 import com.alhaq.amnishield.ui.activity.FragmentActivity
 import com.alhaq.amnishield.ui.activity.RemindersActivity
+import com.alhaq.amnishield.ui.navigation.FragmentDestination
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.premium.PremiumManager
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
@@ -110,10 +111,10 @@ class SettingsFragment : Fragment() {
                         state = state,
                         viewModel = viewModel,
                         onNavigateToProfile = {
-                            val intent = FragmentActivity.createIntent(
-                                requireContext(),
-                                com.alhaq.amnishield.ui.navigation.FragmentDestination.Profile
-                            )
+                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                                putExtra(FragmentDestination.EXTRA_DESTINATION_KEY, "profile")
+                                putExtra("fragment", "profile")
+                            }
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -133,10 +134,10 @@ class SettingsFragment : Fragment() {
                         },
                         onShareCrashLogs = { shareCrashLogs() },
                         onDiagnostics = {
-                            val intent = FragmentActivity.createIntent(
-                                requireContext(),
-                                com.alhaq.amnishield.ui.navigation.FragmentDestination.Diagnostics
-                            )
+                            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                                putExtra(FragmentDestination.EXTRA_DESTINATION_KEY, "diagnostics")
+                                putExtra("feature_type", "diagnostics")
+                            }
                             val options = ActivityOptionsCompat.makeCustomAnimation(
                                 requireContext(),
                                 R.anim.fade_in,
@@ -514,10 +515,10 @@ class SettingsFragment : Fragment() {
     }
 
     private fun openPremiumScreen() {
-        FragmentActivity.launch(
-            requireContext(),
-            com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures
-        )
+        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+            putExtra("feature_type", "premium_features")
+        }
+        startActivity(intent)
     }
 
     private fun openUrl(url: String) {

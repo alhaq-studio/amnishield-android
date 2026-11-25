@@ -20,12 +20,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.OpenInFull
+import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
@@ -45,14 +50,12 @@ import androidx.compose.ui.window.DialogProperties
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.outlined.OpenInFull
-import androidx.compose.material.icons.outlined.SelfImprovement
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.ui.activity.AmniSpaceActivity
 import com.alhaq.amnishield.ui.activity.SelectAppsActivity
 import com.alhaq.amnishield.ui.components.bounceClick
+import com.alhaq.amnishield.ui.state.ScheduleRule
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
 data class FocusAppItem(
@@ -73,7 +76,12 @@ fun FocusScreen(
     onStopFocusSession: () -> Unit = {},
     onOpenFocusConfig: () -> Unit,
     onConfigureSchedules: () -> Unit,
-    onEnableService: () -> Unit
+    onEnableService: () -> Unit,
+    focusSchedules: List<ScheduleRule> = emptyList(),
+    onCreateFocusSchedule: () -> Unit = onConfigureSchedules,
+    onEditFocusSchedule: (ScheduleRule) -> Unit = {},
+    onToggleFocusSchedule: (String, Boolean) -> Unit = { _, _ -> },
+    onDeleteFocusSchedule: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val loader = remember { SavedPreferencesLoader(context) }
@@ -96,6 +104,10 @@ fun FocusScreen(
             onOpenFocusConfig = {
                 showQuickFocusDialog = false
                 onOpenFocusConfig()
+            },
+            onSwitchToAutoSchedule = {
+                showQuickFocusDialog = false
+                onCreateFocusSchedule()
             },
             onStart = { duration, mode, apps ->
                 showQuickFocusDialog = false
@@ -306,6 +318,34 @@ fun FocusScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                if (isServiceEnabled) {
+                                    onCreateFocusSchedule()
+                                } else {
+                                    onEnableService()
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Schedule Auto Focus",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     } else {
                         Button(
                             onClick = onStopFocusSession,
@@ -335,6 +375,168 @@ fun FocusScreen(
                 }
             }
         }
+        }
+
+        // Auto Focus Schedules Section Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "AUTO FOCUS SCHEDULES",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 1.sp
+                        )
+                        TextButton(
+                            onClick = {
+                                if (isServiceEnabled) onCreateFocusSchedule() else onEnableService()
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    if (focusSchedules.isEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = "No auto focus schedules yet",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Automate recurring focus sessions by time window, weekdays, and app allowlist/blocklist.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                FilledTonalButton(
+                                    onClick = {
+                                        if (isServiceEnabled) onCreateFocusSchedule() else onEnableService()
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CalendarToday,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Create Auto Schedule")
+                                }
+                            }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            focusSchedules.forEach { schedule ->
+                                val windowText = if (schedule.isAlwaysBlockEnabled) {
+                                    "Always Active"
+                                } else {
+                                    "${schedule.startTime} - ${schedule.endTime}"
+                                }
+                                val daysText = if (schedule.isAlwaysBlockEnabled) {
+                                    "Every day"
+                                } else if (schedule.days.size == 7) {
+                                    "Daily"
+                                } else {
+                                    schedule.days.joinToString(", ")
+                                }
+                                val strategyText = if (schedule.focusProtectionMode == Constants.FOCUS_MODE_BLOCK_ALL_EX_SELECTED) {
+                                    "Allow Only Selected"
+                                } else {
+                                    "Block Selected"
+                                }
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onEditFocusSchedule(schedule) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = schedule.name.ifBlank { "Auto Focus Schedule" },
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "$windowText • $daysText",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "$strategyText • ${schedule.selectedApps.size} apps",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        IconButton(onClick = { onDeleteFocusSchedule(schedule.id) }) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Delete,
+                                                contentDescription = "Delete Auto Schedule",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Switch(
+                                            checked = schedule.isActive,
+                                            onCheckedChange = { enabled ->
+                                                onToggleFocusSchedule(schedule.id, enabled)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Focus Mode Configurations & Settings Card
@@ -367,28 +569,14 @@ fun FocusScreen(
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        Column {
-                            FocusItemRow(
-                                icon = Icons.Outlined.Settings,
-                                title = "Focus Settings & Whitelist",
-                                summary = "Configure global strategy, emergency whitelist & strictness",
-                                statusText = "SETTINGS",
-                                onChecked = onOpenFocusConfig,
-                                iconColor = MaterialTheme.colorScheme.primary
-                            )
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            FocusItemRow(
-                                icon = Icons.Outlined.CalendarToday,
-                                title = "AutoFocus Schedules",
-                                summary = "Set automated recurring focus schedule windows",
-                                statusText = "SCHEDULES",
-                                onChecked = onConfigureSchedules,
-                                iconColor = Color(0xFF3B82F6)
-                            )
-                        }
+                        FocusItemRow(
+                            icon = Icons.Outlined.Settings,
+                            title = "Focus Settings & Whitelist",
+                            summary = "Configure global strategy, emergency whitelist & strictness",
+                            statusText = "SETTINGS",
+                            onChecked = onOpenFocusConfig,
+                            iconColor = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -674,6 +862,7 @@ fun StartQuickFocusDialog(
     preset3: Int,
     onDismiss: () -> Unit,
     onOpenFocusConfig: () -> Unit = {},
+    onSwitchToAutoSchedule: (() -> Unit)? = null,
     onStart: (Int, Int, Set<String>) -> Unit
 ) {
     val context = LocalContext.current
@@ -749,6 +938,25 @@ fun StartQuickFocusDialog(
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
+                        }
+                    }
+
+                    if (onSwitchToAutoSchedule != null) {
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            SegmentedButton(
+                                selected = true,
+                                onClick = {},
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                            ) {
+                                Text("Start Now", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            SegmentedButton(
+                                selected = false,
+                                onClick = onSwitchToAutoSchedule,
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                            ) {
+                                Text("Auto Schedule", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
 

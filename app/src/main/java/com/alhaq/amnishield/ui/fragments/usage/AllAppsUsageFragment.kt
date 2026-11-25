@@ -599,7 +599,6 @@ class AllAppsUsageFragment : Fragment() {
             putExtra("action", "create")
             putExtra("prefill_target", "WEBSITE_BLOCKER")
             putExtra("prefill_website", domain)
-            putExtra("preset_keyword", domain)
         }
         val options = ActivityOptionsCompat.makeCustomAnimation(
             requireContext(),

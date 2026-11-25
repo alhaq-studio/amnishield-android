@@ -97,8 +97,10 @@ fun AmniShieldAdaptiveApp(
                     onStartFocusSession = onStartFocusMode,
                     onStopFocusSession = onStopFocusMode,
                     onOpenFocusConfig = { navController.navigate(AppRoutes.CREATE_FOCUS_RULE) },
-                    onConfigureSchedules = { navController.navigate(AppRoutes.REMINDERS) },
-                    onEnableService = onOpenAccessibilitySettings
+                    onConfigureSchedules = { navController.navigate(AppRoutes.CREATE_FOCUS_RULE) },
+                    onEnableService = onOpenAccessibilitySettings,
+                    focusSchedules = state.scheduleRules.filter { it.targetBlockerType == "Focus Mode" },
+                    onCreateFocusSchedule = { navController.navigate(AppRoutes.CREATE_FOCUS_RULE) }
                 )
             }
 
@@ -143,53 +145,6 @@ fun AmniShieldAdaptiveApp(
             }
 
             // Sub-destinations
-            composable(AppRoutes.CREATE_APP_RULE) {
-                CreateRuleScreen(
-                    state = state,
-                    onSaveRule = { rule ->
-                        viewModel.addScheduleRule(rule)
-                        navController.popBackStack()
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(AppRoutes.CREATE_KEYWORD_RULE) {
-                CreateKeywordBlockerRuleScreen(
-                    state = state,
-                    viewModel = viewModel,
-                    onSaveRule = { rule ->
-                        viewModel.addScheduleRule(rule)
-                        navController.popBackStack()
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(AppRoutes.CREATE_WEB_RULE) {
-                CreateWebsiteBlockerRuleScreen(
-                    state = state,
-                    viewModel = viewModel,
-                    onSaveRule = { rule ->
-                        viewModel.addScheduleRule(rule)
-                        navController.popBackStack()
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(AppRoutes.CREATE_REELS_RULE) {
-                CreateReelsBlockerRuleScreen(
-                    state = state,
-                    viewModel = viewModel,
-                    onSaveRule = { rule ->
-                        viewModel.addScheduleRule(rule)
-                        navController.popBackStack()
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
             composable(AppRoutes.CREATE_FOCUS_RULE) {
                 CreateFocusModeRuleScreen(
                     state = state,
@@ -204,10 +159,10 @@ fun AmniShieldAdaptiveApp(
             composable(AppRoutes.ADVANCED_SETTINGS) {
                 AdvancedScreen(
                     state = state,
-                    onNavigateToAppBlocker = { navController.navigate(AppRoutes.CREATE_APP_RULE) },
-                    onNavigateToKeywordBlocker = { navController.navigate(AppRoutes.CREATE_KEYWORD_RULE) },
-                    onNavigateToWebBlocker = { navController.navigate(AppRoutes.CREATE_WEB_RULE) },
-                    onNavigateToReelsBlocker = { navController.navigate(AppRoutes.CREATE_REELS_RULE) },
+                    onNavigateToAppBlocker = { navController.navigate(TopLevelDestination.BLOCKS.route) },
+                    onNavigateToKeywordBlocker = { navController.navigate(TopLevelDestination.BLOCKS.route) },
+                    onNavigateToWebBlocker = { navController.navigate(TopLevelDestination.BLOCKS.route) },
+                    onNavigateToReelsBlocker = { navController.navigate(TopLevelDestination.BLOCKS.route) },
                     onNavigateToAntiUninstall = {},
                     onNavigateToUsageTracker = { navController.navigate(TopLevelDestination.STATS.route) },
                     onNavigateToPremium = { navController.navigate(TopLevelDestination.PROFILE.route) },
@@ -225,7 +180,7 @@ fun AmniShieldAdaptiveApp(
                     isBlockerEnabled = state.isReelsBlockerEnabled,
                     onBack = { navController.popBackStack() },
                     onRefresh = {},
-                    onConfigureRules = { navController.navigate(AppRoutes.CREATE_REELS_RULE) }
+                    onConfigureRules = { navController.navigate(TopLevelDestination.BLOCKS.route) }
                 )
             }
 

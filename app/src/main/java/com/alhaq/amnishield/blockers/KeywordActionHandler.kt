@@ -43,9 +43,11 @@ class KeywordActionHandler(
         packageName: String,
         rootNode: AccessibilityNodeInfo?,
         event: AccessibilityEvent,
-        onPressHome: () -> Unit
+        onPressHome: () -> Unit,
+        attributionLabel: String = "Blocked by Always-On Keyword Filter",
+        feedbackModeOverride: String? = null
     ) {
-        val feedbackMode = savedPreferencesLoader.getKeywordBlockerFeedbackMode()
+        val feedbackMode = feedbackModeOverride ?: savedPreferencesLoader.getKeywordBlockerFeedbackMode()
         val isHomePress = result.isHomePressRequested
 
         try {
@@ -56,8 +58,6 @@ class KeywordActionHandler(
 
         when (feedbackMode) {
             Constants.KEYWORD_FEEDBACK_SILENT -> {
-                // In silent mode, only clear text and optionally press home if requested.
-                // Do NOT force AmniSpace!
                 if (isHomePress) {
                     onPressHome()
                 }
@@ -68,7 +68,10 @@ class KeywordActionHandler(
                     val intent = Intent(context, AmniSpaceActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                         putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                        putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Keyword Blocked: ${result.resultDetectWord ?: "Restricted Keyword"}")
+                        putExtra(
+                            Constants.AMNISPACE_EXTRA_TRIGGER_REASON,
+                            "$attributionLabel (${result.resultDetectWord ?: "Restricted Keyword"})"
+                        )
                         putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
                         putExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 5)
                     }
@@ -79,27 +82,9 @@ class KeywordActionHandler(
                 }
             }
 
-            Constants.KEYWORD_FEEDBACK_WARNING_SCREEN -> {
-                val warningConfig = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
-                if (warningConfig.isWarningDialogHidden) {
-                    if (isHomePress) onPressHome()
-                    return
-                }
-
-                val dialogIntent = Intent(context, WarningActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                    putExtra("result_id", result.resultDetectWord ?: "detected_keyword")
-                    putExtra("is_press_home", isHomePress)
-                    putExtra("blocked_by_feature", "Keyword Blocker")
-                }
-                context.startActivity(dialogIntent)
-            }
-
             else -> {
-                // Default fallback to standard WarningActivity
                 val warningConfig = savedPreferencesLoader.loadKeywordBlockerWarningInfo()
-                if (warningConfig.isWarningDialogHidden) {
+                if (warningConfig.isWarningDialogHidden && feedbackModeOverride == null) {
                     if (isHomePress) onPressHome()
                     return
                 }
@@ -109,7 +94,7 @@ class KeywordActionHandler(
                     putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
                     putExtra("result_id", result.resultDetectWord ?: "detected_keyword")
                     putExtra("is_press_home", isHomePress)
-                    putExtra("blocked_by_feature", "Keyword Blocker")
+                    putExtra("blocked_by_feature", attributionLabel)
                 }
                 context.startActivity(dialogIntent)
             }

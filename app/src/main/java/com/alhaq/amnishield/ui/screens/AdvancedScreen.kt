@@ -46,18 +46,42 @@ fun AdvancedScreen(
     onUpdatePinResetCooldown: (Int) -> Unit = {},
     onUpdateEmergencyCooldown: (Int) -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefsLoader = remember { com.alhaq.amnishield.utils.SavedPreferencesLoader(context.applicationContext) }
+    var appLockMode by remember { mutableStateOf(prefsLoader.getAppLockMode()) }
+    var showAppLockPinSetupDialog by remember { mutableStateOf(false) }
+
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var showPinVerifyDialog by remember { mutableStateOf(false) }
     var showPinResetDialog by remember { mutableStateOf(false) }
     var showPinCooldownDialog by remember { mutableStateOf(false) }
     var showEmergencyCooldownDialog by remember { mutableStateOf(false) }
 
+    if (showAppLockPinSetupDialog) {
+        PinPromptDialog(
+            isSettingUp = true,
+            title = "Set App Launch PIN",
+            subtitle = "Choose a separate 4-digit PIN used only to open AmniShield",
+            onDismiss = { showAppLockPinSetupDialog = false },
+            onPinSuccess = { appPin ->
+                showAppLockPinSetupDialog = false
+                prefsLoader.setAppLockCustomPin(appPin)
+                prefsLoader.setAppLockMode(com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_APP_PIN)
+                appLockMode = com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_APP_PIN
+                onToggleAppLock(true)
+            }
+        )
+    }
+
     if (showPinSetupDialog) {
         PinPromptDialog(
             isSettingUp = true,
+            title = "Setup Global Anti-Bypass PIN",
+            subtitle = "Protects Settings, Always-On Shields (Global PIN), and Anti-Uninstall",
             onDismiss = { showPinSetupDialog = false },
             onPinSuccess = { pin ->
                 showPinSetupDialog = false
+                prefsLoader.saveGlobalAntiBypassPin(pin, linkAntiUninstall = true)
                 onTogglePinSecurity(true, pin)
             }
         )
@@ -133,10 +157,10 @@ fun AdvancedScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
     ) {
         if (state.isAdvancedMode) {
-            // Section: Core Protection
+            // Section: Core Protection Engine Behavior
             item {
                 Text(
-                    text = "CORE PROTECTION",
+                    text = "ENGINE DETECTION BEHAVIOR",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -156,9 +180,9 @@ fun AdvancedScreen(
                     Column {
                         AdvancedItemRow(
                             icon = Icons.Outlined.Lock,
-                            title = "App Blocker",
-                            summary = "Blocked apps and categories",
-                            statusText = if (state.isAppBlockerEnabled) "ON" else "OFF",
+                            title = "App Blocker Behavior",
+                            summary = "Auto-block Play Store categories on install",
+                            statusText = if (state.isAppBlockerEnabled) "ACTIVE" else "READY",
                             onChecked = onNavigateToAppBlocker,
                             iconColor = Color(0xFF6366F1)
                         )
@@ -170,9 +194,9 @@ fun AdvancedScreen(
 
                         AdvancedItemRow(
                             icon = Icons.AutoMirrored.Outlined.Label,
-                            title = "Keyword Blocker",
-                            summary = "Keywords and adult content packs",
-                            statusText = "${state.keywords.size} keywords",
+                            title = "Keyword Detection Behavior",
+                            summary = "Whole-word matching, scan scope & safe redirect",
+                            statusText = if (state.keywords.isNotEmpty()) "${state.keywords.size} active" else "READY",
                             onChecked = onNavigateToKeywordBlocker,
                             iconColor = Color(0xFFEF4444)
                         )
@@ -184,9 +208,9 @@ fun AdvancedScreen(
 
                         AdvancedItemRow(
                             icon = Icons.Outlined.PublicOff,
-                            title = "Website/URL Blocker",
-                            summary = "Block websites and custom URLs",
-                            statusText = if (state.isWebFilterEnabled) "ON" else "OFF",
+                            title = "Website Detection Behavior",
+                            summary = "Supported browsers & domain blocklist reference",
+                            statusText = if (state.isWebFilterEnabled) "ACTIVE" else "READY",
                             onChecked = onNavigateToWebBlocker,
                             iconColor = Color(0xFFEC4899)
                         )
@@ -198,9 +222,9 @@ fun AdvancedScreen(
 
                         AdvancedItemRow(
                             icon = Icons.Outlined.VideoLibrary,
-                            title = "Reels Blocker",
-                            summary = "Block short-form video algorithms",
-                            statusText = if (state.isReelsBlockerEnabled) "ON" else "OFF",
+                            title = "Short-Form Detection Behavior",
+                            summary = "DM inbox & main feed Reel exception tuning",
+                            statusText = if (state.isReelsBlockerEnabled) "ACTIVE" else "READY",
                             onChecked = onNavigateToReelsBlocker,
                             iconColor = Color(0xFFF43F5E)
                         )
@@ -270,11 +294,11 @@ fun AdvancedScreen(
             }
         }
 
-        // Section: PIN Security
+        // Section: Global Anti-Bypass PIN & App Lock
         item {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "PIN SECURITY",
+                text = "APP LOCK & ANTI-BYPASS PIN",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -292,21 +316,77 @@ fun AdvancedScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column {
-                    // Row 1: Enable PIN Lock
+                    // App Lock (Decoupled from Global PIN; defaults to native Device Lock / Biometrics)
+                    AdvancedSwitchRow(
+                        icon = Icons.Outlined.AppShortcut,
+                        title = "App Lock",
+                        summary = when (appLockMode) {
+                            com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_APP_PIN ->
+                                "Requires separate App Launch PIN to open AmniShield"
+                            com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_GLOBAL_PIN ->
+                                "Requires Global Anti-Bypass PIN to open AmniShield"
+                            else ->
+                                "Uses native Device Lock / Biometrics to open AmniShield"
+                        },
+                        checked = state.isAppLockEnabled,
+                        onCheckedChange = { checked ->
+                            onToggleAppLock(checked)
+                        },
+                        iconColor = Color(0xFF10B981)
+                    )
+
+                    if (state.isAppLockEnabled) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 56.dp, end = 16.dp, bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val modeOptions = listOf(
+                                com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_DEVICE to "Device Lock",
+                                com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_APP_PIN to "App PIN",
+                                com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_GLOBAL_PIN to "Global PIN"
+                            )
+                            modeOptions.forEach { (modeKey, label) ->
+                                FilterChip(
+                                    selected = appLockMode == modeKey,
+                                    onClick = {
+                                        if (modeKey == com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_APP_PIN &&
+                                            prefsLoader.getAppLockCustomPin().isEmpty()
+                                        ) {
+                                            showAppLockPinSetupDialog = true
+                                        } else if (modeKey == com.alhaq.amnishield.utils.SavedPreferencesLoader.APP_LOCK_MODE_GLOBAL_PIN &&
+                                            !state.isPinProtectionEnabled &&
+                                            prefsLoader.getPinCode().isEmpty()
+                                        ) {
+                                            showPinSetupDialog = true
+                                        } else {
+                                            prefsLoader.setAppLockMode(modeKey)
+                                            appLockMode = modeKey
+                                        }
+                                    },
+                                    label = { Text(label, maxLines = 1) }
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    // Row 1: Enable Global Anti-Bypass PIN
                     AdvancedSwitchRow(
                         icon = Icons.Outlined.Lock,
-                        title = "Enable PIN Security",
-                        summary = "Protect blockers with a 4-digit PIN",
+                        title = "Global Anti-Bypass PIN",
+                        summary = "Protects Settings, Always-On Shields (Global PIN), and Anti-Uninstall",
                         checked = state.isPinProtectionEnabled,
                         onCheckedChange = { checked ->
-                            if (!state.isPremiumUser) {
-                                onNavigateToPremium()
+                            if (checked) {
+                                showPinSetupDialog = true
                             } else {
-                                if (checked) {
-                                    showPinSetupDialog = true
-                                } else {
-                                    showPinVerifyDialog = true
-                                }
+                                showPinVerifyDialog = true
                             }
                         },
                         iconColor = Color(0xFF8B5CF6)
@@ -318,39 +398,14 @@ fun AdvancedScreen(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
 
-                        // Row 2: App Lock
-                        AdvancedSwitchRow(
-                            icon = Icons.Outlined.AppShortcut,
-                            title = "App Lock",
-                            summary = "Require PIN to open AmniShield",
-                            checked = state.isAppLockEnabled,
-                            onCheckedChange = { checked ->
-                                if (!state.isPremiumUser) {
-                                    onNavigateToPremium()
-                                } else {
-                                    onToggleAppLock(checked)
-                                }
-                            },
-                            iconColor = Color(0xFF10B981)
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-
                         // Row 3: Bypass PIN Lock
                         AdvancedSwitchRow(
                             icon = Icons.Outlined.Security,
-                            title = "Bypass PIN Lock",
-                            summary = "Require PIN to modify settings while active",
+                            title = "Lock Settings & Anti-Uninstall",
+                            summary = "Require Global PIN for settings, blockers & Android Settings defense",
                             checked = state.isBypassPinLockEnabled,
                             onCheckedChange = { checked ->
-                                if (!state.isPremiumUser) {
-                                    onNavigateToPremium()
-                                } else {
-                                    onToggleBypassPinLock(checked)
-                                }
+                                onToggleBypassPinLock(checked)
                             },
                             iconColor = Color(0xFFF59E0B)
                         )

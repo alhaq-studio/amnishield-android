@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
 import com.alhaq.amnishield.data.blockers.BaseRule
+import com.alhaq.amnishield.data.blockers.ShieldLockConfig
+import com.alhaq.amnishield.data.blockers.ShieldLockMode
 import com.alhaq.amnishield.ui.state.ScheduleRule
 import com.alhaq.amnishield.utils.PasswordHasher
 
@@ -27,6 +29,18 @@ sealed class AuthTarget {
 
     /** Blocked due to active rate-limiting / brute-force lockout. */
     data class LockedOut(val remainingMillis: Long) : AuthTarget()
+}
+
+/**
+ * Sealed challenge target for Always-On Shields asymmetric friction verification.
+ */
+sealed class ShieldAuthTarget {
+    data object PassThrough : ShieldAuthTarget()
+    data class RequireGlobalPin(val storedHash: String) : ShieldAuthTarget()
+    data class RequireCustomPin(val hash: String, val salt: String) : ShieldAuthTarget()
+    data class RequireDelay(val delaySeconds: Int) : ShieldAuthTarget()
+    data class RequireQr(val expectedValue: String) : ShieldAuthTarget()
+    data class LockedOut(val remainingMillis: Long) : ShieldAuthTarget()
 }
 
 /**
@@ -168,6 +182,77 @@ class AuthResolver(
     }
 
     /**
+     * Resolves the unlock challenge for an Always-On Shield weakening action.
+     * Note: Always evaluates active CUSTOM_PIN and QR_CODE locks regardless of Pro status
+     * so users are never locked out if a Pro subscription expires.
+     */
+    fun resolveShieldChallenge(lockConfig: ShieldLockConfig): ShieldAuthTarget {
+        val sanitized = lockConfig.sanitize()
+        val lockoutRemaining = getLockoutRemainingMillis()
+        if (lockoutRemaining > 0L && (sanitized.mode == ShieldLockMode.INHERIT_GLOBAL_PIN || sanitized.mode == ShieldLockMode.CUSTOM_PIN)) {
+            return ShieldAuthTarget.LockedOut(lockoutRemaining)
+        }
+
+        return when (sanitized.mode) {
+            ShieldLockMode.NONE -> ShieldAuthTarget.PassThrough
+            ShieldLockMode.INHERIT_GLOBAL_PIN -> {
+                val globalHash = getGlobalPinHash()
+                if (!globalHash.isNullOrEmpty()) {
+                    ShieldAuthTarget.RequireGlobalPin(globalHash)
+                } else {
+                    ShieldAuthTarget.PassThrough
+                }
+            }
+            ShieldLockMode.PAUSE_DELAY -> {
+                ShieldAuthTarget.RequireDelay(sanitized.delaySeconds.coerceIn(5, 300))
+            }
+            ShieldLockMode.CUSTOM_PIN -> {
+                val hash = sanitized.customPinHash
+                val salt = sanitized.customPinSalt
+                if (!hash.isNullOrEmpty() && !salt.isNullOrEmpty()) {
+                    ShieldAuthTarget.RequireCustomPin(hash, salt)
+                } else {
+                    ShieldAuthTarget.PassThrough
+                }
+            }
+            ShieldLockMode.QR_CODE -> {
+                val qr = sanitized.registeredQrValue
+                if (!qr.isNullOrEmpty()) {
+                    ShieldAuthTarget.RequireQr(qr)
+                } else {
+                    ShieldAuthTarget.PassThrough
+                }
+            }
+        }
+    }
+
+    /**
+     * Verifies a PIN entered against a [ShieldAuthTarget] using the shared PBKDF2 + lockout engine.
+     */
+    fun verifyShieldPin(target: ShieldAuthTarget, inputPin: String): AuthResult {
+        val lockoutRemaining = getLockoutRemainingMillis()
+        if (lockoutRemaining > 0L) {
+            return AuthResult.LockedOut(lockoutRemaining)
+        }
+
+        val isMatch = when (target) {
+            is ShieldAuthTarget.PassThrough -> true
+            is ShieldAuthTarget.RequireGlobalPin -> PasswordHasher.verify(inputPin, target.storedHash)
+            is ShieldAuthTarget.RequireCustomPin -> PasswordHasher.verifyWithSalt(inputPin, target.hash, target.salt)
+            is ShieldAuthTarget.RequireDelay,
+            is ShieldAuthTarget.RequireQr,
+            is ShieldAuthTarget.LockedOut -> false
+        }
+
+        return if (isMatch) {
+            clearLockoutState()
+            AuthResult.Success
+        } else {
+            handleFailedAttempt()
+        }
+    }
+
+    /**
      * Checks if a global bypass / anti-uninstall PIN is configured in the app.
      */
     fun hasGlobalPin(): Boolean {
@@ -176,10 +261,20 @@ class AuthResolver(
     }
 
     /**
-     * Gets the stored global anti-uninstall PIN hash.
+     * Gets the stored global anti-uninstall PIN hash, migrating any legacy `AppPreferences.profile_pin` if needed.
      */
     fun getGlobalPinHash(): String? {
-        return antiUninstallPrefs.getString(KEY_ANTI_UNINSTALL_PASSWORD, null)
+        val existing = antiUninstallPrefs.getString(KEY_ANTI_UNINSTALL_PASSWORD, null)
+        if (!existing.isNullOrEmpty()) return existing
+        val legacyPin = context?.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            ?.getString("profile_pin", null)
+            ?.trim()
+        if (!legacyPin.isNullOrEmpty()) {
+            val hashed = if (PasswordHasher.isPlainText(legacyPin)) PasswordHasher.hash(legacyPin) else legacyPin
+            antiUninstallPrefs.edit().putString(KEY_ANTI_UNINSTALL_PASSWORD, hashed).apply()
+            return hashed
+        }
+        return existing
     }
 
     /**

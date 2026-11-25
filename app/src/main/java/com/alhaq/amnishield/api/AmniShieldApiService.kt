@@ -72,9 +72,8 @@ class AmniShieldApiService : Service() {
             packages.contains("com.alhaq.amnishield.guardian.debug") ||
             packages.contains("com.alhaq.amguard") ||
             packages.contains("com.alhaq.amniguard") ||
-            packages.contains("com.alhaq.amnishield.netblock") ||
-            packages.contains("com.alhaq.amniquest") ||
-            packages.contains("com.alhaq.amniquest.debug")
+            packages.contains("com.alhaq.amniguard") ||
+            packages.contains("com.alhaq.amnishield.netblock")
         )) {
             return true
         }

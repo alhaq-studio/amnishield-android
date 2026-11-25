@@ -15,23 +15,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.alhaq.amnishield.R
+import com.alhaq.amnishield.data.blockers.AlwaysOnShieldsConfig
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.AppInterceptionLevel
+import com.alhaq.amnishield.data.blockers.BlockRuleStatus
 import com.alhaq.amnishield.data.blockers.BlockerType
+import com.alhaq.amnishield.data.blockers.UnifiedBlockRule
 import com.alhaq.amnishield.data.blockers.UniversalScheduleRule
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
 import com.alhaq.amnishield.premium.PremiumManager
+import com.alhaq.amnishield.security.AuthResolver
+import com.alhaq.amnishield.security.AuthType
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
-import com.alhaq.amnishield.ui.screens.BlocksManagerScreen
-import com.alhaq.amnishield.ui.screens.CreateRuleScreen
-import com.alhaq.amnishield.ui.screens.CreateKeywordBlockerRuleScreen
-import com.alhaq.amnishield.ui.screens.CreateWebsiteBlockerRuleScreen
-import com.alhaq.amnishield.ui.screens.CreateReelsBlockerRuleScreen
-import com.alhaq.amnishield.ui.screens.CreateFocusModeRuleScreen
+import com.alhaq.amnishield.ui.screens.BlocksPrimaryTab
+import com.alhaq.amnishield.ui.screens.CreateOrEditBlockScreen
+import com.alhaq.amnishield.ui.screens.CustomRulesFilter
+import com.alhaq.amnishield.ui.screens.SelectTargetsScreen
+import com.alhaq.amnishield.ui.screens.UnifiedBlocksDashboardScreen
+import com.alhaq.amnishield.ui.screens.WeeklyUsageReportScreen
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -71,6 +78,7 @@ class BlocksManagerFragment : Fragment() {
 
     private lateinit var viewModel: AmniShieldViewModel
     private val savedPreferencesLoader by lazy { SavedPreferencesLoader(requireContext().applicationContext) }
+    private val resumeRefreshTick = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,47 +101,131 @@ class BlocksManagerFragment : Fragment() {
                 val prefillTarget = remember { arguments?.getString("prefill_target") }
                 val prefillType = remember { arguments?.getString("prefill_type") }
                 val prefillApp = remember { arguments?.getString("prefill_app") }
-                val prefillWebsite = remember { arguments?.getString("prefill_website") ?: arguments?.getString("preset_keyword") }
+                val prefillWebsite = remember { arguments?.getString("prefill_website") }
+                val presetKeyword = remember { arguments?.getString("preset_keyword") }
+                val filterType = remember { arguments?.getString("filter_type") }
+                val initialTabArg = remember { arguments?.getString("initial_tab") }
 
-                val defaultScreen = remember(action, prefillTarget) {
-                    if (action == "create") {
-                        when (prefillTarget) {
-                            "KEYWORD_BLOCKER" -> "create_keyword"
-                            "WEBSITE_BLOCKER" -> "create_website"
-                            "REEL_BLOCKER" -> "create_reels"
-                            else -> "create_app"
-                        }
+                val initialPrimaryTab = remember(initialTabArg, filterType) {
+                    val tabRaw = initialTabArg?.lowercase().orEmpty()
+                    val filterRaw = filterType?.lowercase().orEmpty()
+                    if (tabRaw.contains("always") || tabRaw.contains("shield") ||
+                        filterRaw.contains("always") || filterRaw.contains("shield")
+                    ) {
+                        BlocksPrimaryTab.ALWAYS_ON_SHIELDS
                     } else {
-                        "manage"
+                        BlocksPrimaryTab.CUSTOM_RULES
                     }
+                }
+
+                val initialCustomFilter = remember(filterType) {
+                    val f = filterType?.lowercase().orEmpty()
+                    when {
+                        f.contains("limit") -> CustomRulesFilter.LIMITS
+                        f.contains("schedule") || f.contains("app") || f.contains("focus") -> CustomRulesFilter.SCHEDULES
+                        f.contains("archive") -> CustomRulesFilter.ARCHIVE
+                        else -> CustomRulesFilter.ALL
+                    }
+                }
+
+                val defaultScreen = remember(action) {
+                    if (action == "create") "create_unified" else "manage"
                 }
 
                 val activeTheme = com.alhaq.amnishield.utils.ThemeUtils.resolveAppTheme(requireContext())
                 viewModel.updateTheme(activeTheme)
                 val state by viewModel.state.collectAsState()
 
-                var currentScreen by remember(defaultScreen) { mutableStateOf(defaultScreen) } // "manage", "create_app", "create_keyword", "create_website", "create_reels"
-                var initialType by remember { mutableStateOf(prefillType ?: "Block Schedule") }
+                var currentScreen by remember(defaultScreen) { mutableStateOf(defaultScreen) }
                 var editingRule by remember { mutableStateOf<com.alhaq.amnishield.ui.state.ScheduleRule?>(null) }
-                var showSelectBlockerDialog by remember { mutableStateOf(false) }
                 var pendingPinProtectedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-                val checkPinAndProceed: (() -> Unit) -> Unit = { action ->
-                    val pinEnabled = savedPreferencesLoader.isPinSecurityEnabled()
-                    val pinCode = savedPreferencesLoader.getPinCode()
-                    val needsPin = pinEnabled && pinCode.isNotEmpty() && !com.alhaq.amnishield.AmniShield.isBypassSessionActive()
-                    if (needsPin) {
-                        pendingPinProtectedAction = action
+                var unifiedRules by remember {
+                    mutableStateOf(savedPreferencesLoader.loadUnifiedBlockRules().toList())
+                }
+                var alwaysOnShieldsConfig by remember {
+                    mutableStateOf(savedPreferencesLoader.loadAlwaysOnShieldsConfig())
+                }
+                var reelsScrolledToday by remember {
+                    mutableIntStateOf(savedPreferencesLoader.getReelsScrolledToday())
+                }
+                var isPremiumUser by remember {
+                    mutableStateOf(PremiumManager.getInstance(requireContext().applicationContext).isPremium())
+                }
+                var hasGlobalPin by remember {
+                    mutableStateOf(AuthResolver.getInstance(requireContext().applicationContext).hasGlobalPin())
+                }
+                val initialPrefilledUnifiedRule = remember(action, prefillTarget, prefillApp, prefillWebsite, presetKeyword) {
+                    if (action == "create") {
+                        val preApps = when {
+                            !prefillApp.isNullOrBlank() -> mapOf(prefillApp to AppInterceptionLevel.BLOCK_ENTIRE_APP)
+                            prefillTarget == "REEL_BLOCKER" -> mapOf(
+                                "com.instagram.android" to AppInterceptionLevel.BLOCK_SHORTFORM_ONLY,
+                                "com.google.android.youtube" to AppInterceptionLevel.BLOCK_SHORTFORM_ONLY
+                            )
+                            else -> emptyMap()
+                        }
+                        val preDomains = if (!prefillWebsite.isNullOrBlank()) listOf(prefillWebsite.trim().lowercase()) else emptyList()
+                        val preKeywords = if (!presetKeyword.isNullOrBlank() && prefillWebsite.isNullOrBlank()) {
+                            listOf(presetKeyword.trim().lowercase())
+                        } else {
+                            emptyList()
+                        }
+                        val defaultName = when {
+                            !prefillWebsite.isNullOrBlank() -> "Block ${prefillWebsite.trim()}"
+                            !presetKeyword.isNullOrBlank() -> "Block ${presetKeyword.trim()}"
+                            prefillTarget == "REEL_BLOCKER" -> "Short Videos Block"
+                            else -> "Block"
+                        }
+                        UnifiedBlockRule(
+                            name = defaultName,
+                            status = BlockRuleStatus.ACTIVE,
+                            appTargets = preApps,
+                            blockedDomains = preDomains,
+                            blockedKeywords = preKeywords
+                        )
+                    } else null
+                }
+                var editingUnifiedRule by remember { mutableStateOf<UnifiedBlockRule?>(initialPrefilledUnifiedRule) }
+                var pickerApps by remember { mutableStateOf<Map<String, AppInterceptionLevel>>(emptyMap()) }
+                var pickerDomains by remember { mutableStateOf<List<String>>(emptyList()) }
+                var pickerKeywords by remember { mutableStateOf<List<String>>(emptyList()) }
+                var pickerBlockNewlyInstalled by remember { mutableStateOf(false) }
+                var pickerIncludeInBrowserShortform by remember { mutableStateOf(false) }
+
+                val refreshUnifiedRulesState: () -> Unit = {
+                    unifiedRules = savedPreferencesLoader.loadUnifiedBlockRules().toList()
+                    alwaysOnShieldsConfig = savedPreferencesLoader.loadAlwaysOnShieldsConfig()
+                    reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                    isPremiumUser = PremiumManager.getInstance(requireContext().applicationContext).isPremium()
+                    hasGlobalPin = AuthResolver.getInstance(requireContext().applicationContext).hasGlobalPin()
+                }
+
+                val checkPinAndProceedForRule: (UnifiedBlockRule?, () -> Unit) -> Unit = { targetRule, block ->
+                    // Per-rule PIN challenges are already verified inside UnifiedBlocksDashboardScreen's gateIfEnforcing
+                    if (targetRule?.authType == AuthType.RULE_PIN) {
+                        block()
                     } else {
-                        action()
+                        val pinEnabled = savedPreferencesLoader.isPinSecurityEnabled()
+                        val pinCode = savedPreferencesLoader.getPinCode()
+                        val needsPin = pinEnabled && pinCode.isNotEmpty() && !com.alhaq.amnishield.AmniShield.isBypassSessionActive()
+                        if (needsPin) {
+                            pendingPinProtectedAction = block
+                        } else {
+                            block()
+                        }
                     }
                 }
 
-                LaunchedEffect(currentScreen) {
+                val refreshTick by resumeRefreshTick
+                LaunchedEffect(currentScreen, refreshTick) {
                     val isManage = currentScreen == "manage"
                     val mainActivity = activity as? com.alhaq.amnishield.ui.activity.MainActivity
                     mainActivity?.setBottomNavVisible(isManage)
                     mainActivity?.setToolbarVisible(isManage)
+                    if (isManage) {
+                        refreshUnifiedRulesState()
+                    }
                 }
 
                 DisposableEffect(Unit) {
@@ -145,11 +237,16 @@ class BlocksManagerFragment : Fragment() {
                 }
 
                 androidx.activity.compose.BackHandler(enabled = currentScreen != "manage") {
-                    editingRule = null
-                    if (action == "create") {
-                        safeOnBack()
+                    if (currentScreen == "select_targets") {
+                        currentScreen = "create_unified"
                     } else {
-                        currentScreen = "manage"
+                        editingRule = null
+                        editingUnifiedRule = null
+                        if (action == "create") {
+                            safeOnBack()
+                        } else {
+                            currentScreen = "manage"
+                        }
                     }
                 }
 
@@ -179,242 +276,160 @@ class BlocksManagerFragment : Fragment() {
 
                     when (currentScreen) {
                         "manage" -> {
-                            BlocksManagerScreen(
-                                state = state,
-                                viewModel = viewModel,
-                                onNavigateToCreateRule = { type ->
-                                    editingRule = null
-                                    initialType = type
-                                    showSelectBlockerDialog = true
+                            UnifiedBlocksDashboardScreen(
+                                rules = unifiedRules,
+                                alwaysOnShieldsConfig = alwaysOnShieldsConfig,
+                                reelsScrolledToday = reelsScrolledToday,
+                                isPremiumUser = isPremiumUser,
+                                initialPrimaryTab = initialPrimaryTab,
+                                initialCustomFilter = initialCustomFilter,
+                                hasGlobalPinOverride = hasGlobalPin,
+                                onUpdateAlwaysOnShieldsConfig = { updated ->
+                                    savedPreferencesLoader.saveAlwaysOnShieldsConfig(updated)
+                                    alwaysOnShieldsConfig = savedPreferencesLoader.loadAlwaysOnShieldsConfig()
+                                    reelsScrolledToday = savedPreferencesLoader.getReelsScrolledToday()
+                                    hasGlobalPin = AuthResolver.getInstance(requireContext().applicationContext).hasGlobalPin()
+                                    sendRefreshRequest()
                                 },
-                                onEditRule = { rule ->
-                                    editingRule = rule
-                                    initialType = rule.restrictionType
-                                    val firstBlocker = rule.selectedBlockers.firstOrNull() ?: rule.targetBlockerType
-                                    currentScreen = when (firstBlocker) {
-                                        "Keyword Blocker" -> "create_keyword"
-                                        "Website Blocker" -> "create_website"
-                                        "Reels Blocker" -> "create_reels"
-                                        "Focus Mode" -> "create_focus"
-                                        else -> "create_app"
-                                    }
+                                onNavigateToPremium = { openPremiumScreen() },
+                                onCreateNewBlock = {
+                                    editingUnifiedRule = null
+                                    currentScreen = "create_unified"
                                 },
-                                onToggleRule = { id ->
-                                    toggleScheduleRuleActive(id)
+                                onEditBlock = { rule ->
+                                    editingUnifiedRule = rule
+                                    currentScreen = "create_unified"
                                 },
-                                onDeleteRule = { id ->
-                                    deleteScheduleRule(id)
+                                onActivateBlockNow = { rule ->
+                                    savedPreferencesLoader.setUnifiedBlockRuleStatus(
+                                        rule.id,
+                                        BlockRuleStatus.ACTIVE
+                                    )
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
                                 },
-                                onUpdateRuleAuth = { rule, newAuthType, newHash, newSalt ->
-                                    updateRuleAuth(rule, newAuthType, newHash, newSalt)
+                                onDeactivateManualBlock = { rule ->
+                                    savedPreferencesLoader.setUnifiedBlockRuleStatus(
+                                        rule.id,
+                                        BlockRuleStatus.INACTIVE_MANUAL
+                                    )
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
                                 },
-                                onNavigateToPremium = { openPremiumScreen() }
-                            )
-
-                            if (showSelectBlockerDialog) {
-                                SelectBlockerBottomSheet(
-                                    onDismissRequest = { showSelectBlockerDialog = false },
-                                    onSelectOption = { option ->
-                                        showSelectBlockerDialog = false
-                                        currentScreen = when (option) {
-                                            "App Blocker" -> "create_app"
-                                            "Keyword Blocker" -> "create_keyword"
-                                            "Website Blocker" -> "create_website"
-                                            "Reels Blocker" -> "create_reels"
-                                            "Focus Mode" -> "create_focus"
-                                            else -> "create_app"
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        "create_app" -> {
-                            CreateRuleScreen(
-                                state = state,
-                                prefillTarget = prefillTarget ?: "APP_BLOCKER",
-                                prefillApp = prefillApp,
-                                editingRule = editingRule,
-                                onSaveRule = { rule ->
-                                    if (editingRule != null) {
-                                        deleteScheduleRule(editingRule!!.id)
-                                    }
-                                    saveScheduleRule(rule)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
+                                onPauseBlockForMinutes = { rule, mins ->
+                                    savedPreferencesLoader.pauseUnifiedBlockRule(rule.id, mins)
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Paused \"${rule.name}\" for $mins min",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 },
-                                onBack = {
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
+                                onArchiveBlock = { rule ->
+                                    savedPreferencesLoader.setUnifiedBlockRuleStatus(
+                                        rule.id,
+                                        BlockRuleStatus.ARCHIVED
+                                    )
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
                                 },
-                                onDeleteRule = { id ->
-                                    deleteScheduleRule(id)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
+                                onRestoreArchivedBlock = { rule ->
+                                    savedPreferencesLoader.setUnifiedBlockRuleStatus(
+                                        rule.id,
+                                        BlockRuleStatus.ACTIVE
+                                    )
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
                                 },
-                                onNavigateToPremium = { openPremiumScreen() }
-                            )
-                        }
-                        "create_keyword" -> {
-                            CreateKeywordBlockerRuleScreen(
-                                state = state,
-                                viewModel = viewModel,
-                                initialType = initialType,
-                                editingRule = editingRule,
-                                onSaveRule = { rule ->
-                                    if (editingRule != null) {
-                                        deleteScheduleRule(editingRule!!.id)
-                                    }
-                                    saveScheduleRule(rule)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
+                                onDuplicateBlock = { rule ->
+                                    val copyRule = rule.copy(
+                                        id = UUID.randomUUID().toString(),
+                                        name = "${rule.name} (Copy)",
+                                        status = BlockRuleStatus.INACTIVE_MANUAL,
+                                        pausedUntilElapsedRealtime = 0L,
+                                        pausedUntilWallClockMillis = 0L,
+                                        createdAt = System.currentTimeMillis()
+                                    )
+                                    savedPreferencesLoader.upsertUnifiedBlockRule(copyRule)
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
                                 },
-                                onBack = {
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
+                                onDeleteBlock = { rule ->
+                                    savedPreferencesLoader.deleteUnifiedBlockRule(rule.id)
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
                                 },
-                                onDeleteRule = { id ->
-                                    deleteScheduleRule(id)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
-                                onNavigateToPremium = { openPremiumScreen() }
+                                onOpenWeeklyReport = {
+                                    currentScreen = "weekly_report"
+                                }
                             )
                         }
-                        "create_website" -> {
-                            CreateWebsiteBlockerRuleScreen(
-                                state = state,
-                                viewModel = viewModel,
-                                initialType = initialType,
-                                editingRule = editingRule,
-                                prefillWebsite = prefillWebsite,
-                                onSaveRule = { rule ->
-                                    if (editingRule != null) {
-                                        deleteScheduleRule(editingRule!!.id)
-                                    }
-                                    saveScheduleRule(rule)
-                                    editingRule = null
+                        "create_unified" -> {
+                            CreateOrEditBlockScreen(
+                                initialRule = editingUnifiedRule,
+                                existingRulesForCopy = unifiedRules,
+                                onDraftUpdated = { draft ->
+                                    editingUnifiedRule = draft
+                                },
+                                onOpenTargetPicker = { apps, domains, keywords, blockNew, browserShortform, _ ->
+                                    pickerApps = apps
+                                    pickerDomains = domains
+                                    pickerKeywords = keywords
+                                    pickerBlockNewlyInstalled = blockNew
+                                    pickerIncludeInBrowserShortform = browserShortform
+                                    currentScreen = "select_targets"
+                                },
+                                onSave = { updatedRule ->
+                                    savedPreferencesLoader.upsertUnifiedBlockRule(updatedRule)
+                                    refreshUnifiedRulesState()
+                                    sendRefreshRequest()
+                                    editingUnifiedRule = null
                                     if (action == "create") {
                                         safeOnBack()
                                     } else {
                                         currentScreen = "manage"
                                     }
                                 },
-                                onBack = {
-                                    editingRule = null
+                                onClose = {
+                                    editingUnifiedRule = null
                                     if (action == "create") {
                                         safeOnBack()
                                     } else {
                                         currentScreen = "manage"
                                     }
-                                },
-                                onDeleteRule = { id ->
-                                    deleteScheduleRule(id)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
-                                onNavigateToPremium = { openPremiumScreen() }
+                                }
                             )
                         }
-                        "create_reels" -> {
-                            CreateReelsBlockerRuleScreen(
-                                state = state,
-                                viewModel = viewModel,
-                                initialType = initialType,
-                                editingRule = editingRule,
-                                onSaveRule = { rule ->
-                                    if (editingRule != null) {
-                                        deleteScheduleRule(editingRule!!.id)
-                                    }
-                                    saveScheduleRule(rule)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
+                        "select_targets" -> {
+                            SelectTargetsScreen(
+                                initialAppTargets = pickerApps,
+                                initialBlockedDomains = pickerDomains,
+                                initialBlockedKeywords = pickerKeywords,
+                                initialBlockNewlyInstalled = pickerBlockNewlyInstalled,
+                                initialIncludeInBrowserShortform = pickerIncludeInBrowserShortform,
+                                onConfirm = { newApps, newDomains, newKeywords, newBlockNew, newBrowserShortform ->
+                                    val base = editingUnifiedRule ?: UnifiedBlockRule(name = "")
+                                    editingUnifiedRule = base.copy(
+                                        appTargets = newApps,
+                                        blockedDomains = newDomains,
+                                        blockedKeywords = newKeywords,
+                                        blockNewlyInstalledApps = newBlockNew,
+                                        includeInBrowserShortform = newBrowserShortform
+                                    )
+                                    currentScreen = "create_unified"
                                 },
                                 onBack = {
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
-                                onDeleteRule = { id ->
-                                    deleteScheduleRule(id)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
-                                onNavigateToPremium = { openPremiumScreen() }
+                                    currentScreen = "create_unified"
+                                }
                             )
                         }
-                        "create_focus" -> {
-                            CreateFocusModeRuleScreen(
-                                state = state,
-                                editingRule = editingRule,
-                                onSaveRule = { rule ->
-                                    if (editingRule != null) {
-                                        deleteScheduleRule(editingRule!!.id)
-                                    }
-                                    saveScheduleRule(rule)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
+                        "weekly_report" -> {
+                            WeeklyUsageReportScreen(
+                                savedPreferencesLoader = savedPreferencesLoader,
                                 onBack = {
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
-                                onDeleteRule = { id ->
-                                    deleteScheduleRule(id)
-                                    editingRule = null
-                                    if (action == "create") {
-                                        safeOnBack()
-                                    } else {
-                                        currentScreen = "manage"
-                                    }
-                                },
-                                onNavigateToPremium = { openPremiumScreen() }
+                                    currentScreen = "manage"
+                                }
                             )
                         }
                     }
@@ -453,6 +468,7 @@ class BlocksManagerFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        resumeRefreshTick.intValue += 1
         try {
             loadSchedulesAndLimits()
         } catch (e: Throwable) {
@@ -1164,6 +1180,12 @@ class BlocksManagerFragment : Fragment() {
 
         val keywordIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST)
         context.sendBroadcast(keywordIntent.setPackage(context.packageName))
+
+        val alwaysOnIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ALWAYS_ON_SHIELDS)
+        context.sendBroadcast(alwaysOnIntent.setPackage(context.packageName))
+
+        val websiteIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
+        context.sendBroadcast(websiteIntent.setPackage(context.packageName))
 
         val viewIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER)
         context.sendBroadcast(viewIntent.setPackage(context.packageName))

@@ -62,9 +62,21 @@ class WarningActivity : AppCompatActivity() {
         binding.minsPicker.setValue(restoredMins)
         var isDialogCancelable = !isAppBlockerMode || isHomePressRequested || isFocusMode
 
+        val customRuleMessage = intent.getStringExtra("custom_warning_message")?.trim().orEmpty()
+        val customCloseDelaySecs = intent.getIntExtra("custom_close_delay_seconds", -1)
+        val effectiveDelaySecs = if (customCloseDelaySecs >= 0) {
+            customCloseDelaySecs
+        } else {
+            warningScreenConfig.proceedDelayInSecs
+        }
+
         if (isSimpleMode) {
             binding.warningTitle.text = "Access Blocked"
-            binding.warningMsg.text = "This content has been blocked permanently under Simple Mode by the $blockedFeature feature."
+            binding.warningMsg.text = if (customRuleMessage.isNotEmpty()) {
+                customRuleMessage
+            } else {
+                "This content has been blocked permanently under Simple Mode by the $blockedFeature feature."
+            }
             binding.btnProceed.visibility = View.GONE
             binding.proceedSeconds.visibility = View.GONE
             binding.minsPicker.visibility = View.GONE
@@ -77,20 +89,43 @@ class WarningActivity : AppCompatActivity() {
             isDialogCancelable = true
         } else {
             binding.warningTitle.text = when {
+                intent.hasExtra("custom_warning_title") -> intent.getStringExtra("custom_warning_title")
                 isAppBlockerMode -> getString(R.string.warning_title_app_blocker)
                 isKeywordBlockerMode -> "Keyword Blocked"
-                mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER && intent.getStringExtra("blocked_by_feature") == "Website Blocker" -> "Website Blocked"
+                mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER && !isReelBlockerWarning -> "Website Blocked"
                 else -> getString(R.string.warning_title_reels_blocker)
             }
 
-            if (warningScreenConfig.isProceedDisabled) {
-                binding.btnProceed.visibility = View.GONE
-                binding.proceedSeconds.visibility = View.GONE
-            } else {
-                val defaultDelayMillis = (warningScreenConfig.proceedDelayInSecs * 1000L).coerceAtLeast(0L)
-                remainingProceedMillis = savedInstanceState?.getLong(KEY_REMAINING_PROCEED_MILLIS, defaultDelayMillis) ?: defaultDelayMillis
-                isProceedTimerFinished = savedInstanceState?.getBoolean(KEY_PROCEED_TIMER_FINISHED, false) ?: false
+            val defaultDelayMillis = (effectiveDelaySecs * 1000L).coerceAtLeast(0L)
+            remainingProceedMillis = savedInstanceState?.getLong(KEY_REMAINING_PROCEED_MILLIS, defaultDelayMillis) ?: defaultDelayMillis
+            isProceedTimerFinished = savedInstanceState?.getBoolean(KEY_PROCEED_TIMER_FINISHED, false) ?: false
 
+            if (warningScreenConfig.isProceedDisabled || customCloseDelaySecs >= 0) {
+                binding.btnProceed.visibility = View.GONE
+                if (effectiveDelaySecs > 0 && !isProceedTimerFinished && remainingProceedMillis > 0L) {
+                    binding.proceedSeconds.visibility = View.VISIBLE
+                    binding.btnCancel.isEnabled = false
+                    proceedTimer = object : CountDownTimer(remainingProceedMillis, 1000) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            remainingProceedMillis = millisUntilFinished
+                            val secs = (millisUntilFinished / 1000L).coerceAtLeast(1L)
+                            binding.proceedSeconds.text = "Closing available in ${secs}s..."
+                        }
+
+                        override fun onFinish() {
+                            remainingProceedMillis = 0L
+                            isProceedTimerFinished = true
+                            binding.proceedSeconds.visibility = View.GONE
+                            binding.btnCancel.isEnabled = true
+                        }
+                    }.start()
+                } else {
+                    remainingProceedMillis = 0L
+                    isProceedTimerFinished = true
+                    binding.proceedSeconds.visibility = View.GONE
+                    binding.btnCancel.isEnabled = true
+                }
+            } else {
                 if (isProceedTimerFinished || remainingProceedMillis <= 0L) {
                     remainingProceedMillis = 0L
                     isProceedTimerFinished = true
@@ -101,34 +136,36 @@ class WarningActivity : AppCompatActivity() {
                     binding.btnProceed.setText(R.string.proceed)
                     binding.proceedSeconds.visibility = View.GONE
                 } else {
-                    binding.proceedSeconds.text = getString(R.string.proceed_in, remainingProceedMillis / 1000)
-                    proceedTimer = object : CountDownTimer(remainingProceedMillis, 1000) {
-                        override fun onTick(millisUntilFinished: Long) {
-                            remainingProceedMillis = millisUntilFinished
-                            binding.proceedSeconds.text =
-                                getString(R.string.proceed_in, millisUntilFinished / 1000)
-                        }
-
-                        override fun onFinish() {
-                            remainingProceedMillis = 0L
-                            isProceedTimerFinished = true
-                            binding.btnProceed.let { button ->
-                                button.isEnabled = true
-                                if (warningScreenConfig.isDynamicIntervalSettingAllowed) {
-                                    binding.minsPicker.visibility = View.VISIBLE
-                                }
-                                button.setText(R.string.proceed)
+                    binding.proceedSeconds.text =
+                        getString(R.string.proceed_in, remainingProceedMillis / 1000)
+                    proceedTimer =
+                        object : CountDownTimer(remainingProceedMillis, 1000) {
+                            override fun onTick(millisUntilFinished: Long) {
+                                remainingProceedMillis = millisUntilFinished
+                                binding.proceedSeconds.text =
+                                    getString(R.string.proceed_in, millisUntilFinished / 1000)
                             }
-                            binding.proceedSeconds.visibility = View.GONE
-                        }
-                    }.start()
+
+                            override fun onFinish() {
+                                remainingProceedMillis = 0L
+                                isProceedTimerFinished = true
+                                binding.btnProceed.let { button ->
+                                    button.isEnabled = true
+                                    if (warningScreenConfig.isDynamicIntervalSettingAllowed) {
+                                        binding.minsPicker.visibility = View.VISIBLE
+                                    }
+                                    button.setText(R.string.proceed)
+                                }
+                                binding.proceedSeconds.visibility = View.GONE
+                            }
+                        }.start()
                 }
             }
         }
 
         dialog = MaterialAlertDialogBuilder(this)
             .setView(binding.root)
-            .setCancelable(isDialogCancelable)
+            .setCancelable(isDialogCancelable && customCloseDelaySecs <= 0)
             .setOnCancelListener {
                 if (mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER || isAppBlockerMode || isFocusMode) {
                     val homeIntent = Intent(Intent.ACTION_MAIN).apply {
@@ -145,18 +182,24 @@ class WarningActivity : AppCompatActivity() {
             isFocusMode -> "This app is restricted during your active Focus Session."
             isAppBlockerMode -> getString(R.string.warning_default_message_app)
             isKeywordBlockerMode -> "Content containing a blocked keyword was detected."
-            mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER && intent.getStringExtra("blocked_by_feature") == "Website Blocker" -> "Access to this website is restricted."
+            mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER && !isReelBlockerWarning -> "Access to this website is restricted."
             else -> getString(R.string.warning_default_message_reels)
         }
-        val configuredMessage = warningScreenConfig.message.trim()
+        val configuredMessage = customRuleMessage.ifEmpty { warningScreenConfig.message.trim() }
+        val baseMessage = configuredMessage.ifEmpty { fallbackMessage }
+        val attributedMessage = if (blockedFeature.isNotBlank() && !baseMessage.contains(blockedFeature, ignoreCase = true)) {
+            "$baseMessage\n\n$blockedFeature"
+        } else {
+            baseMessage
+        }
 
         if (isSimpleMode) {
             binding.btnCancel.text = "Go Home"
         } else if (isFocusMode) {
-            binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
+            binding.warningMsg.text = attributedMessage
             binding.btnCancel.text = "Return Home"
         } else {
-            binding.warningMsg.text = if (configuredMessage.isNotEmpty()) configuredMessage else fallbackMessage
+            binding.warningMsg.text = attributedMessage
             binding.minsPicker.setValue(restoredMins)
             binding.btnCancel.text = if (isAppBlockerMode || isHomePressRequested || mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER) {
                 getString(R.string.warning_cancel_go_home)

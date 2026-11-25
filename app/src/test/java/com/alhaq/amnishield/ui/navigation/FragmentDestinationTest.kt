@@ -1,5 +1,6 @@
 package com.alhaq.amnishield.ui.navigation
 
+import android.content.Intent
 import com.alhaq.amnishield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnishield.ui.fragments.DiagnosticsFragment
 import com.alhaq.amnishield.ui.fragments.ManageLaunchLimitsFragment
@@ -121,5 +122,30 @@ class FragmentDestinationTest {
         assertFalse(FragmentDestination.Welcome.requiresBypassPin)
         assertFalse(FragmentDestination.AccessibilityGuideDest.requiresBypassPin)
         assertFalse(FragmentDestination.Profile.requiresBypassPin)
+    }
+
+    @Test
+    fun `ManageLaunchLimits routes to BlocksManagerFragment and fromIntent enriches BlocksManager extras`() {
+        assertTrue(FragmentDestination.ManageLaunchLimits.createFragment() is BlocksManagerFragment)
+        assertTrue(FragmentDestination.ManageLaunchLimits.requiresBypassPin)
+
+        val extras = mapOf(
+            FragmentDestination.EXTRA_DESTINATION_KEY to BlocksManagerFragment.FRAGMENT_ID,
+            "filter_type" to "Limits",
+            "action" to "create_website",
+            "prefill_website" to "example.com",
+            "initial_tab" to "MY_BLOCKS"
+        )
+        val fakeIntent = object : Intent() {
+            override fun getStringExtra(name: String?): String? = extras[name]
+        }
+
+        val resolved = FragmentDestination.fromIntent(fakeIntent)
+        assertTrue(resolved is FragmentDestination.BlocksManager)
+        val blocks = resolved as FragmentDestination.BlocksManager
+        assertEquals("Limits", blocks.filterType)
+        assertEquals("create_website", blocks.action)
+        assertEquals("example.com", blocks.prefillWebsite)
+        assertEquals("MY_BLOCKS", blocks.initialTab)
     }
 }

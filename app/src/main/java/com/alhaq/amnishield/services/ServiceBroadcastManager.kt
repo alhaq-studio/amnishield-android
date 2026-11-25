@@ -5,11 +5,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
+import androidx.core.content.ContextCompat
 
 /**
  * Manages broadcast receiver registrations and dispatches settings, cooldown,
- * and authentication refresh events to their respective service handlers.
+ * Always-On Shields, and authentication refresh events to their respective service handlers.
  */
 class ServiceBroadcastManager(
     private val context: Context,
@@ -25,6 +25,7 @@ class ServiceBroadcastManager(
         fun onRefreshReelBlockerCooldown(resultId: String?, interval: Int)
         fun onRefreshKeywordBlockerCooldown(resultId: String?, interval: Int)
         fun onRefreshUnifiedFeatureSchedules()
+        fun onRefreshAlwaysOnShields()
         fun onRefreshAppBlockerCooldown(resultId: String?, interval: Int)
         fun onRefreshFocusMode()
         fun onRefreshAntiUninstall()
@@ -63,6 +64,7 @@ class ServiceBroadcastManager(
                     callbacks.onRefreshKeywordBlockerCooldown(resultId, interval)
                 }
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES -> callbacks.onRefreshUnifiedFeatureSchedules()
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ALWAYS_ON_SHIELDS -> callbacks.onRefreshAlwaysOnShields()
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE -> callbacks.onRefreshFocusMode()
                 AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL -> callbacks.onRefreshAntiUninstall()
                 AmniShieldAccessibilityService.INTENT_ACTION_PASSWORD_VERIFIED -> callbacks.onPasswordVerified()
@@ -83,16 +85,18 @@ class ServiceBroadcastManager(
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES)
+            addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ALWAYS_ON_SHIELDS)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
             addAction(AmniShieldAccessibilityService.INTENT_ACTION_PASSWORD_VERIFIED)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         isRegistered = true
     }
 

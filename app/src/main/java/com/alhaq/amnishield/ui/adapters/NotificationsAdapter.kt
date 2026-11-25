@@ -7,14 +7,13 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.alhaq.amnishield.R
-import com.alhaq.amnishield.utils.NotificationInboxStore.Category
-import com.alhaq.amnishield.utils.NotificationInboxStore.InboxNotification
+import com.alhaq.amnishield.utils.NotificationInboxStore.InboxItem
 
 class NotificationsAdapter(
-    private var items: List<InboxNotification>
+    private var items: List<InboxItem>
 ) : RecyclerView.Adapter<NotificationsAdapter.ViewHolder>() {
 
-    fun updateData(newItems: List<InboxNotification>) {
+    fun updateData(newItems: List<InboxItem>) {
         items = newItems
         notifyDataSetChanged()
     }
@@ -37,9 +36,9 @@ class NotificationsAdapter(
         private val meta: TextView = itemView.findViewById(R.id.notification_meta)
         private val unreadDot: View = itemView.findViewById(R.id.unread_dot)
 
-        fun bind(item: InboxNotification) {
+        fun bind(item: InboxItem) {
             title.text = item.title
-            message.text = item.message
+            message.text = item.body
 
             val relative = DateUtils.getRelativeTimeSpanString(
                 item.timestamp,
@@ -53,12 +52,13 @@ class NotificationsAdapter(
             itemView.alpha = if (item.read) 0.78f else 1f
         }
 
-        private fun categoryLabel(category: Category): String = when (category) {
-            Category.DAILY_REPORT -> "Daily report"
-            Category.REMINDER -> "Reminder"
-            Category.ACHIEVEMENT -> "Achievement"
-            Category.BLOCK_ALERT -> "Block alert"
-            Category.SYSTEM -> "AmniShield"
+        private fun categoryLabel(category: String): String = when (category.lowercase()) {
+            "report" -> "Daily report"
+            "smart" -> "Smart Coach"
+            "achievement" -> "Achievement"
+            "blocking" -> "Block alert"
+            "streak" -> "Streak"
+            else -> "AmniShield"
         }
     }
 }

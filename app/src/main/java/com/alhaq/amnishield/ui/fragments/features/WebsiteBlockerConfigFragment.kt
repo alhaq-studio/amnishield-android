@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
-import com.alhaq.amnishield.ui.dialogs.TweakAppBlockerWarning
 import com.alhaq.amnishield.ui.screens.config.WebsiteBlockerConfigScreen
 import com.alhaq.amnishield.ui.theme.AmniShieldTheme
 import com.alhaq.amnishield.utils.ThemeUtils
@@ -41,12 +40,6 @@ class WebsiteBlockerConfigFragment : BaseFeatureFragment() {
                             if (!parentFragmentManager.popBackStackImmediate()) {
                                 activity?.finish()
                             }
-                        },
-                        onConfigureWarning = {
-                            TweakAppBlockerWarning(savedPreferencesLoader).show(
-                                childFragmentManager,
-                                "tweak_website_blocker_warning"
-                            )
                         }
                     )
                 }

@@ -562,6 +562,103 @@ class SupabaseRest(
         }
     }
 
+    /**
+     * Immediately ties and syncs the user's Username, Daily Screen Time Goal, Avatar, and App ID (deviceId)
+     * with the backend (Supabase device registry, sync_records, and community access identity) as well as local preferences.
+     */
+    fun syncUserIdentityWithAppId(
+        context: android.content.Context,
+        userName: String,
+        goalMinutes: Int? = null,
+        avatarId: String? = null,
+        imageUri: String? = null
+    ): Boolean {
+        val loader = com.alhaq.amnishield.utils.SavedPreferencesLoader(context.applicationContext)
+        val cleanName = userName.trim().ifEmpty { "Guardian" }
+        val appId = loader.getDeviceId()
+
+        loader.setProfileName(cleanName)
+        if (goalMinutes != null) {
+            loader.setProfileGoalMinutes(goalMinutes)
+        }
+        if (avatarId != null) {
+            loader.setProfileAvatarId(avatarId)
+        }
+        if (imageUri != null) {
+            loader.setProfileImageUri(imageUri.ifBlank { null })
+        }
+
+        val resolvedGoal = goalMinutes ?: loader.getProfileGoalMinutes()
+        val resolvedAvatar = avatarId ?: loader.getProfileAvatarId()
+
+        var remoteSynced = false
+        try {
+            val keys = SecureKeyStore(context.applicationContext)
+            keys.deviceName = "$cleanName (${android.os.Build.MODEL})"
+            val refresh = keys.refreshToken
+            if (!refresh.isNullOrBlank()) {
+                val session = refresh(refresh)
+                keys.accessToken = session.accessToken
+                keys.refreshToken = session.refreshToken
+                upsertDevice(
+                    session = session,
+                    id = appId,
+                    platform = "android",
+                    label = keys.deviceName,
+                    fcmToken = keys.fcmToken
+                )
+                val payloadObj = JsonObject().apply {
+                    addProperty("username", cleanName)
+                    addProperty("app_id", appId)
+                    addProperty("goal_minutes", resolvedGoal)
+                    addProperty("avatar_id", resolvedAvatar)
+                    addProperty("updated_at_ms", System.currentTimeMillis())
+                }
+                val encoded = android.util.Base64.encodeToString(
+                    payloadObj.toString().toByteArray(Charsets.UTF_8),
+                    android.util.Base64.NO_WRAP
+                )
+                upsertRecord(
+                    session = session,
+                    namespace = "amnishield_identity",
+                    recordKey = "profile_$appId",
+                    deviceId = appId,
+                    ciphertextB64 = keys.dekB64 ?: "plain:$encoded",
+                    version = System.currentTimeMillis(),
+                    deleted = false
+                )
+                remoteSynced = true
+            }
+
+            // Also sync with community-access endpoint if user has a registered email or active community access
+            val caEmail = loader.getCompassionateAccessEmail()
+            if (caEmail.isNotBlank()) {
+                val payload = JsonObject().apply {
+                    addProperty("action", "sync_identity")
+                    addProperty("email", caEmail)
+                    addProperty("name", cleanName)
+                    addProperty("device_identifier", appId)
+                    addProperty("app_id", appId)
+                    addProperty("goal_minutes", resolvedGoal)
+                }
+                val req = Request.Builder()
+                    .url("$baseUrl/functions/v1/community-access")
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $anonKey")
+                    .header("Content-Type", "application/json")
+                    .post(payload.toString().toRequestBody(jsonType))
+                    .build()
+                client.newCall(req).execute().close()
+                remoteSynced = true
+            }
+        } catch (_: Exception) {
+            // Safe fallback: local binding with App ID is always persisted immediately
+        }
+
+        loader.markIdentitySynced(cleanName, appId)
+        return remoteSynced
+    }
+
     companion object {
         const val ANON_KEY =
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZ3BtY29tdmliZ2tsbXZueHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NzE0MjQsImV4cCI6MjA5OTQ0NzQyNH0.JvPyt8ye2OCBsLXMBUoIOXUz1E5UHDHOY55oDH6Ce10"

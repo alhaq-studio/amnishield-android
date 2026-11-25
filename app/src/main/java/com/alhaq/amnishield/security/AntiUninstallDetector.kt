@@ -80,11 +80,16 @@ class AntiUninstallDetector(private val context: Context) {
         private const val PLAY_STORE_PACKAGE = "com.android.vending"
     }
 
+    @Volatile
     var isAntiUninstallOn: Boolean = false
         private set
+    @Volatile
     private var antiUninstallMode: Int = -1
+    @Volatile
     private var savedPassword: String? = null
+    @Volatile
     private var savedDate: String? = null
+    @Volatile
     private var savedUnlockAtMillis: Long = 0L
 
     private var lastBlockTime: Long = 0L

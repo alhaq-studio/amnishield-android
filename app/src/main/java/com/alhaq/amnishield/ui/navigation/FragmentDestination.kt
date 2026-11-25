@@ -58,12 +58,27 @@ sealed class FragmentDestination(val key: String) {
         override val requiresBypassPin: Boolean = true
     }
 
-    data class BlocksManager(val filterType: String? = null) : FragmentDestination(BlocksManagerFragment.FRAGMENT_ID) {
+    data class BlocksManager(
+        val filterType: String? = null,
+        val action: String? = null,
+        val prefillTarget: String? = null,
+        val prefillApp: String? = null,
+        val prefillWebsite: String? = null,
+        val presetKeyword: String? = null,
+        val initialTab: String? = null
+    ) : FragmentDestination(BlocksManagerFragment.FRAGMENT_ID) {
         override fun createFragment(): Fragment = BlocksManagerFragment().apply {
-            if (filterType != null) {
-                arguments = Bundle().apply {
-                    putString("filter_type", filterType)
-                }
+            val args = Bundle().apply {
+                filterType?.let { putString("filter_type", it) }
+                action?.let { putString("action", it) }
+                prefillTarget?.let { putString("prefill_target", it) }
+                prefillApp?.let { putString("prefill_app", it) }
+                prefillWebsite?.let { putString("prefill_website", it) }
+                presetKeyword?.let { putString("preset_keyword", it) }
+                initialTab?.let { putString("initial_tab", it) }
+            }
+            if (!args.isEmpty) {
+                arguments = args
             }
         }
         override val requiresBypassPin: Boolean = true
@@ -129,7 +144,11 @@ sealed class FragmentDestination(val key: String) {
     }
 
     data object ManageLaunchLimits : FragmentDestination(ManageLaunchLimitsFragment.FRAGMENT_ID) {
-        override fun createFragment(): Fragment = ManageLaunchLimitsFragment()
+        override fun createFragment(): Fragment = BlocksManagerFragment().apply {
+            arguments = Bundle().apply {
+                putString("filter_type", "Limits")
+            }
+        }
         override val requiresBypassPin: Boolean = true
     }
 
@@ -183,14 +202,34 @@ sealed class FragmentDestination(val key: String) {
             if (intent == null) return null
             val filterType = intent.getStringExtra("filter_type")
 
+            fun enrichBlocksDestination(dest: FragmentDestination?): FragmentDestination? {
+                return if (dest is BlocksManager) {
+                    dest.copy(
+                        filterType = filterType ?: dest.filterType,
+                        action = intent.getStringExtra("action"),
+                        prefillTarget = intent.getStringExtra("prefill_target"),
+                        prefillApp = intent.getStringExtra("prefill_app"),
+                        prefillWebsite = intent.getStringExtra("prefill_website"),
+                        presetKeyword = intent.getStringExtra("preset_keyword"),
+                        initialTab = intent.getStringExtra("initial_tab")
+                    )
+                } else {
+                    dest
+                }
+            }
+
             // 1. Check type-safe destination key first
-            fromKey(intent.getStringExtra(EXTRA_DESTINATION_KEY), filterType)?.let { return it }
+            fromKey(intent.getStringExtra(EXTRA_DESTINATION_KEY), filterType)?.let {
+                return enrichBlocksDestination(it)
+            }
 
             // 2. Fallback to feature_type extra
-            fromKey(intent.getStringExtra(EXTRA_FEATURE_TYPE), filterType)?.let { return it }
+            fromKey(intent.getStringExtra(EXTRA_FEATURE_TYPE), filterType)?.let {
+                return enrichBlocksDestination(it)
+            }
 
             // 3. Fallback to legacy fragment ID extra
-            return fromKey(intent.getStringExtra(EXTRA_FRAGMENT), filterType)
+            return enrichBlocksDestination(fromKey(intent.getStringExtra(EXTRA_FRAGMENT), filterType))
         }
     }
 }

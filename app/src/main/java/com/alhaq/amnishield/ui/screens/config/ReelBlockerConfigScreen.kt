@@ -2,596 +2,291 @@ package com.alhaq.amnishield.ui.screens.config
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.alhaq.amnishield.blockers.ReelBlocker
-import com.alhaq.amnishield.data.blockers.BlockerType
+import com.alhaq.amnishield.data.blockers.AppInterceptionLevel
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
-import com.alhaq.amnishield.ui.activity.FragmentActivity
-import com.alhaq.amnishield.ui.components.bounceClick
-import com.alhaq.amnishield.ui.fragments.BlocksManagerFragment
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 
-private const val TAG = "ReelBlockerConfigScreen"
-
-/**
- * Dedicated Jetpack Compose configuration screen for Short Video / Reel Blocker.
- * 
- * Manages behavioral settings and preferences:
- * - Master Reel Blocker enabled switch
- * - Blocking response mode (Warning Screen, Redirect to Home Feed, Exit to Android Home)
- * - Individual platform detection switches (YouTube Shorts, Instagram Reels, TikTok, In-Browser)
- * - Warning dialog customization trigger
- * - Direct shortcut to Active Blocks Manager for reel rules
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReelBlockerConfigScreen(
     isServiceEnabled: Boolean,
     onEnableServiceClick: () -> Unit,
     onBack: () -> Unit,
-    onConfigureWarning: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val loader = remember { SavedPreferencesLoader(context) }
+    val prefsLoader = remember { SavedPreferencesLoader(context) }
+    val reelConfigSp = remember { context.getSharedPreferences("config_reels", Context.MODE_PRIVATE) }
 
-    var isFeatureEnabled by remember { mutableStateOf(loader.isReelBlockerEnabled()) }
-    var isYoutubeEnabled by remember { mutableStateOf(loader.isReelBlockerYoutubeEnabled()) }
-    var isInstagramEnabled by remember { mutableStateOf(loader.isReelBlockerInstagramEnabled()) }
-    var isTiktokEnabled by remember { mutableStateOf(loader.isReelBlockerTiktokEnabled()) }
-    var isBrowserEnabled by remember { mutableStateOf(loader.isReelBlockerBrowserEnabled()) }
-    var blockResponseMode by remember { mutableStateOf(loader.getReelBlockerBlockResponseMode()) }
-
-    val reelsRulesCount = remember {
-        loader.loadAppBlockerScheduleRules()
-            .filter { it.blockerType == BlockerType.REELS || it.packageName == "reel_blocker" || it.title.contains("Reel", ignoreCase = true) }
-            .map { it.groupId ?: it.id }
-            .distinct()
-            .size
+    var allowDmReels by remember {
+        mutableStateOf(reelConfigSp.getBoolean("is_reel_inbox", false))
+    }
+    var allowFirstFeedReel by remember {
+        mutableStateOf(reelConfigSp.getBoolean("is_reel_first", false))
     }
 
-    Log.d(TAG, "Rendering ReelBlockerConfigScreen: enabled=$isFeatureEnabled, rulesCount=$reelsRulesCount")
+    val rules = remember { prefsLoader.loadUnifiedBlockRules() }
+    val alwaysOnReels = remember { prefsLoader.loadAlwaysOnShieldsConfig().reels }
+    val activeRules = remember(rules) {
+        rules.filter { rule ->
+            rule.isActiveOrScheduledForContentNow() &&
+                (rule.includeInBrowserShortform ||
+                    rule.appTargets.values.any { it == AppInterceptionLevel.BLOCK_SHORTFORM_ONLY })
+        }
+    }
+    val activeShortformCardCount = activeRules.size
+    val isAlwaysOnReelsActive = alwaysOnReels.enabled
+    val activeBrowserShortsCount = remember(activeRules, alwaysOnReels) {
+        activeRules.count { it.includeInBrowserShortform } +
+            if (alwaysOnReels.enabled && alwaysOnReels.blockInBrowserShorts) 1 else 0
+    }
+    val hasAnyActiveReelsProtection = activeShortformCardCount > 0 || isAlwaysOnReelsActive
+
+    fun broadcastReelRefresh() {
+        context.sendBroadcast(
+            Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER).apply {
+                setPackage(context.packageName)
+            }
+        )
+    }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = {
-                    Column {
-                        Text(
-                            text = "Short Video & Reels Settings",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            text = "Block short-form scroll feeds & addiction",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
+                title = { Text("Short-Form Detection Behavior", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("reel_config_back_button")
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                }
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
+        }
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            // Accessibility Service Banner if disabled
             if (!isServiceEnabled) {
-                ServiceRequiredCard(onEnableClick = onEnableServiceClick)
-            }
-
-            // 1. Master Feature Switch Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isFeatureEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayCircleOutline,
-                            contentDescription = null,
-                            tint = if (isFeatureEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enable Reels Blocker",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val dynamicSubtitle = when {
-                            !isServiceEnabled -> "Accessibility Service required"
-                            !isFeatureEnabled -> if (reelsRulesCount > 0) "Feature suspended • $reelsRulesCount rule${if (reelsRulesCount > 1) "s" else ""} preserved" else "Reels blocker suspended"
-                            reelsRulesCount == 0 -> "Engine ready • No reels rules active"
-                            else -> "Active • Enforcing $reelsRulesCount rule${if (reelsRulesCount > 1) "s" else ""}"
-                        }
-                        Text(
-                            text = dynamicSubtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = isFeatureEnabled,
-                        onCheckedChange = { checked ->
-                            Log.i(TAG, "Reels Blocker feature toggle changed: $checked")
-                            isFeatureEnabled = checked
-                            loader.setReelBlockerEnabled(checked, updateManual = true)
-
-                            val refreshIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER).apply {
-                                setPackage(context.packageName)
-                            }
-                            context.sendBroadcast(refreshIntent)
-                        }
-                    )
+                item {
+                    ServiceRequiredCard(onEnableClick = onEnableServiceClick)
                 }
             }
 
-            // 2. Active Reels Rules Link
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Timer,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
+            // Engine Status Banner
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (hasAnyActiveReelsProtection) Icons.Default.CheckCircle else Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Managed by Always-On Shields & Block Cards",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (hasAnyActiveReelsProtection) {
+                                        val guardText = if (isAlwaysOnReelsActive) "Always-On Reels Guard + " else ""
+                                        "${guardText}$activeShortformCardCount active Block Card(s) guarding short-form feeds" +
+                                            if (activeBrowserShortsCount > 0) " (including In-Browser Shorts)." else "."
+                                    } else {
+                                        "No Always-On Reels Guard or Block Cards are currently targeting Reels or Shorts."
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.12f)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+
+                        Text(
+                            text = "Choose which apps block Reels/Shorts (or toggle \"Block in-browser short videos\") and set the interception style inside each Block Card.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+
+            // Feed Exception & Sensitivity Tuning
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Column {
+                                Text(
+                                    text = "Feed Detection Exceptions",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Fine-tune how the short-form accessibility detector handles shared links and feed previews.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        HorizontalDivider()
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = "Allow Reels from Direct Messages",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Let you view a single Reel sent by a friend inside Instagram DM Inbox without triggering a block until you scroll to the next Reel.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = allowDmReels,
+                                onCheckedChange = { enabled ->
+                                    allowDmReels = enabled
+                                    reelConfigSp.edit().putBoolean("is_reel_inbox", enabled).apply()
+                                    broadcastReelRefresh()
+                                },
+                                modifier = Modifier.testTag("allow_dm_reels_switch")
+                            )
+                        }
+
+                        HorizontalDivider()
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = "Allow First Reel in Main Feed",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Avoid false-positive triggers when scrolling past an embedded video in the main home timeline before entering the dedicated Reels player.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = allowFirstFeedReel,
+                                onCheckedChange = { enabled ->
+                                    allowFirstFeedReel = enabled
+                                    reelConfigSp.edit().putBoolean("is_reel_first", enabled).apply()
+                                    broadcastReelRefresh()
+                                },
+                                modifier = Modifier.testTag("allow_first_feed_reel_switch")
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Supported Platforms Reference Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Reels Rules & Daily Limits",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = "Supported Short-Form Feeds",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "$reelsRulesCount active reels schedule rule" + if (reelsRulesCount != 1) "s" else "",
+                                text = "AmniShield detects view IDs and feed hierarchies for Instagram Reels, YouTube Shorts, TikTok Feed, and In-Browser Short Videos (/shorts/, /reels/, /tiktok/).",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = {
-                            Log.d(TAG, "Navigating to Blocks Manager for Reels Blocker")
-                            val intent = Intent(context, FragmentActivity::class.java).apply {
-                                putExtra("fragment", BlocksManagerFragment.FRAGMENT_ID)
-                                putExtra("filter_type", "Reels Blocker")
-                            }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bounceClick(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AddCircleOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Manage Reels Rules & Limits", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-
-            // 3. Block Action / Response Mode
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Block Action",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    Text(
-                        text = "Choose what happens when a reel or short video is intercepted",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    ResponseModeOptionRow(
-                        title = "Redirect to Home Feed (Default)",
-                        description = "Stays in app and redirects to the safe home / news feed without friction",
-                        icon = Icons.Outlined.DynamicFeed,
-                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT,
-                        onClick = {
-                            blockResponseMode = ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT
-                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    ResponseModeOptionRow(
-                        title = "Exit to Android Home",
-                        description = "Closes to your phone's home screen immediately",
-                        icon = Icons.Outlined.Smartphone,
-                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.ANDROID_HOME,
-                        onClick = {
-                            blockResponseMode = ReelBlocker.BlockResponseMode.ANDROID_HOME
-                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.ANDROID_HOME)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    ResponseModeOptionRow(
-                        title = "Warning Screen (Hard Block)",
-                        description = "Shows the warning screen with cooldown timer & motivation",
-                        icon = Icons.Outlined.Shield,
-                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.HARD_BLOCK,
-                        onClick = {
-                            blockResponseMode = ReelBlocker.BlockResponseMode.HARD_BLOCK
-                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.HARD_BLOCK)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    ResponseModeOptionRow(
-                        title = "AmniSpace Mindful Breathing Pause",
-                        description = "Shows a 5s guided breathing circle & reflection prompt before exit",
-                        icon = Icons.Outlined.SelfImprovement,
-                        isSelected = blockResponseMode == ReelBlocker.BlockResponseMode.MINDFUL_PAUSE,
-                        onClick = {
-                            blockResponseMode = ReelBlocker.BlockResponseMode.MINDFUL_PAUSE
-                            loader.setReelBlockerBlockResponseMode(ReelBlocker.BlockResponseMode.MINDFUL_PAUSE)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-                }
-            }
-
-            // 4. Platform Detection Switches
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Supported Platforms",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    PlatformToggleRow(
-                        title = "YouTube Shorts",
-                        description = "Intercept Shorts feed and tab in YouTube app",
-                        icon = Icons.Outlined.SmartDisplay,
-                        checked = isYoutubeEnabled,
-                        onCheckedChange = { checked ->
-                            Log.i(TAG, "YouTube Shorts switch: $checked")
-                            isYoutubeEnabled = checked
-                            loader.setReelBlockerYoutubeEnabled(checked)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    PlatformToggleRow(
-                        title = "Instagram Reels",
-                        description = "Intercept Reels tab and infinite scroll video viewer",
-                        icon = Icons.Outlined.PhotoCamera,
-                        checked = isInstagramEnabled,
-                        onCheckedChange = { checked ->
-                            Log.i(TAG, "Instagram Reels switch: $checked")
-                            isInstagramEnabled = checked
-                            loader.setReelBlockerInstagramEnabled(checked)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    PlatformToggleRow(
-                        title = "TikTok",
-                        description = "Intercept TikTok video feeds and explore tabs",
-                        icon = Icons.Outlined.Videocam,
-                        checked = isTiktokEnabled,
-                        onCheckedChange = { checked ->
-                            Log.i(TAG, "TikTok switch: $checked")
-                            isTiktokEnabled = checked
-                            loader.setReelBlockerTiktokEnabled(checked)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                    )
-
-                    PlatformToggleRow(
-                        title = "In-Browser Short Videos",
-                        description = "Intercept web shorts in Chrome, Firefox & mobile browsers",
-                        icon = Icons.Outlined.Language,
-                        checked = isBrowserEnabled,
-                        onCheckedChange = { checked ->
-                            Log.i(TAG, "Browser Reels switch: $checked")
-                            isBrowserEnabled = checked
-                            loader.setReelBlockerBrowserEnabled(checked)
-                            broadcastReelsRefresh(context)
-                        }
-                    )
-                }
-            }
-
-            // 5. Intercept Warning Screen Settings
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bounceClick()
-                    .clickable { onConfigureWarning() }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Warning Screen Behavior",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Customize message, cooldown delays, and motivation",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Configure",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
     }
-}
-
-@Composable
-private fun PlatformToggleRow(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-    }
-}
-
-@Composable
-private fun ResponseModeOptionRow(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .padding(vertical = 6.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                    else MaterialTheme.colorScheme.surfaceVariant
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        RadioButton(
-            selected = isSelected,
-            onClick = onClick
-        )
-    }
-}
-
-private fun broadcastReelsRefresh(context: Context) {
-    val refreshReelIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER).apply {
-        setPackage(context.packageName)
-    }
-    context.sendBroadcast(refreshReelIntent)
-    val refreshViewIntent = Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_VIEW_BLOCKER).apply {
-        setPackage(context.packageName)
-    }
-    context.sendBroadcast(refreshViewIntent)
 }

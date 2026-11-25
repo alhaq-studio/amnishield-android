@@ -5,7 +5,13 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import com.alhaq.amnishield.InMemorySharedPreferences
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.AppInterceptionLevel
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
+import com.alhaq.amnishield.data.blockers.BlockRuleStatus
+import com.alhaq.amnishield.data.blockers.LimitPeriod
+import com.alhaq.amnishield.data.blockers.OpenLimitTrigger
+import com.alhaq.amnishield.data.blockers.UnifiedBlockRule
+import com.alhaq.amnishield.data.blockers.WeeklyScheduleTrigger
 import com.alhaq.amnishield.security.AuthType
 import com.alhaq.amnishield.ui.state.ScheduleRule
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
@@ -155,6 +161,51 @@ class AmniShieldRuleDatabaseTest {
         assertEquals(1, limitEntities.size)
         assertEquals("com.instagram.android", limitEntities.first().packageName)
         assertEquals(3, limitEntities.first().maxLaunches)
+    }
+
+    @Test
+    fun savedPreferencesLoader_syncsUnifiedBlockRulesToRelationalDb() {
+        val unified = UnifiedBlockRule(
+            id = "unified_work_1",
+            name = "Deep Focus Unified",
+            status = BlockRuleStatus.ACTIVE,
+            appTargets = mapOf(
+                "com.instagram.android" to AppInterceptionLevel.BLOCK_ENTIRE_APP
+            ),
+            weeklySchedules = listOf(
+                WeeklyScheduleTrigger(
+                    id = "sched_am",
+                    daysOfWeek = setOf(Calendar.MONDAY, Calendar.TUESDAY),
+                    startTimeMinutes = 540,
+                    endTimeMinutes = 720
+                )
+            ),
+            openLimits = listOf(
+                OpenLimitTrigger(
+                    id = "open_daily",
+                    period = LimitPeriod.DAILY,
+                    maxLaunches = 4
+                )
+            ),
+            authType = AuthType.RULE_PIN,
+            rulePasswordHash = "hash_u",
+            rulePasswordSalt = "salt_u"
+        )
+
+        loader.saveUnifiedBlockRules(listOf(unified), syncToEngines = false)
+
+        val projectedApps = ruleDb.appBlockRulesFlow.value
+        assertEquals(1, projectedApps.size)
+        assertEquals("unified_work_1", projectedApps.first().groupId)
+        assertEquals("com.instagram.android", projectedApps.first().packageName)
+        assertEquals(540, projectedApps.first().startMinute)
+        assertEquals(AuthType.RULE_PIN, projectedApps.first().authType)
+
+        val projectedLimits = ruleDb.screenTimeLimitRulesFlow.value
+        assertEquals(1, projectedLimits.size)
+        assertEquals("com.instagram.android", projectedLimits.first().packageName)
+        assertEquals(4, projectedLimits.first().maxLaunches)
+        assertEquals("DAILY", projectedLimits.first().timePeriod)
     }
 
     @Test

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,9 +73,12 @@ class AmniSpaceActivity : ComponentActivity() {
         val triggerReason = intent.getStringExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON) ?: "Focus Session"
         val triggerApp = intent.getStringExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP) ?: ""
         val customDurationSeconds = intent.getIntExtra(Constants.AMNISPACE_EXTRA_DURATION_SECONDS, 0)
+        val customWarningMessage = intent.getStringExtra("custom_warning_message")?.trim().orEmpty()
 
         setContent {
-            AmniShieldTheme {
+            AmniShieldTheme(
+                appTheme = com.alhaq.amnishield.utils.ThemeUtils.resolveAppTheme(this)
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -84,6 +88,7 @@ class AmniSpaceActivity : ComponentActivity() {
                             triggerReason = triggerReason,
                             triggerApp = triggerApp,
                             customDurationSeconds = if (customDurationSeconds > 0) customDurationSeconds else null,
+                            customWarningMessage = customWarningMessage,
                             onClose = {
                                 navigateToAndroidHome()
                                 finish()
@@ -395,6 +400,7 @@ fun AmniSpaceBreathingScreen(
     triggerReason: String,
     triggerApp: String,
     customDurationSeconds: Int? = null,
+    customWarningMessage: String = "",
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -433,6 +439,8 @@ fun AmniSpaceBreathingScreen(
     val isFocus = triggerReason.contains("Focus", ignoreCase = true)
 
     val badgeTitle = when {
+        triggerReason.startsWith("Blocked by Always-On", ignoreCase = true) -> triggerReason.substringBefore(" (").uppercase()
+        triggerReason.startsWith("Blocked by Custom Rule:", ignoreCase = true) -> triggerReason.substringBefore(" (").uppercase()
         isFocus -> "FOCUS MODE PAUSE"
         isReels -> "REELS BLOCKER"
         isWebsite -> "WEBSITE BLOCKER"
@@ -440,13 +448,14 @@ fun AmniSpaceBreathingScreen(
         else -> "APP BLOCKER"
     }
 
-    val subtitleText = when {
+    val defaultSubtitleText = when {
         isFocus -> "Focus session is active. Take a mindful breath."
         isReels -> "Short video feeds are engineered to trap attention. Take a breath and choose intentionally."
         isWebsite -> if (resolvedAppName != null) "Notice the urge to browse $resolvedAppName. Take a moment of calm." else "Notice the urge to browse this website. Take a moment of calm."
         isKeyword -> "Content containing restricted terms was detected. Pause and refocus."
         else -> if (resolvedAppName != null) "Notice the impulse to open $resolvedAppName. Take a breath and choose intentionally." else "Notice the impulse to open this app. Take a moment of calm."
     }
+    val subtitleText = customWarningMessage.trim().ifEmpty { defaultSubtitleText }
 
     Column(
         modifier = Modifier
@@ -480,7 +489,19 @@ fun AmniSpaceBreathingScreen(
                     text = badgeTitle,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
+                    color = MaterialTheme.colorScheme.secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (triggerReason.isNotBlank() && !triggerReason.equals(badgeTitle, ignoreCase = true)) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = triggerReason,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
 

@@ -4,21 +4,33 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
+import com.alhaq.amnishield.contract.GuardianContract
+import com.alhaq.amnishield.data.db.AmniShieldRuleDatabase
 import com.alhaq.amnishield.services.AmniShieldAccessibilityService
 import com.alhaq.amnishield.blockers.ReelBlocker
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.alhaq.amnishield.blockers.FocusModeBlocker
+import com.alhaq.amnishield.data.blockers.AlwaysOnShieldsConfig
 import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.AppInterceptionLevel
 import com.alhaq.amnishield.data.blockers.AppLaunchLimitRule
+import com.alhaq.amnishield.data.blockers.BlockRuleStatus
 import com.alhaq.amnishield.data.blockers.BlockerType
+import com.alhaq.amnishield.data.blockers.LimitPeriod
+import com.alhaq.amnishield.data.blockers.OpenLimitTrigger
+import com.alhaq.amnishield.data.blockers.PauseOptionConfig
+import com.alhaq.amnishield.data.blockers.PauseOptionType
+import com.alhaq.amnishield.data.blockers.ReelsLimitMode
+import com.alhaq.amnishield.data.blockers.ScreenTimeLimitTrigger
+import com.alhaq.amnishield.data.blockers.UnifiedBlockRule
+import com.alhaq.amnishield.data.blockers.WeeklyScheduleTrigger
 import com.alhaq.amnishield.ui.activity.MainActivity
 import java.util.Calendar
 import java.util.UUID
 import java.util.ArrayList
 import java.time.LocalDate
 import android.os.SystemClock
-import com.alhaq.amnishield.contract.GuardianContract
 
 open class SavedPreferencesLoader(
     val context: Context,
@@ -42,10 +54,10 @@ open class SavedPreferencesLoader(
         return sharedPreferences.getStringSet("ignored_apps", emptySet()) ?: emptySet()
     }
 
-    fun loadBlockedApps(): Set<String> {
+    fun loadBlockedApps(): Set<String> = synchronized(rulesLock) {
         val sharedPreferences =
             context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        return sharedPreferences.getStringSet("blocked_apps", emptySet()) ?: emptySet()
+        return@synchronized (sharedPreferences.getStringSet("blocked_apps", emptySet()) ?: emptySet()).toSet()
     }
 
     fun saveAppBlockerCooldownData(cooldowns: Map<String, Long>) = synchronized(statsLock) {
@@ -64,7 +76,7 @@ open class SavedPreferencesLoader(
         if (json.isNullOrEmpty()) return@synchronized mutableMapOf()
 
         val type = object : TypeToken<MutableMap<String, Long>>() {}.type
-        return@synchronized Gson().fromJson(json, type) ?: mutableMapOf()
+        return@synchronized Gson().fromJson<MutableMap<String, Long>>(json, type) ?: mutableMapOf()
     }
 
     fun saveViewBlockerCooldownData(cooldowns: Map<String, Long>) = synchronized(statsLock) {
@@ -81,7 +93,7 @@ open class SavedPreferencesLoader(
         if (json.isNullOrEmpty()) return@synchronized mutableMapOf()
 
         val type = object : TypeToken<MutableMap<String, Long>>() {}.type
-        return@synchronized Gson().fromJson(json, type) ?: mutableMapOf()
+        return@synchronized Gson().fromJson<MutableMap<String, Long>>(json, type) ?: mutableMapOf()
     }
 
     fun saveReelBlockerCooldownData(cooldowns: Map<String, Long>) = synchronized(statsLock) {
@@ -98,7 +110,7 @@ open class SavedPreferencesLoader(
         if (json.isNullOrEmpty()) return@synchronized mutableMapOf()
 
         val type = object : TypeToken<MutableMap<String, Long>>() {}.type
-        return@synchronized Gson().fromJson(json, type) ?: mutableMapOf()
+        return@synchronized Gson().fromJson<MutableMap<String, Long>>(json, type) ?: mutableMapOf()
     }
 
     fun isReelBlockerEnabled(defaultValue: Boolean = false): Boolean {
@@ -208,28 +220,28 @@ open class SavedPreferencesLoader(
     fun savePinned(pinnedApps: Set<String>) = synchronized(rulesLock) {
         val sharedPreferences =
             context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putStringSet("pinned_apps", pinnedApps.toSet()).apply()
+        sharedPreferences.edit().putStringSet("pinned_apps", pinnedApps).apply()
     }
 
 
     fun saveBlockedApps(pinnedApps: Set<String>) = synchronized(rulesLock) {
         val sharedPreferences =
             context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putStringSet("blocked_apps", pinnedApps.toSet()).apply()
+        sharedPreferences.edit().putStringSet("blocked_apps", pinnedApps).apply()
     }
 
 
-    fun saveIgnoredAppUsageTracker(ignoredApps: Set<String>) = synchronized(rulesLock) {
+    fun saveIgnoredAppUsageTracker(ignoredApps: Set<String>) {
         val sharedPreferences =
             context.getSharedPreferences("app_usage_tracker", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putStringSet("ignored_apps", ignoredApps.toSet()).apply()
+        sharedPreferences.edit().putStringSet("ignored_apps", ignoredApps).apply()
     }
 
 
     fun saveBlockedKeywords(pinnedApps: Set<String>) = synchronized(rulesLock) {
         val sharedPreferences =
             context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putStringSet("blocked_keywords", pinnedApps.toSet()).apply()
+        sharedPreferences.edit().putStringSet("blocked_keywords", pinnedApps).apply()
     }
     private data class LegacyAutoTimedActionItem(
         val title: String = "",
@@ -238,10 +250,10 @@ open class SavedPreferencesLoader(
         val packages: ArrayList<String> = ArrayList()
     )
 
-    fun migrateLegacySchedulesIfNeeded() = synchronized(rulesLock) {
+    fun migrateLegacySchedulesIfNeeded() {
         val migrationPrefs = context.getSharedPreferences("schedules_migration", Context.MODE_PRIVATE)
         if (migrationPrefs.getBoolean("migrated_v2", false)) {
-            return@synchronized
+            return
         }
 
         // 1. Migrate App Blocker Cheat Hours
@@ -449,7 +461,7 @@ open class SavedPreferencesLoader(
 
 
 
-    fun saveFocusModeData(focusModeData: FocusModeBlocker.FocusModeData) = synchronized(rulesLock) {
+    fun saveFocusModeData(focusModeData: FocusModeBlocker.FocusModeData) {
         val sharedPreferences =
             context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
@@ -466,7 +478,7 @@ open class SavedPreferencesLoader(
     }
 
 
-    fun getFocusModeData(): FocusModeBlocker.FocusModeData = synchronized(rulesLock) {
+    fun getFocusModeData(): FocusModeBlocker.FocusModeData {
 
         val sharedPreferences =
             context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
@@ -497,13 +509,13 @@ open class SavedPreferencesLoader(
             )
             saveFocusModeData(expiredData)
             completeFocusSession()
-            return@synchronized expiredData
+            return expiredData
         }
 
-        return@synchronized data
+        return data
     }
     
-    fun saveFocusSessionStartTime(startTime: Long, endTime: Long) = synchronized(rulesLock) {
+    fun saveFocusSessionStartTime(startTime: Long, endTime: Long) {
         val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         sharedPreferences.edit()
             .putLong("focus_session_start", startTime)
@@ -536,7 +548,7 @@ open class SavedPreferencesLoader(
 
                 try {
                     context.contentResolver.notifyChange(GuardianContract.URI_FOCUS, null)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 }
 
                 val targetPackages = listOf("com.alhaq.amniquest", "com.alhaq.amniquest.debug")
@@ -546,7 +558,7 @@ open class SavedPreferencesLoader(
                     }
                     try {
                         context.sendBroadcast(abortIntent, GuardianContract.PERMISSION_GUARDIAN_IPC)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                     }
                 }
             } else {
@@ -559,12 +571,12 @@ open class SavedPreferencesLoader(
         val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         val startTime = sharedPreferences.getLong("focus_session_start", -1L)
         val endTime = sharedPreferences.getLong("focus_session_end", -1L)
-        
+
         if (startTime != -1L && endTime != -1L) {
             val durationMinutes = ((endTime - startTime) / 60000L).toInt()
             // Record the completed focus session
             BlockingStatsManager.getInstance(context).recordFocusSession(startTime, endTime)
-            
+
             // Clear the session data
             sharedPreferences.edit()
                 .remove("focus_session_start")
@@ -573,7 +585,7 @@ open class SavedPreferencesLoader(
 
             try {
                 context.contentResolver.notifyChange(GuardianContract.URI_FOCUS, null)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
 
             val targetPackages = listOf("com.alhaq.amniquest", "com.alhaq.amniquest.debug")
@@ -584,13 +596,13 @@ open class SavedPreferencesLoader(
                 }
                 try {
                     context.sendBroadcast(intent, GuardianContract.PERMISSION_GUARDIAN_IPC)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 }
             }
         }
     }
 
-    fun saveFocusModeSelectedApps(appList: List<String>) = synchronized(rulesLock) {
+    fun saveFocusModeSelectedApps(appList: List<String>) {
         val sharedPreferences =
             context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
@@ -602,28 +614,28 @@ open class SavedPreferencesLoader(
         editor.apply()
     }
 
-    fun getFocusModeSelectedApps(): List<String> = synchronized(rulesLock) {
+    fun getFocusModeSelectedApps(): List<String> {
         val sharedPreferences =
             context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         val gson = Gson()
 
         val json = sharedPreferences.getString("selected_apps", null)
 
-        if (json.isNullOrEmpty()) return@synchronized listOf()
+        if (json.isNullOrEmpty()) return listOf()
 
         val type =
             object : TypeToken<List<String>>() {}.type
-        return@synchronized Gson().fromJson(json, type) ?: emptyList()
+        return gson.fromJson(json, type)
     }
 
     /**
      * Emergency / Always Whitelisted apps that are NEVER blocked under any focus session.
      */
-    fun getAlwaysWhitelistedApps(): List<String> = synchronized(rulesLock) {
+    fun getAlwaysWhitelistedApps(): List<String> {
         val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         val json = sharedPreferences.getString("always_whitelisted_apps", null)
-        if (json.isNullOrEmpty()) return@synchronized emptyList()
-        return@synchronized try {
+        if (json.isNullOrEmpty()) return emptyList()
+        return try {
             val type = object : TypeToken<List<String>>() {}.type
             Gson().fromJson(json, type) ?: emptyList()
         } catch (e: Exception) {
@@ -631,7 +643,7 @@ open class SavedPreferencesLoader(
         }
     }
 
-    fun saveAlwaysWhitelistedApps(apps: List<String>) = synchronized(rulesLock) {
+    fun saveAlwaysWhitelistedApps(apps: List<String>) {
         val sharedPreferences = context.getSharedPreferences("focus_mode", Context.MODE_PRIVATE)
         sharedPreferences.edit()
             .putString("always_whitelisted_apps", Gson().toJson(apps))
@@ -684,7 +696,7 @@ open class SavedPreferencesLoader(
         sharedPreferences.edit().putBoolean("allow_early_stop", allowed).apply()
     }
 
-    fun saveKeywordBlockerIgnoredApps(appList: List<String>) = synchronized(rulesLock) {
+    fun saveKeywordBlockerIgnoredApps(appList: List<String>) {
         val sharedPreferences =
             context.getSharedPreferences("Keyword_blocker_ignored_apps", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
@@ -696,18 +708,18 @@ open class SavedPreferencesLoader(
         editor.apply()
     }
 
-    fun getKeywordBlockerIgnoredApps(): List<String> = synchronized(rulesLock) {
+    fun getKeywordBlockerIgnoredApps(): List<String> {
         val sharedPreferences =
             context.getSharedPreferences("Keyword_blocker_ignored_apps", Context.MODE_PRIVATE)
         val gson = Gson()
 
         val json = sharedPreferences.getString("selected_apps", null)
 
-        if (json.isNullOrEmpty()) return@synchronized listOf()
+        if (json.isNullOrEmpty()) return listOf()
 
         val type =
             object : TypeToken<List<String>>() {}.type
-        return@synchronized gson.fromJson(json, type) ?: emptyList()
+        return gson.fromJson(json, type)
     }
 
 
@@ -756,13 +768,13 @@ open class SavedPreferencesLoader(
         sharedPreferences.edit().putBoolean("auto_block_enabled", enabled).apply()
     }
 
-    fun loadAppBlockLists(): MutableMap<String, MutableSet<String>> = synchronized(rulesLock) {
+    fun loadAppBlockLists(): MutableMap<String, MutableSet<String>> {
         val sharedPreferences = context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
         val json = sharedPreferences.getString("named_block_lists", null)
-        if (json.isNullOrEmpty()) return@synchronized mutableMapOf()
+        if (json.isNullOrEmpty()) return mutableMapOf()
 
         val type = object : TypeToken<MutableMap<String, MutableSet<String>>>() {}.type
-        return@synchronized runCatching {
+        return runCatching {
             Gson().fromJson<MutableMap<String, MutableSet<String>>>(json, type) ?: mutableMapOf()
         }.getOrElse {
             Log.e("SavedPreferencesLoader", "Failed to load named block lists", it)
@@ -770,7 +782,7 @@ open class SavedPreferencesLoader(
         }
     }
 
-    fun saveAppBlockLists(lists: MutableMap<String, MutableSet<String>>) = synchronized(rulesLock) {
+    fun saveAppBlockLists(lists: MutableMap<String, MutableSet<String>>) {
         val sharedPreferences = context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
         val json = Gson().toJson(lists)
         sharedPreferences.edit().putString("named_block_lists", json).apply()
@@ -780,7 +792,7 @@ open class SavedPreferencesLoader(
         saveBlockedApps(merged)
     }
 
-    fun addPackageToBlockList(listName: String, packageName: String) = synchronized(rulesLock) {
+    fun addPackageToBlockList(listName: String, packageName: String) {
         val lists = loadAppBlockLists()
         val selectedList = lists.getOrPut(listName) { mutableSetOf() }
         selectedList.add(packageName)
@@ -835,7 +847,7 @@ open class SavedPreferencesLoader(
             sharedPreferences.edit().putString("schedule_rules", json).apply()
         }
         runCatching {
-            com.alhaq.amnishield.data.db.AmniShieldRuleDatabase.getInstance(context)
+            AmniShieldRuleDatabase.getInstance(context)
                 .syncAppBlockScheduleRules(immutableSnapshot)
         }
     }
@@ -1262,6 +1274,17 @@ open class SavedPreferencesLoader(
 
     // ==================== Usage Tracker & Doom Scrolling ====================
     companion object {
+        private val rulesLock = Any()
+        private val statsLock = Any()
+        private val alwaysOnShieldsLock = Any()
+
+        @Volatile
+        private var cachedScheduleRulesSnapshot: List<AppBlockScheduleRule>? = null
+
+        fun invalidateScheduleRulesCache() {
+            cachedScheduleRulesSnapshot = null
+        }
+
         const val OVERLAY_MODE_COUNT = 0
         const val OVERLAY_MODE_TIME = 1
         const val OVERLAY_MODE_BOTH = 2
@@ -1289,6 +1312,10 @@ open class SavedPreferencesLoader(
         )
 
         // PIN Security, Cooldown & Reset Engine
+        const val APP_LOCK_MODE_DEVICE = "DEVICE_LOCK"
+        const val APP_LOCK_MODE_APP_PIN = "APP_PIN"
+        const val APP_LOCK_MODE_GLOBAL_PIN = "GLOBAL_PIN"
+
         const val MIN_COOLDOWN_MINUTES = 2
         const val DEFAULT_COOLDOWN_MINUTES = 5
         const val PREF_PIN_RESET_COOLDOWN_MINS = "pin_reset_cooldown_mins"
@@ -1298,18 +1325,6 @@ open class SavedPreferencesLoader(
         const val PREF_EMERGENCY_OVERRIDE_ACTIVE = "is_emergency_override_active"
         const val PREF_EMERGENCY_WINDOW_EXPIRY_TIMESTAMP = "emergency_window_expiry_timestamp"
         const val EMERGENCY_WINDOW_DURATION_MS = 10 * 60 * 1000L // 10-minute temporary unlock window
-
-        // Static companion mutexes to synchronize across all SavedPreferencesLoader instances
-        private val rulesLock = Any()
-        private val statsLock = Any()
-        @Volatile
-        private var cachedScheduleRulesSnapshot: List<AppBlockScheduleRule>? = null
-
-        fun invalidateScheduleRulesCache() {
-            synchronized(rulesLock) {
-                cachedScheduleRulesSnapshot = null
-            }
-        }
     }
 
     fun isUsageTrackerFeatureEnabled(default: Boolean = true): Boolean {
@@ -1492,14 +1507,17 @@ open class SavedPreferencesLoader(
         }
     }
 
-    fun saveAppLaunchLimitRules(rules: List<AppLaunchLimitRule>) = synchronized(rulesLock) {
-        val sharedPreferences =
-            context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
-        val json = Gson().toJson(rules)
-        sharedPreferences.edit().putString("launch_limit_rules", json).apply()
+    fun saveAppLaunchLimitRules(rules: List<AppLaunchLimitRule>) {
+        val sanitized = rules.map { it.sanitize() }
+        synchronized(rulesLock) {
+            val sharedPreferences =
+                context.getSharedPreferences("app_blocker", Context.MODE_PRIVATE)
+            val json = Gson().toJson(sanitized)
+            sharedPreferences.edit().putString("launch_limit_rules", json).apply()
+        }
         runCatching {
-            com.alhaq.amnishield.data.db.AmniShieldRuleDatabase.getInstance(context)
-                .syncLaunchLimitRules(rules)
+            AmniShieldRuleDatabase.getInstance(context)
+                .syncLaunchLimitRules(sanitized)
         }
     }
 
@@ -1524,21 +1542,22 @@ open class SavedPreferencesLoader(
     // ==================== Launch Count Tracking (Per Period) ====================
     // Tracks current launch counts with period information to reset when period changes
 
-    fun trackAppLaunch(packageName: String) {
-        val rule = getAppLaunchLimitRule(packageName) ?: return
-        synchronized(statsLock) {
-            val now = System.currentTimeMillis()
-            val launchData = loadLaunchCountMap().toMutableMap()
-            val current = launchData[packageName]
+    fun trackAppLaunch(packageName: String) = synchronized(statsLock) {
+        if (packageName.isBlank()) return@synchronized
+        val now = wallClockProvider()
+        recordUniversalAppLaunch(packageName, now)
 
-            launchData[packageName] = if (current == null || isLaunchDataExpired(current, rule, now)) {
-                LaunchCountData(count = 1, firstLaunchTime = now, period = rule.timePeriod.name)
-            } else {
-                current.copy(count = current.count + 1, period = rule.timePeriod.name)
-            }
+        val rule = getAppLaunchLimitRule(packageName) ?: return@synchronized
+        val launchData = loadLaunchCountMap().toMutableMap()
+        val current = launchData[packageName]
 
-            saveLaunchCountMap(launchData)
+        launchData[packageName] = if (current == null || isLaunchDataExpired(current, rule, now)) {
+            LaunchCountData(count = 1, firstLaunchTime = now, period = rule.timePeriod.name)
+        } else {
+            current.copy(count = current.count + 1, period = rule.timePeriod.name)
         }
+
+        saveLaunchCountMap(launchData)
     }
 
     fun getCurrentLaunchCount(
@@ -1568,12 +1587,12 @@ open class SavedPreferencesLoader(
         }
     }
 
-    private fun loadLaunchCountMap(): Map<String, LaunchCountData> = synchronized(statsLock) {
+    private fun loadLaunchCountMap(): Map<String, LaunchCountData> {
         val sharedPreferences = context.getSharedPreferences("app_launch_tracking", Context.MODE_PRIVATE)
         val json = sharedPreferences.getString("launch_counts", null)
-        if (json.isNullOrEmpty()) return@synchronized emptyMap()
+        if (json.isNullOrEmpty()) return emptyMap()
 
-        return@synchronized try {
+        return try {
             val type = object : TypeToken<Map<String, LaunchCountData>>() {}.type
             Gson().fromJson<Map<String, LaunchCountData>>(json, type) ?: emptyMap()
         } catch (e: Exception) {
@@ -1582,7 +1601,7 @@ open class SavedPreferencesLoader(
         }
     }
 
-    private fun saveLaunchCountMap(data: Map<String, LaunchCountData>) = synchronized(statsLock) {
+    private fun saveLaunchCountMap(data: Map<String, LaunchCountData>) {
         val sharedPreferences = context.getSharedPreferences("app_launch_tracking", Context.MODE_PRIVATE)
         val newJson = Gson().toJson(data)
         sharedPreferences.edit().putString("launch_counts", newJson).apply()
@@ -1760,6 +1779,80 @@ open class SavedPreferencesLoader(
     fun setPinCode(pin: String) {
         context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .edit().putString("profile_pin", pin).apply()
+        if (pin.isNotEmpty()) {
+            val antiPrefs = context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+            val useSeparate = antiPrefs.getBoolean("use_separate_anti_uninstall_password", false)
+            if (!useSeparate) {
+                antiPrefs.edit()
+                    .putString("password", PasswordHasher.hash(pin))
+                    .apply()
+                context.sendBroadcast(
+                    Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+                        .setPackage(context.packageName)
+                )
+            }
+        }
+    }
+
+    fun saveGlobalAntiBypassPin(pin: String, linkAntiUninstall: Boolean = true) {
+        val cleanPin = pin.trim()
+        if (cleanPin.length < 4) return
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit()
+            .putString("profile_pin", cleanPin)
+            .putBoolean("pin_protection_enabled", true)
+            .putBoolean("pin_bypass_lock", true)
+            .apply()
+
+        val antiPrefs = context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
+        val useSeparate = antiPrefs.getBoolean("use_separate_anti_uninstall_password", false)
+        val currentMode = antiPrefs.getInt("mode", -1)
+        val hashedPin = PasswordHasher.hash(cleanPin)
+
+        antiPrefs.edit().apply {
+            if (!useSeparate) {
+                putString("password", hashedPin)
+            }
+            putBoolean("is_configuring_blocked", true)
+            if (linkAntiUninstall && currentMode != com.alhaq.amnishield.Constants.ANTI_UNINSTALL_TIMED_MODE) {
+                putBoolean("is_anti_uninstall_on", true)
+                putInt("mode", com.alhaq.amnishield.Constants.ANTI_UNINSTALL_PASSWORD_MODE)
+            }
+            apply()
+        }
+
+        context.sendBroadcast(
+            Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ANTI_UNINSTALL)
+                .setPackage(context.packageName)
+        )
+    }
+
+    fun getAppLockMode(): String {
+        val mode = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("app_lock_mode", APP_LOCK_MODE_DEVICE)
+        return when (mode) {
+            APP_LOCK_MODE_APP_PIN, APP_LOCK_MODE_GLOBAL_PIN -> mode
+            else -> APP_LOCK_MODE_DEVICE
+        }
+    }
+
+    fun setAppLockMode(mode: String) {
+        val safeMode = when (mode) {
+            APP_LOCK_MODE_APP_PIN, APP_LOCK_MODE_GLOBAL_PIN -> mode
+            else -> APP_LOCK_MODE_DEVICE
+        }
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().putString("app_lock_mode", safeMode).apply()
+    }
+
+    fun getAppLockCustomPin(): String {
+        return context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .getString("app_lock_custom_pin", "") ?: ""
+    }
+
+    fun setAppLockCustomPin(pin: String) {
+        context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit().putString("app_lock_custom_pin", pin.trim()).apply()
     }
 
     fun isAppLockEnabled(): Boolean {
@@ -1779,7 +1872,20 @@ open class SavedPreferencesLoader(
 
     fun setBypassPinLockEnabled(enabled: Boolean) {
         val antiUninstallPrefs = context.getSharedPreferences("anti_uninstall", Context.MODE_PRIVATE)
-        antiUninstallPrefs.edit().putBoolean("is_configuring_blocked", enabled).apply()
+        val currentMode = antiUninstallPrefs.getInt("mode", -1)
+        val useSeparate = antiUninstallPrefs.getBoolean("use_separate_anti_uninstall_password", false)
+        val globalPin = getPinCode()
+        antiUninstallPrefs.edit().apply {
+            putBoolean("is_configuring_blocked", enabled)
+            if (enabled && globalPin.isNotEmpty() && currentMode != com.alhaq.amnishield.Constants.ANTI_UNINSTALL_TIMED_MODE) {
+                if (!useSeparate) {
+                    putString("password", PasswordHasher.hash(globalPin))
+                }
+                putBoolean("is_anti_uninstall_on", true)
+                putInt("mode", com.alhaq.amnishield.Constants.ANTI_UNINSTALL_PASSWORD_MODE)
+            }
+            apply()
+        }
 
         context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
             .edit().putBoolean("pin_bypass_lock", enabled).apply()
@@ -2103,8 +2209,607 @@ open class SavedPreferencesLoader(
             .edit().putInt("widget_breathing_duration_minutes", minutes.coerceIn(1, 30)).apply()
     }
 
+    // -------------------------------------------------------------------------
+    // Profile Identity, Daily Screen Time Goal & App ID Backend Sync Helpers
+    // -------------------------------------------------------------------------
+
+    fun getProfileName(): String {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return prefs.getString("profile_name", "Guardian")?.takeIf { it.isNotBlank() } ?: "Guardian"
+    }
+
+    fun setProfileName(name: String) {
+        val cleanName = name.trim().ifEmpty { "Guardian" }
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        prefs.edit().putString("profile_name", cleanName).apply()
+        // Keep community access display name in sync if already set or initialized
+        val caPrefs = context.getSharedPreferences("saved_preferences", Context.MODE_PRIVATE)
+        if (caPrefs.getString("compassionate_access_name", "").isNullOrBlank()) {
+            caPrefs.edit().putString("compassionate_access_name", cleanName).apply()
+        }
+    }
+
+    fun getProfileGoalMinutes(): Int {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return prefs.getInt("profile_goal_minutes", 180).coerceIn(15, 720)
+    }
+
+    fun setProfileGoalMinutes(minutes: Int) {
+        val clamped = minutes.coerceIn(15, 720)
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        prefs.edit().putInt("profile_goal_minutes", clamped).apply()
+    }
+
+    fun getProfileAvatarId(): String {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return try {
+            prefs.getString("profile_avatar_id", "avatar_shield")?.takeIf { it.isNotBlank() } ?: "avatar_shield"
+        } catch (_: ClassCastException) {
+            prefs.edit().remove("profile_avatar_id").putString("profile_avatar_id", "avatar_shield").apply()
+            "avatar_shield"
+        }
+    }
+
+    fun setProfileAvatarId(avatarId: String) {
+        val cleanId = avatarId.trim().ifEmpty { "avatar_shield" }
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        prefs.edit().putString("profile_avatar_id", cleanId).apply()
+    }
+
+    fun getProfileImageUri(): String? {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return prefs.getString("profile_image_uri", null)?.takeIf { it.isNotBlank() }
+    }
+
+    fun setProfileImageUri(uriString: String?) {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        if (uriString.isNullOrBlank()) {
+            prefs.edit().remove("profile_image_uri").apply()
+        } else {
+            prefs.edit().putString("profile_image_uri", uriString).apply()
+        }
+    }
+
+    fun getShortAppId(): String {
+        val raw = getDeviceId().replace("-", "").uppercase()
+        return if (raw.length >= 8) {
+            "AMNI-${raw.take(4)}-${raw.takeLast(4)}"
+        } else {
+            "AMNI-$raw"
+        }
+    }
+
+    fun getLastIdentitySyncTime(): Long {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return prefs.getLong("last_identity_sync_time", 0L)
+    }
+
+    fun markIdentitySynced(userName: String, appId: String = getDeviceId()) {
+        val prefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("synced_user_name", userName.trim().ifEmpty { "Guardian" })
+            .putString("synced_app_id", appId)
+            .putLong("last_identity_sync_time", System.currentTimeMillis())
+            .apply()
+    }
+
+    // ==================== Universal Hourly & Daily Launch Tracking ====================
+
+    data class UniversalLaunchRecord(
+        val dailyDateKey: String = "",
+        val dailyCount: Int = 0,
+        val hourlyKey: String = "",
+        val hourlyCount: Int = 0
+    )
+
+    private fun formatDateAndHourKeys(nowMillis: Long): Pair<String, String> {
+        val cal = Calendar.getInstance().apply { timeInMillis = nowMillis }
+        val year = cal.get(Calendar.YEAR)
+        val day = cal.get(Calendar.DAY_OF_YEAR)
+        val hour = cal.get(Calendar.HOUR_OF_DAY)
+        return "$year-$day" to "$year-$day-$hour"
+    }
+
+    fun recordUniversalAppLaunch(packageName: String, nowMillis: Long = wallClockProvider()) = synchronized(statsLock) {
+        val prefs = context.getSharedPreferences("app_launch_tracking", Context.MODE_PRIVATE)
+        val (dateKey, hourKey) = formatDateAndHourKeys(nowMillis)
+        val map = loadUniversalLaunchMap(prefs).toMutableMap()
+        val existing = map[packageName]
+        val nextDaily = if (existing?.dailyDateKey == dateKey) existing.dailyCount + 1 else 1
+        val nextHourly = if (existing?.hourlyKey == hourKey) existing.hourlyCount + 1 else 1
+        map[packageName] = UniversalLaunchRecord(
+            dailyDateKey = dateKey,
+            dailyCount = nextDaily,
+            hourlyKey = hourKey,
+            hourlyCount = nextHourly
+        )
+        prefs.edit().putString("universal_launch_counts", Gson().toJson(map)).apply()
+    }
+
+    fun getUniversalDailyLaunchCount(packageName: String, nowMillis: Long = wallClockProvider()): Int = synchronized(statsLock) {
+        val prefs = context.getSharedPreferences("app_launch_tracking", Context.MODE_PRIVATE)
+        val (dateKey, _) = formatDateAndHourKeys(nowMillis)
+        val record = loadUniversalLaunchMap(prefs)[packageName] ?: return@synchronized 0
+        return@synchronized if (record.dailyDateKey == dateKey) record.dailyCount else 0
+    }
+
+    fun getUniversalHourlyLaunchCount(packageName: String, nowMillis: Long = wallClockProvider()): Int = synchronized(statsLock) {
+        val prefs = context.getSharedPreferences("app_launch_tracking", Context.MODE_PRIVATE)
+        val (_, hourKey) = formatDateAndHourKeys(nowMillis)
+        val record = loadUniversalLaunchMap(prefs)[packageName] ?: return@synchronized 0
+        return@synchronized if (record.hourlyKey == hourKey) record.hourlyCount else 0
+    }
+
+    private fun loadUniversalLaunchMap(prefs: SharedPreferences): Map<String, UniversalLaunchRecord> {
+        val json = prefs.getString("universal_launch_counts", null)
+        if (json.isNullOrEmpty()) return emptyMap()
+        return try {
+            val type = object : TypeToken<Map<String, UniversalLaunchRecord>>() {}.type
+            Gson().fromJson<Map<String, UniversalLaunchRecord>>(json, type) ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    // ==================== Unified Block Engine ("All-in-One Block") ====================
+
+    fun loadUnifiedBlockRules(): MutableList<UnifiedBlockRule> = synchronized(rulesLock) {
+        val prefs = context.getSharedPreferences("unified_block_engine", Context.MODE_PRIVATE)
+        val migrated = prefs.getBoolean("legacy_rules_migrated_v1", false)
+        val json = prefs.getString("unified_block_rules_json", null)
+        if (!migrated && json.isNullOrEmpty()) {
+            return@synchronized migrateLegacyRulesToUnifiedIfNeeded()
+        }
+        if (json.isNullOrEmpty()) return@synchronized mutableListOf()
+
+        val type = object : TypeToken<MutableList<UnifiedBlockRule>>() {}.type
+        return@synchronized runCatching {
+            val rawList = Gson().fromJson<MutableList<UnifiedBlockRule>>(json, type) ?: mutableListOf()
+            val nowElapsed = elapsedRealtimeProvider()
+            val nowWall = wallClockProvider()
+            var anyExpiredPause = false
+            val sanitizedList = rawList.map { raw ->
+                val clean = raw.sanitize()
+                if (clean.status == BlockRuleStatus.PAUSED_UNTIL && !clean.isPaused(nowElapsed, nowWall)) {
+                    anyExpiredPause = true
+                    clean.copy(
+                        status = BlockRuleStatus.ACTIVE,
+                        pausedUntilElapsedRealtime = 0L,
+                        pausedUntilWallClockMillis = 0L
+                    )
+                } else {
+                    clean
+                }
+            }.toMutableList()
+            if (anyExpiredPause) {
+                prefs.edit().putString("unified_block_rules_json", Gson().toJson(sanitizedList)).apply()
+            }
+            sanitizedList
+        }.getOrElse {
+            Log.e("SavedPreferencesLoader", "Failed to load unified block rules", it)
+            mutableListOf()
+        }
+    }
+
+    fun saveUnifiedBlockRules(rules: List<UnifiedBlockRule>, syncToEngines: Boolean = true) {
+        val sanitized = rules.map { it.sanitize() }
+        synchronized(rulesLock) {
+            val prefs = context.getSharedPreferences("unified_block_engine", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putBoolean("legacy_rules_migrated_v1", true)
+                .putString("unified_block_rules_json", Gson().toJson(sanitized))
+                .apply()
+        }
+        runCatching {
+            AmniShieldRuleDatabase.getInstance(context)
+                .syncUnifiedBlockRules(sanitized)
+        }
+        if (syncToEngines) {
+            syncUnifiedRulesToLegacyEngines(sanitized)
+        }
+    }
+
+    fun upsertUnifiedBlockRule(rule: UnifiedBlockRule) = synchronized(rulesLock) {
+        val rules = loadUnifiedBlockRules()
+        val sanitized = rule.sanitize()
+        val index = rules.indexOfFirst { it.id == sanitized.id }
+        if (index >= 0) {
+            rules[index] = sanitized
+        } else {
+            rules.add(0, sanitized)
+        }
+        saveUnifiedBlockRules(rules, syncToEngines = true)
+    }
+
+    fun deleteUnifiedBlockRule(ruleId: String) = synchronized(rulesLock) {
+        val rules = loadUnifiedBlockRules()
+        val removed = rules.removeAll { it.id == ruleId }
+        if (removed) {
+            saveUnifiedBlockRules(rules, syncToEngines = true)
+        }
+    }
+
+    fun pauseUnifiedBlockRule(ruleId: String, durationMinutes: Int) = synchronized(rulesLock) {
+        val safeMinutes = durationMinutes.coerceIn(1, 720)
+        val durationMs = safeMinutes * 60_000L
+        val nowElapsed = elapsedRealtimeProvider()
+        val nowWall = wallClockProvider()
+        val rules = loadUnifiedBlockRules()
+        val index = rules.indexOfFirst { it.id == ruleId }
+        if (index >= 0) {
+            val target = rules[index]
+            rules[index] = target.copy(
+                status = BlockRuleStatus.PAUSED_UNTIL,
+                pausedUntilElapsedRealtime = nowElapsed + durationMs,
+                pausedUntilWallClockMillis = nowWall + durationMs
+            )
+            saveUnifiedBlockRules(rules, syncToEngines = true)
+        }
+    }
+
+    fun setUnifiedBlockRuleStatus(ruleId: String, newStatus: BlockRuleStatus) = synchronized(rulesLock) {
+        val rules = loadUnifiedBlockRules()
+        val index = rules.indexOfFirst { it.id == ruleId }
+        if (index >= 0) {
+            val current = rules[index]
+            rules[index] = current.copy(
+                status = newStatus,
+                pausedUntilElapsedRealtime = if (newStatus == BlockRuleStatus.PAUSED_UNTIL) current.pausedUntilElapsedRealtime else 0L,
+                pausedUntilWallClockMillis = if (newStatus == BlockRuleStatus.PAUSED_UNTIL) current.pausedUntilWallClockMillis else 0L
+            )
+            saveUnifiedBlockRules(rules, syncToEngines = true)
+        }
+    }
+
+    fun migrateLegacyRulesToUnifiedIfNeeded(): MutableList<UnifiedBlockRule> = synchronized(rulesLock) {
+        val prefs = context.getSharedPreferences("unified_block_engine", Context.MODE_PRIVATE)
+        val legacySchedules = loadAppBlockerScheduleRules()
+        val legacyLaunchLimits = loadAppLaunchLimitRules()
+        val migratedList = mutableListOf<UnifiedBlockRule>()
+
+        val groupIds = legacySchedules.mapNotNull { (it.groupId ?: it.id).takeIf { id -> id.isNotBlank() } }.distinct()
+        val coveredPackages = mutableSetOf<String>()
+
+        groupIds.forEach { groupId ->
+            val groupItems = legacySchedules.filter { (it.groupId ?: it.id) == groupId }
+            if (groupItems.isEmpty()) return@forEach
+            val first = groupItems.first()
+            val name = (first.groupTitle ?: first.title).removePrefix("Block Always • ").removePrefix("Block • ").ifBlank { "Block" }
+            val isEnabled = first.isRuleEnabled
+
+            val appTargets = mutableMapOf<String, AppInterceptionLevel>()
+            val domains = mutableListOf<String>()
+            val keywords = mutableListOf<String>()
+            val schedules = mutableListOf<WeeklyScheduleTrigger>()
+            val screenLimits = mutableListOf<ScreenTimeLimitTrigger>()
+            val openLimits = mutableListOf<OpenLimitTrigger>()
+
+            groupItems.forEach { item ->
+                when (item.blockerType) {
+                    BlockerType.WEBSITE -> {
+                        domains.addAll(item.targets.ifEmpty { item.targetWebsites })
+                    }
+                    BlockerType.KEYWORD -> {
+                        keywords.addAll(item.targets.ifEmpty { item.targetKeywords })
+                    }
+                    BlockerType.REELS -> {
+                        val pkgs = item.targets.filter { it != "reel_blocker" }
+                            .ifEmpty { listOf("com.instagram.android", "com.google.android.youtube") }
+                        pkgs.forEach { pkg ->
+                            appTargets[pkg] = AppInterceptionLevel.BLOCK_SHORTFORM_ONLY
+                        }
+                    }
+                    else -> {
+                        val pkg = item.packageName
+                        if (pkg.isNotBlank() &&
+                            pkg != "keyword_blocker" &&
+                            pkg != "website_blocker" &&
+                            pkg != "reel_blocker" &&
+                            !pkg.equals("FOCUS_MODE", ignoreCase = true)
+                        ) {
+                            appTargets[pkg] = AppInterceptionLevel.BLOCK_ENTIRE_APP
+                            coveredPackages.add(pkg)
+                        }
+                        item.targets.filter {
+                            it.isNotBlank() &&
+                                it != "keyword_blocker" &&
+                                it != "website_blocker" &&
+                                it != "reel_blocker" &&
+                                !it.equals("FOCUS_MODE", ignoreCase = true)
+                        }.forEach { tPkg ->
+                            appTargets[tPkg] = AppInterceptionLevel.BLOCK_ENTIRE_APP
+                            coveredPackages.add(tPkg)
+                        }
+                    }
+                }
+
+                if (item.durationHours > 0) {
+                    val mins = item.durationHours * 60
+                    if (screenLimits.none { it.maxMinutes == mins && it.period == LimitPeriod.DAILY }) {
+                        screenLimits.add(ScreenTimeLimitTrigger(period = LimitPeriod.DAILY, maxMinutes = mins))
+                    }
+                } else if (item.recurrence != AppBlockScheduleRule.Recurrence.ALWAYS &&
+                    item.type == AppBlockScheduleRule.RuleType.BLOCK
+                ) {
+                    val days = if (item.selectedDays.isNotEmpty()) {
+                        item.selectedDays
+                    } else {
+                        setOf(
+                            Calendar.MONDAY,
+                            Calendar.TUESDAY,
+                            Calendar.WEDNESDAY,
+                            Calendar.THURSDAY,
+                            Calendar.FRIDAY,
+                            Calendar.SATURDAY,
+                            Calendar.SUNDAY
+                        )
+                    }
+                    if (schedules.none {
+                            it.startTimeMinutes == item.startMinute &&
+                                it.endTimeMinutes == item.endMinute &&
+                                it.daysOfWeek == days
+                        }
+                    ) {
+                        schedules.add(
+                            WeeklyScheduleTrigger(
+                                daysOfWeek = days,
+                                startTimeMinutes = item.startMinute.coerceIn(0, 1439),
+                                endTimeMinutes = item.endMinute.coerceIn(0, 1439)
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Attach any matching launch limit rules
+            appTargets.keys.forEach { pkg ->
+                val limit = legacyLaunchLimits.firstOrNull { it.packageName == pkg }
+                if (limit != null) {
+                    val period = if (limit.timePeriod == AppLaunchLimitRule.TimePeriod.HOURLY) {
+                        LimitPeriod.HOURLY
+                    } else {
+                        LimitPeriod.DAILY
+                    }
+                    if (openLimits.none { it.maxLaunches == limit.maxLaunches && it.period == period }) {
+                        openLimits.add(OpenLimitTrigger(period = period, maxLaunches = limit.maxLaunches))
+                    }
+                }
+            }
+
+            if (appTargets.isNotEmpty() || domains.isNotEmpty() || keywords.isNotEmpty()) {
+                migratedList.add(
+                    UnifiedBlockRule(
+                        id = groupId,
+                        name = name,
+                        status = if (isEnabled) BlockRuleStatus.ACTIVE else BlockRuleStatus.INACTIVE_MANUAL,
+                        appTargets = appTargets,
+                        blockedDomains = domains.distinct(),
+                        blockedKeywords = keywords.distinct(),
+                        weeklySchedules = schedules,
+                        screenTimeLimits = screenLimits,
+                        openLimits = openLimits,
+                        pauseOption = PauseOptionConfig(type = PauseOptionType.DELAY, delaySeconds = 10, maxPauseDurationMinutes = 60),
+                        createdAt = first.createdAt,
+                        authType = first.authType,
+                        rulePasswordHash = first.rulePasswordHash,
+                        rulePasswordSalt = first.rulePasswordSalt
+                    ).sanitize()
+                )
+            }
+        }
+
+        // Convert standalone launch limits not already covered by a group
+        legacyLaunchLimits.filter { !coveredPackages.contains(it.packageName) && it.packageName.isNotBlank() }.forEach { limit ->
+            val period = if (limit.timePeriod == AppLaunchLimitRule.TimePeriod.HOURLY) {
+                LimitPeriod.HOURLY
+            } else {
+                LimitPeriod.DAILY
+            }
+            migratedList.add(
+                UnifiedBlockRule(
+                    id = "limit::${limit.packageName}",
+                    name = "Open Limit",
+                    status = if (limit.isEnabled) BlockRuleStatus.ACTIVE else BlockRuleStatus.INACTIVE_MANUAL,
+                    appTargets = mapOf(limit.packageName to AppInterceptionLevel.BLOCK_ENTIRE_APP),
+                    openLimits = listOf(OpenLimitTrigger(period = period, maxLaunches = limit.maxLaunches)),
+                    createdAt = limit.createdAt,
+                    authType = limit.authType,
+                    rulePasswordHash = limit.rulePasswordHash,
+                    rulePasswordSalt = limit.rulePasswordSalt
+                ).sanitize()
+            )
+        }
+
+        prefs.edit()
+            .putBoolean("legacy_rules_migrated_v1", true)
+            .putString("unified_block_rules_json", Gson().toJson(migratedList))
+            .apply()
+
+        return@synchronized migratedList
+    }
+
+    // ==================== Always-On Shields Config ====================
+
+    fun loadAlwaysOnShieldsConfig(): AlwaysOnShieldsConfig {
+        synchronized(alwaysOnShieldsLock) {
+            val prefs = context.getSharedPreferences("always_on_shields", Context.MODE_PRIVATE)
+            val json = prefs.getString("always_on_shields_json", null)
+            if (json.isNullOrBlank()) {
+                return AlwaysOnShieldsConfig()
+            }
+            return runCatching {
+                Gson().fromJson(json, AlwaysOnShieldsConfig::class.java)?.sanitize()
+                    ?: AlwaysOnShieldsConfig()
+            }.getOrElse {
+                Log.e("SavedPreferencesLoader", "Failed to deserialize AlwaysOnShieldsConfig", it)
+                AlwaysOnShieldsConfig()
+            }
+        }
+    }
+
+    fun saveAlwaysOnShieldsConfig(config: AlwaysOnShieldsConfig, syncToEngines: Boolean = true) {
+        val sanitized = config.sanitize()
+        synchronized(alwaysOnShieldsLock) {
+            val prefs = context.getSharedPreferences("always_on_shields", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putString("always_on_shields_json", Gson().toJson(sanitized))
+                .apply()
+        }
+        if (syncToEngines) {
+            val currentRules = loadUnifiedBlockRules()
+            syncUnifiedRulesToLegacyEngines(currentRules, sanitized)
+        }
+    }
+
+    /**
+     * Synchronizes both UnifiedBlockRules and AlwaysOnShieldsConfig with the underlying engines
+     * (unioning active targets so Always-On Shields work independently of Custom Rules),
+     * broadcasts scoped refresh intents, and updates the persistent Active Protection notification.
+     */
+    fun syncUnifiedRulesToLegacyEngines(
+        rules: List<UnifiedBlockRule>,
+        alwaysOnOverride: AlwaysOnShieldsConfig? = null
+    ) {
+        val alwaysOn = (alwaysOnOverride ?: loadAlwaysOnShieldsConfig()).sanitize()
+        val nowElapsed = elapsedRealtimeProvider()
+        val nowWall = wallClockProvider()
+        val nonArchived = rules.filter { it.status != BlockRuleStatus.ARCHIVED }
+        val activeRules = nonArchived.filter {
+            it.isEffectivelyActive(nowElapsed, nowWall)
+        }
+
+        // 1. Authoritative Sync for Websites (Custom Rules U Always-On Website custom domains;
+        // large bundled packs are streamed off-thread directly by DomainBlocklistEngine without bloating SharedPreferences)
+        val unifiedDomains = activeRules
+            .filter { it.isActiveOrScheduledForContentNow(nowElapsed, nowWall) }
+            .flatMap { it.blockedDomains }
+            .toMutableSet()
+        if (alwaysOn.website.enabled) {
+            alwaysOn.website.customDomains.forEach { domain ->
+                com.alhaq.amnishield.data.blockers.WebsiteGuardConfig.normalizeDomainInput(domain)
+                    ?.let { unifiedDomains.add(it) }
+            }
+        }
+        saveBlockedWebsites(unifiedDomains)
+        setWebsiteBlockerEnabled(
+            unifiedDomains.isNotEmpty() || (
+                alwaysOn.website.enabled && (
+                    alwaysOn.website.enabledPackIds.isNotEmpty() ||
+                        alwaysOn.website.blockUnsupportedBrowsers ||
+                        alwaysOn.website.blockIncognitoMode
+                    )
+                ),
+            updateManual = false
+        )
+
+        // 2. Authoritative Union Sync for Keywords (Custom Rules U Always-On Keyword Guard)
+        val unifiedKeywords = activeRules
+            .filter { it.isActiveOrScheduledForContentNow(nowElapsed, nowWall) }
+            .flatMap { it.blockedKeywords }
+            .toMutableSet()
+        if (alwaysOn.keyword.enabled) {
+            unifiedKeywords.addAll(alwaysOn.keyword.effectiveKeywords())
+            val kwConfigPrefs = context.getSharedPreferences("keyword_blocker_configs", Context.MODE_PRIVATE)
+            kwConfigPrefs.edit()
+                .putBoolean("whole_word_only", alwaysOn.keyword.wholeWordOnly)
+                .putBoolean("search_all_text_fields", alwaysOn.keyword.scanAllTextFields)
+                .apply()
+            saveKeywordBlockerIgnoredApps(alwaysOn.keyword.ignoredPackages.toList())
+        }
+        saveBlockedKeywords(unifiedKeywords)
+        setKeywordBlockerFeatureEnabled(unifiedKeywords.isNotEmpty(), updateManual = false)
+
+        // 3. Authoritative Union Sync for Short-form / Reels & In-Browser Short Videos
+        val shortformPackages = activeRules.flatMap { rule ->
+            rule.appTargets.filterValues { it == AppInterceptionLevel.BLOCK_SHORTFORM_ONLY }.keys
+        }.toSet()
+        val browserShortformByRules = activeRules.any {
+            it.includeInBrowserShortform && it.isActiveOrScheduledForContentNow(nowElapsed, nowWall)
+        }
+        val reelsGuardOn = alwaysOn.reels.enabled
+        val ytEnabled = shortformPackages.contains("com.google.android.youtube") ||
+            (reelsGuardOn && alwaysOn.reels.blockYoutubeShorts)
+        val igEnabled = shortformPackages.contains("com.instagram.android") ||
+            (reelsGuardOn && alwaysOn.reels.blockInstagramReels)
+        val ttEnabled = shortformPackages.contains("com.zhiliaoapp.musically") ||
+            shortformPackages.contains("com.ss.android.ugc.trill") ||
+            (reelsGuardOn && alwaysOn.reels.blockTikTok)
+        val browserEnabled = browserShortformByRules ||
+            (reelsGuardOn && alwaysOn.reels.blockInBrowserShorts)
+
+        val anyShortformActive = ytEnabled || igEnabled || ttEnabled || browserEnabled
+        setReelBlockerEnabled(anyShortformActive, updateManual = false)
+        setReelBlockerYoutubeEnabled(ytEnabled)
+        setReelBlockerInstagramEnabled(igEnabled)
+        setReelBlockerTiktokEnabled(ttEnabled)
+        setReelBlockerBrowserEnabled(browserEnabled)
+
+        // Wire ReelsLimitMode directly into existing ReelBlocker mode & daily limit prefs
+        if (reelsGuardOn) {
+            val mode = when (alwaysOn.reels.limitMode) {
+                ReelsLimitMode.ALWAYS_BLOCK_24_7 -> ReelBlocker.MODE_BLOCK_ALL
+                ReelsLimitMode.LIMIT_BY_COUNT -> ReelBlocker.MODE_BLOCK_AFTER_DAILY_COUNT
+            }
+            setReelBlockerMode(mode)
+            setReelBlockerDailyLimit(alwaysOn.reels.dailyReelLimit)
+        } else {
+            setReelBlockerMode(ReelBlocker.MODE_BLOCK_ALL)
+        }
+
+        // 4. Authoritative Sync for Full-App blocks that are active right now
+        val unconditionalFullBlockedPackages = activeRules
+            .filter { it.blockAppLaunch && it.isUnconditionalOrScheduledActiveNow(nowElapsed, nowWall) }
+            .flatMap { rule ->
+                rule.appTargets.filterValues { it == AppInterceptionLevel.BLOCK_ENTIRE_APP }.keys
+            }
+            .toSet()
+
+        val anyAppRuleActive = activeRules.any {
+            it.appTargets.containsValue(AppInterceptionLevel.BLOCK_ENTIRE_APP)
+        }
+        setAppBlockerFeatureEnabled(anyAppRuleActive, updateManual = false)
+        saveBlockedApps(unconditionalFullBlockedPackages)
+
+        // 5. Update persistent Active Protection notification
+        runCatching {
+            NotificationHelper.getInstance(context).updateActiveProtectionStatusNotification(
+                activeAlwaysOnNames = alwaysOn.activeShieldTypes().map { it.pillLabel },
+                activeCustomRuleCount = activeRules.size
+            )
+        }
+
+        // 6. Broadcast package-scoped refresh intents to AmniShieldAccessibilityService
+        runCatching {
+            val actions = listOf(
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_ALWAYS_ON_SHIELDS,
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_UNIFIED_FEATURE_SCHEDULES,
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER,
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER,
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_REEL_BLOCKER,
+                AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_BLOCKED_KEYWORD_LIST
+            )
+            actions.forEach { action ->
+                val intent = Intent(action).apply { setPackage(context.packageName) }
+                context.sendBroadcast(intent)
+            }
+        }
+    }
+
+    // ==================== Weekly Usage Report Notes ====================
+
+    fun getWeeklyReportNote(weekKey: String): String {
+        val prefs = context.getSharedPreferences("weekly_usage_reports", Context.MODE_PRIVATE)
+        return prefs.getString("note_$weekKey", "") ?: ""
+    }
+
+    fun saveWeeklyReportNote(weekKey: String, note: String) {
+        val safeNote = note.take(500)
+        val prefs = context.getSharedPreferences("weekly_usage_reports", Context.MODE_PRIVATE)
+        prefs.edit().putString("note_$weekKey", safeNote).apply()
+    }
+
     // ========================================================================
-    // Accessibility Prominent Disclosure Consent Persistence
+    // Accessibility Prominent Disclosure Consent Persistence & Baseline Aliases
     // ========================================================================
 
     fun isAccessibilityDisclosureAccepted(): Boolean {

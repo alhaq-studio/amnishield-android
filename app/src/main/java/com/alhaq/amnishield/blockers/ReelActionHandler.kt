@@ -2,6 +2,7 @@ package com.alhaq.amnishield.blockers
 
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import com.alhaq.amnishield.Constants
 import com.alhaq.amnishield.ui.activity.WarningActivity
@@ -18,21 +19,47 @@ class ReelActionHandler(
     private val savedPreferencesLoader: SavedPreferencesLoader,
     private val homeFeedNavigator: HomeFeedNavigator
 ) {
+    private var lastBackFallbackPkg: String = ""
+    private var lastBackFallbackElapsedMs: Long = 0L
+    private var lastRedirectPkg: String = ""
+    private var lastRedirectElapsedMs: Long = 0L
+
     fun handleReelBlock(
         result: ReelBlocker.ReelBlockerResult,
         rootNode: AccessibilityNodeInfo?,
         packageName: String,
         onPressHome: () -> Unit,
-        onPressBack: () -> Unit
+        onPressBack: () -> Unit,
+        attributionLabel: String = "Blocked by Always-On Reels Guard"
     ) {
         if (!result.isBlocked) return
 
         when (result.blockResponseMode) {
             ReelBlocker.BlockResponseMode.HOME_FEED_REDIRECT -> {
-                val navigated = if (rootNode != null && packageName.isNotEmpty()) {
+                val nowElapsed = SystemClock.elapsedRealtime()
+                if (packageName == lastRedirectPkg && (nowElapsed - lastRedirectElapsedMs) < 1200L) {
+                    return
+                }
+                lastRedirectPkg = packageName
+                lastRedirectElapsedMs = nowElapsed
+
+                val navigated = if (rootNode != null) {
                     homeFeedNavigator.navigateToHomeFeed(rootNode, packageName)
                 } else false
-                if (!navigated) onPressBack()
+                if (!navigated) {
+                    val isRepeatedFailure = packageName == lastBackFallbackPkg &&
+                        (nowElapsed - lastBackFallbackElapsedMs) < 2500L
+                    lastBackFallbackPkg = packageName
+                    lastBackFallbackElapsedMs = nowElapsed
+                    if (isRepeatedFailure) {
+                        onPressHome()
+                    } else {
+                        onPressBack()
+                    }
+                } else {
+                    lastBackFallbackPkg = ""
+                    lastBackFallbackElapsedMs = 0L
+                }
                 return
             }
             ReelBlocker.BlockResponseMode.ANDROID_HOME -> {
@@ -43,7 +70,7 @@ class ReelActionHandler(
                 val amnispaceIntent = Intent(context, com.alhaq.amnishield.ui.activity.AmniSpaceActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     putExtra(Constants.AMNISPACE_EXTRA_MODE, Constants.AMNISPACE_MODE_MINDFUL_BREATHING)
-                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, "Reels Interception")
+                    putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_REASON, attributionLabel)
                     if (packageName.isNotEmpty()) {
                         putExtra(Constants.AMNISPACE_EXTRA_TRIGGER_APP, packageName)
                     }
@@ -65,7 +92,7 @@ class ReelActionHandler(
             putExtra("result_id", result.viewId)
             putExtra("is_press_home", result.requestHomePressInstead)
             putExtra("is_reel_blocker", true)
-            putExtra("blocked_by_feature", "Reels Blocker")
+            putExtra("blocked_by_feature", attributionLabel)
         }
         context.startActivity(dialogIntent)
     }

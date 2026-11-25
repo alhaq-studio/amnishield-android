@@ -1,0 +1,6 @@
+{
+  "name": "AmniShield",
+  "description": "Mindful screen time, app & website blocker, and focus space for Android",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

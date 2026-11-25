@@ -96,5 +96,13 @@ object ThemeUtils {
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_THEME_STYLE, THEME_SYSTEM) ?: THEME_SYSTEM
     }
+
+    fun setAppTheme(context: Context, themeStyle: String) {
+        context
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_THEME_STYLE, themeStyle)
+            .apply()
+    }
 }
 

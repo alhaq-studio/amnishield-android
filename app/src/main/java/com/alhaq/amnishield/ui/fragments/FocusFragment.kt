@@ -31,6 +31,10 @@ import com.alhaq.amnishield.ui.theme.AmniShieldTheme
 import com.alhaq.amnishield.ui.state.AppTheme
 import com.alhaq.amnishield.utils.SavedPreferencesLoader
 import com.alhaq.amnishield.blockers.FocusModeBlocker
+import com.alhaq.amnishield.data.blockers.AppBlockScheduleRule
+import com.alhaq.amnishield.data.blockers.BlockerType
+import com.alhaq.amnishield.ui.screens.CreateFocusModeRuleScreen
+import com.alhaq.amnishield.ui.state.ScheduleRule
 import com.alhaq.amnishield.utils.NotificationTimerManager
 import androidx.lifecycle.ViewModelProvider
 import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
@@ -39,6 +43,9 @@ import androidx.compose.runtime.getValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
+import java.util.Locale
+import java.util.UUID
 
 class FocusFragment : BaseFeatureFragment() {
 
@@ -54,6 +61,9 @@ class FocusFragment : BaseFeatureFragment() {
     private val installedAppsList = mutableStateListOf<FocusAppItem>()
     private val preSelectedApps = mutableStateOf<Set<String>>(emptySet())
     private val defaultMode = mutableStateOf(1)
+    private val focusSchedules = mutableStateListOf<ScheduleRule>()
+    private val showScheduleEditor = mutableStateOf(false)
+    private val editingFocusSchedule = mutableStateOf<ScheduleRule?>(null)
 
     private data class PendingSession(
         val durationMinutes: Int,
@@ -107,21 +117,61 @@ class FocusFragment : BaseFeatureFragment() {
                 viewModel.updateTheme(activeTheme)
                 val state by viewModel.state.collectAsState()
                 AmniShieldTheme(appTheme = activeTheme) {
-                    FocusScreen(
-                        isServiceEnabled = isServiceEnabled.value,
-                        isFocusModeActive = isFocusModeActive.value,
-                        focusModeEndTime = focusModeEndTime.value,
-                        installedApps = installedAppsList,
-                        preSelectedApps = preSelectedApps.value,
-                        defaultMode = defaultMode.value,
-                        onStartFocusSession = { durationMinutes, mode, selectedApps ->
-                            checkNotificationPermissionAndStart(durationMinutes, mode, selectedApps)
-                        },
-                        onStopFocusSession = { stopFocusSession() },
-                        onOpenFocusConfig = { openFocusConfig() },
-                        onConfigureSchedules = { configureSchedules() },
-                        onEnableService = { enableService() }
-                    )
+                    if (showScheduleEditor.value) {
+                        CreateFocusModeRuleScreen(
+                            state = state,
+                            editingRule = editingFocusSchedule.value,
+                            onSaveRule = { rule ->
+                                saveFocusScheduleRule(rule)
+                                showScheduleEditor.value = false
+                                editingFocusSchedule.value = null
+                            },
+                            onBack = {
+                                showScheduleEditor.value = false
+                                editingFocusSchedule.value = null
+                            },
+                            onDeleteRule = { id ->
+                                deleteFocusScheduleRule(id)
+                                showScheduleEditor.value = false
+                                editingFocusSchedule.value = null
+                            },
+                            onNavigateToPremium = { openPremiumScreen() }
+                        )
+                    } else {
+                        FocusScreen(
+                            isServiceEnabled = isServiceEnabled.value,
+                            isFocusModeActive = isFocusModeActive.value,
+                            focusModeEndTime = focusModeEndTime.value,
+                            installedApps = installedAppsList,
+                            preSelectedApps = preSelectedApps.value,
+                            defaultMode = defaultMode.value,
+                            onStartFocusSession = { durationMinutes, mode, selectedApps ->
+                                checkNotificationPermissionAndStart(durationMinutes, mode, selectedApps)
+                            },
+                            onStopFocusSession = { stopFocusSession() },
+                            onOpenFocusConfig = { openFocusConfig() },
+                            onConfigureSchedules = {
+                                editingFocusSchedule.value = null
+                                showScheduleEditor.value = true
+                            },
+                            onEnableService = { enableService() },
+                            focusSchedules = focusSchedules,
+                            onCreateFocusSchedule = {
+                                editingFocusSchedule.value = null
+                                showScheduleEditor.value = true
+                            },
+                            onEditFocusSchedule = { schedule ->
+                                editingFocusSchedule.value = schedule
+                                showScheduleEditor.value = true
+                            },
+                            onToggleFocusSchedule = { id, enabled ->
+                                toggleFocusScheduleRule(id, enabled)
+                            },
+                            onDeleteFocusSchedule = { id ->
+                                deleteFocusScheduleRule(id)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -152,6 +202,7 @@ class FocusFragment : BaseFeatureFragment() {
         allowedAppsCount.value = loader.getFocusModeSelectedApps().size
         preSelectedApps.value = loader.getFocusModeSelectedApps().toSet()
         defaultMode.value = focusData.modeType
+        loadFocusSchedules()
     }
 
     private fun checkNotificationPermissionAndStart(durationMinutes: Int, mode: Int, selectedApps: Set<String>) {
@@ -260,23 +311,212 @@ class FocusFragment : BaseFeatureFragment() {
     }
 
     private fun openFocusConfig() {
-        val intent = FragmentActivity.createIntent(
-            requireContext(),
-            com.alhaq.amnishield.ui.navigation.FragmentDestination.FocusModeConfig
-        )
+        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+            putExtra("fragment", com.alhaq.amnishield.ui.fragments.features.FocusModeConfigFragment.FRAGMENT_ID)
+        }
         startActivity(intent, activityOptions.toBundle())
     }
 
-    private fun configureSchedules() {
-        val extras = Bundle().apply {
-            putString("prefill_target", "FOCUS_MODE")
+    private fun openPremiumScreen() {
+        val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+            putExtra("feature_type", "premium_features")
         }
-        val intent = FragmentActivity.createIntent(
-            requireContext(),
-            com.alhaq.amnishield.ui.navigation.FragmentDestination.BlocksManager(),
-            extras
-        )
         startActivity(intent, activityOptions.toBundle())
+    }
+
+    private fun loadFocusSchedules() {
+        val rawRules = loader.loadAppBlockerScheduleRules().filter {
+            it.blockerType == BlockerType.FOCUS_MODE || it.packageName.equals("FOCUS_MODE", ignoreCase = true)
+        }
+        val grouped = rawRules.groupBy { it.groupId ?: it.id }
+        val loaded = grouped.map { (groupId, entries) ->
+            val blockEntry = entries.firstOrNull { it.type == AppBlockScheduleRule.RuleType.BLOCK } ?: entries.first()
+            val cheatEntry = entries.firstOrNull { it.type == AppBlockScheduleRule.RuleType.CHEAT }
+            val isAlways = blockEntry.recurrence == AppBlockScheduleRule.Recurrence.ALWAYS
+            val mappedDays = if (blockEntry.selectedDays.isEmpty()) {
+                listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+            } else {
+                blockEntry.selectedDays.map { calendarIntToDay(it) }.distinct()
+            }
+            val mappedCheatDays = if (cheatEntry == null || cheatEntry.selectedDays.isEmpty()) {
+                listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+            } else {
+                cheatEntry.selectedDays.map { calendarIntToDay(it) }.distinct()
+            }
+            ScheduleRule(
+                id = groupId,
+                name = (blockEntry.groupTitle ?: blockEntry.title)
+                    .removePrefix("Block Always • ")
+                    .removePrefix("Block • ")
+                    .ifBlank { "Auto Focus Schedule" },
+                targetBlockerType = "Focus Mode",
+                startTime = minutesToTime(blockEntry.startMinute),
+                endTime = minutesToTime(blockEntry.endMinute),
+                days = mappedDays,
+                isActive = blockEntry.isRuleEnabled,
+                isAlwaysBlockEnabled = isAlways,
+                isScheduleEnabled = !isAlways && blockEntry.type == AppBlockScheduleRule.RuleType.BLOCK,
+                isCheatEnabled = cheatEntry != null,
+                cheatStartTime = cheatEntry?.let { minutesToTime(it.startMinute) } ?: "12:00",
+                cheatEndTime = cheatEntry?.let { minutesToTime(it.endMinute) } ?: "13:00",
+                cheatDays = mappedCheatDays,
+                selectedApps = blockEntry.targets.filter {
+                    !it.equals("FOCUS_MODE", ignoreCase = true)
+                },
+                focusProtectionMode = blockEntry.focusProtectionMode,
+                authType = blockEntry.authType,
+                rulePasswordHash = blockEntry.rulePasswordHash,
+                rulePasswordSalt = blockEntry.rulePasswordSalt
+            )
+        }
+        focusSchedules.clear()
+        focusSchedules.addAll(loaded)
+    }
+
+    private fun saveFocusScheduleRule(rule: ScheduleRule) {
+        val groupId = rule.id.ifBlank { UUID.randomUUID().toString() }
+        loader.removeAppBlockerScheduleGroup(groupId)
+        loader.removeAppBlockerScheduleRule(groupId)
+
+        val groupTitle = rule.name.ifBlank { "Auto Focus Schedule" }
+        val targets = rule.selectedApps.ifEmpty { loader.getFocusModeSelectedApps() }
+
+        if (rule.isAlwaysBlockEnabled || rule.isScheduleEnabled) {
+            val startMin = if (rule.isAlwaysBlockEnabled) 0 else timeToMinutes(rule.startTime)
+            val endMin = if (rule.isAlwaysBlockEnabled) 0 else timeToMinutes(rule.endTime)
+            val calendarDays = if (rule.isAlwaysBlockEnabled) emptySet() else rule.days.map { dayToCalendarInt(it) }.toSet()
+            val recurrence = when {
+                rule.isAlwaysBlockEnabled -> AppBlockScheduleRule.Recurrence.ALWAYS
+                rule.days.size == 7 -> AppBlockScheduleRule.Recurrence.DAILY
+                else -> AppBlockScheduleRule.Recurrence.WEEKLY
+            }
+            loader.upsertAppBlockerScheduleRule(
+                AppBlockScheduleRule(
+                    id = UUID.randomUUID().toString(),
+                    title = if (rule.isAlwaysBlockEnabled) "Block Always • $groupTitle" else "Block • $groupTitle",
+                    packageName = "FOCUS_MODE",
+                    type = AppBlockScheduleRule.RuleType.BLOCK,
+                    recurrence = recurrence,
+                    startMinute = startMin,
+                    endMinute = endMin,
+                    selectedDays = calendarDays,
+                    createdAt = System.currentTimeMillis(),
+                    groupId = groupId,
+                    groupTitle = groupTitle,
+                    isEnabled = rule.isActive,
+                    blockerType = BlockerType.FOCUS_MODE,
+                    targets = targets,
+                    focusProtectionMode = rule.focusProtectionMode,
+                    authType = rule.authType,
+                    rulePasswordHash = rule.rulePasswordHash,
+                    rulePasswordSalt = rule.rulePasswordSalt
+                )
+            )
+        }
+
+        if (rule.isCheatEnabled) {
+            val calendarDays = rule.cheatDays.map { dayToCalendarInt(it) }.toSet()
+            val recurrence = if (rule.cheatDays.size == 7) {
+                AppBlockScheduleRule.Recurrence.DAILY
+            } else {
+                AppBlockScheduleRule.Recurrence.WEEKLY
+            }
+            loader.upsertAppBlockerScheduleRule(
+                AppBlockScheduleRule(
+                    id = UUID.randomUUID().toString(),
+                    title = "Cheat • $groupTitle",
+                    packageName = "FOCUS_MODE",
+                    type = AppBlockScheduleRule.RuleType.CHEAT,
+                    recurrence = recurrence,
+                    startMinute = timeToMinutes(rule.cheatStartTime),
+                    endMinute = timeToMinutes(rule.cheatEndTime),
+                    selectedDays = calendarDays,
+                    createdAt = System.currentTimeMillis(),
+                    groupId = groupId,
+                    groupTitle = groupTitle,
+                    isEnabled = rule.isActive,
+                    blockerType = BlockerType.FOCUS_MODE,
+                    targets = targets,
+                    focusProtectionMode = rule.focusProtectionMode,
+                    authType = rule.authType,
+                    rulePasswordHash = rule.rulePasswordHash,
+                    rulePasswordSalt = rule.rulePasswordSalt
+                )
+            )
+        }
+
+        broadcastFocusScheduleRefresh()
+        loadFocusSchedules()
+    }
+
+    private fun toggleFocusScheduleRule(id: String, enabled: Boolean) {
+        val current = loader.loadAppBlockerScheduleRules()
+        val updated = current.map { entry ->
+            if ((entry.groupId ?: entry.id) == id) entry.copy(isEnabled = enabled) else entry
+        }.toMutableList()
+        loader.saveAppBlockerScheduleRules(updated)
+        broadcastFocusScheduleRefresh()
+        loadFocusSchedules()
+    }
+
+    private fun deleteFocusScheduleRule(id: String) {
+        loader.removeAppBlockerScheduleGroup(id)
+        loader.removeAppBlockerScheduleRule(id)
+        broadcastFocusScheduleRefresh()
+        loadFocusSchedules()
+    }
+
+    private fun broadcastFocusScheduleRefresh() {
+        val ctx = requireContext()
+        ctx.sendBroadcast(
+            Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_FOCUS_MODE).apply {
+                setPackage(ctx.packageName)
+            }
+        )
+        ctx.sendBroadcast(
+            Intent(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER).apply {
+                setPackage(ctx.packageName)
+            }
+        )
+    }
+
+    private fun timeToMinutes(timeStr: String): Int {
+        val parts = timeStr.split(":")
+        if (parts.size != 2) return 0
+        val hours = parts[0].toIntOrNull() ?: 0
+        val minutes = parts[1].toIntOrNull() ?: 0
+        return (hours * 60 + minutes).coerceIn(0, 1439)
+    }
+
+    private fun minutesToTime(totalMinutes: Int): String {
+        val clamped = totalMinutes.coerceIn(0, 1439)
+        return String.format(Locale.US, "%02d:%02d", clamped / 60, clamped % 60)
+    }
+
+    private fun dayToCalendarInt(day: String): Int {
+        return when (day.lowercase(Locale.ROOT)) {
+            "sun" -> Calendar.SUNDAY
+            "mon" -> Calendar.MONDAY
+            "tue" -> Calendar.TUESDAY
+            "wed" -> Calendar.WEDNESDAY
+            "thu" -> Calendar.THURSDAY
+            "fri" -> Calendar.FRIDAY
+            "sat" -> Calendar.SATURDAY
+            else -> Calendar.MONDAY
+        }
+    }
+
+    private fun calendarIntToDay(dayInt: Int): String {
+        return when (dayInt) {
+            Calendar.SUNDAY -> "Sun"
+            Calendar.MONDAY -> "Mon"
+            Calendar.TUESDAY -> "Tue"
+            Calendar.WEDNESDAY -> "Wed"
+            Calendar.THURSDAY -> "Thu"
+            Calendar.FRIDAY -> "Fri"
+            Calendar.SATURDAY -> "Sat"
+            else -> "Mon"
+        }
     }
 
     private fun enableService() {

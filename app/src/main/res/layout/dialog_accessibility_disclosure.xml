@@ -1,74 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive Scrollable Prominent Disclosure Dialog for Google Play Compliance -->
+<!-- Scroll-Safe, Zoom-Resilient (up to 200% Font Scale) Prominent Disclosure Dialog for Google Play Compliance -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="18dp">
+    android:padding="20dp">
 
+    <!-- 1. Pinned Header: Icon & Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/widget_chip_background"
+            android:padding="6dp"
+            android:src="@drawable/baseline_shield_24"
+            app:tint="?attr/colorPrimary"
+            tools:ignore="ContentDescription" />
+
+        <TextView
+            android:id="@+id/disclosure_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/accessibility_disclosure_title"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 2. Scrollable Body: Constrained weight(1) so buttons below are ALWAYS pinned and visible even at 200% zoom -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true"
-        android:fadeScrollbars="false">
+        android:fadeScrollbars="false"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbars="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="8dp">
 
-            <!-- Header Icon & Title -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingBottom="8dp">
-
-                <ImageView
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:background="@drawable/widget_chip_background"
-                    android:padding="4dp"
-                    android:src="@drawable/baseline_shield_24"
-                    app:tint="?attr/colorPrimary"
-                    tools:ignore="ContentDescription" />
-
-                <TextView
-                    android:id="@+id/disclosure_title"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="@string/accessibility_disclosure_title"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Introductory Scope -->
+            <!-- Introductory Scope (Explicitly names AccessibilityService API) -->
             <TextView
                 android:id="@+id/disclosure_intro"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingBottom="6dp"
+                android:paddingBottom="10dp"
                 android:text="@string/accessibility_disclosure_intro"
-                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp" />
+                android:lineSpacingExtra="2dp" />
 
-            <!-- Feature Usage Card (Directly Aligned with System Settings Description) -->
+            <!-- Feature Usage & Data Accessed Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="10dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                app:cardCornerRadius="10dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -77,29 +80,38 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="8dp">
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingBottom="6dp"
+                        android:text="@string/accessibility_disclosure_usage_title"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                        android:textColor="?attr/colorPrimary"
+                        android:textStyle="bold" />
 
                     <!-- 1. App & URL Blocker -->
                     <TextView
                         android:id="@+id/disclosure_point_apps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingBottom="4dp"
+                        android:paddingBottom="6dp"
                         android:text="@string/accessibility_disclosure_point_apps"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="11sp" />
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- 2. Keyword & Search Inspection -->
                     <TextView
                         android:id="@+id/disclosure_point_keywords"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingBottom="4dp"
+                        android:paddingBottom="6dp"
                         android:text="@string/accessibility_disclosure_point_keywords"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="11sp" />
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- 3. Navigation Gestures & Reel Blocking -->
                     <TextView
@@ -109,7 +121,7 @@
                         android:text="@string/accessibility_disclosure_point_gestures"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="11sp" />
+                        android:lineSpacingExtra="2dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -118,9 +130,8 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
-                app:cardCornerRadius="10dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
                 app:strokeColor="?attr/colorOutlineVariant"
                 app:strokeWidth="1dp">
@@ -130,12 +141,12 @@
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="8dp">
+                    android:padding="12dp">
 
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_marginEnd="6dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="10dp"
                         android:src="@drawable/baseline_lock_24"
                         app:tint="?attr/colorPrimary"
                         tools:ignore="ContentDescription" />
@@ -148,8 +159,8 @@
                         android:text="@string/accessibility_disclosure_privacy_desc"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:lineSpacingExtra="2dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -157,30 +168,29 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Sticky Action Buttons Row (Two-Button Explicit Consent, 200% font scale safe) -->
+    <!-- 3. Sticky Action Buttons Row (Always visible, adaptive wrap_content height for 200% font scale) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <!-- Negative Button: Deny -->
+        <!-- Negative Button: Decline -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_decline"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:minHeight="48dp"
-            android:layout_marginEnd="5dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingVertical="8dp"
             android:text="@string/accessibility_disclosure_decline"
             android:textAllCaps="false"
-            android:textSize="12.5sp"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="12dp" />
 
         <!-- Positive Button: Agree & Enable -->
         <com.google.android.material.button.MaterialButton
@@ -189,16 +199,15 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:minHeight="48dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1.3"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingVertical="8dp"
             android:text="@string/accessibility_disclosure_agree"
             android:textAllCaps="false"
-            android:textSize="12.5sp"
             android:textStyle="bold"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
 </LinearLayout>

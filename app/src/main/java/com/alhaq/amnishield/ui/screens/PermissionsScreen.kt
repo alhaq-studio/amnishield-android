@@ -10,7 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -24,15 +23,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.alhaq.amnishield.R
 import com.alhaq.amnishield.permissions.PermissionsManager
+import com.alhaq.amnishield.utils.AccessibilityDisclosureComposableDialog
 import com.alhaq.amnishield.utils.AccessibilityDisclosureDialog
+import com.alhaq.amnishield.utils.ProminentPermissionDisclosureDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +50,7 @@ fun PermissionsScreen(
     var isNotifGranted by remember { mutableStateOf(permManager.areNotificationsEnabled()) }
 
     // Dialog States
+    var showAccessibilityDisclosure by remember { mutableStateOf(false) }
     var showOverlayDisclosure by remember { mutableStateOf(false) }
     var showUsageDisclosure by remember { mutableStateOf(false) }
     var showBatteryDisclosure by remember { mutableStateOf(false) }
@@ -122,6 +122,7 @@ fun PermissionsScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -134,7 +135,7 @@ fun PermissionsScreen(
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Text(
-                            text = if (grantedCount >= 3) "Continue to Quick Guide" else "Continue ($grantedCount/4 Ready)",
+                            text = if (grantedCount >= 3) "Continue" else "Continue ($grantedCount/4 Ready)",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
                         )
@@ -168,17 +169,7 @@ fun PermissionsScreen(
                     badgeLabel = "Required",
                     onClick = {
                         if (!isAccessibilityGranted) {
-                            AccessibilityDisclosureDialog.show(
-                                context = context,
-                                onAgree = {
-                                    try {
-                                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        // Fallback
-                                    }
-                                }
-                            )
+                            showAccessibilityDisclosure = true
                         }
                     }
                 )
@@ -250,153 +241,121 @@ fun PermissionsScreen(
         }
     }
 
+    // Standalone Non-Dismissible Scroll-Safe Accessibility Disclosure Dialog
+    if (showAccessibilityDisclosure) {
+        AccessibilityDisclosureComposableDialog(
+            onAgree = {
+                showAccessibilityDisclosure = false
+                AccessibilityDisclosureDialog.openAccessibilitySettings(context)
+            },
+            onDecline = {
+                showAccessibilityDisclosure = false
+            }
+        )
+    }
+
     // Overlay Disclosure Dialog
     if (showOverlayDisclosure) {
-        AlertDialog(
-            onDismissRequest = { showOverlayDisclosure = false },
-            icon = { Icon(Icons.Outlined.Layers, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Display Over Other Apps") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "AmniShield requires overlay permission to render blocking screens and mindful pause timers when a restricted app is launched.",
-                        style = MaterialTheme.typography.bodyMedium
+        ProminentPermissionDisclosureDialog(
+            icon = Icons.Outlined.Layers,
+            title = "Display Over Other Apps",
+            introText = "AmniShield requires the Display Over Other Apps (Overlay) permission to render distraction shields and mindful pause timers when a restricted app is opened:",
+            bulletPoints = listOf(
+                "Displays instant full-screen distraction shields over blocked apps.",
+                "Shows mindful breathing exercises and pause countdown timers.",
+                "Renders floating focus session progress indicators."
+            ),
+            privacyGuaranteeText = "100% On-Device Privacy: Overlay screens are rendered strictly locally and never capture or transmit screen pixels.",
+            confirmButtonText = "Agree & Configure",
+            declineButtonText = "Decline",
+            onConfirm = {
+                showOverlayDisclosure = false
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
                     )
-                    Text(
-                        "• Displays instant full-screen distraction shields\n• Shows mindful breathing and pause countdowns\n• Operates 100% on-device without data collection",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showOverlayDisclosure = false
-                        try {
-                            val intent = Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:${context.packageName}")
-                            )
-                            overlayLauncher.launch(intent)
-                        } catch (e: Exception) {
-                            try {
-                                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                overlayLauncher.launch(intent)
-                            } catch (e2: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
-                            }
-                        }
+                    overlayLauncher.launch(intent)
+                } catch (e: Exception) {
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                        overlayLauncher.launch(intent)
+                    } catch (e2: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
                     }
-                ) {
-                    Text("Agree & Configure")
                 }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showOverlayDisclosure = false }) {
-                    Text("Deny")
-                }
-            }
+            onDecline = { showOverlayDisclosure = false }
         )
     }
 
     // Usage Stats Disclosure Dialog
     if (showUsageDisclosure) {
-        AlertDialog(
-            onDismissRequest = { showUsageDisclosure = false },
-            icon = { Icon(Icons.Outlined.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("App Usage Access") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "AmniShield requires Usage Access to calculate screen time, count daily app opens, and enforce daily launch limits.",
-                        style = MaterialTheme.typography.bodyMedium
+        ProminentPermissionDisclosureDialog(
+            icon = Icons.Outlined.BarChart,
+            title = "App Usage Access",
+            introText = "AmniShield requires App Usage Access (UsageStatsManager) to calculate screen time, count daily app opens, and enforce your daily screen time goals:",
+            bulletPoints = listOf(
+                "Tracks daily screen time and compares progress against your personal daily goal.",
+                "Counts app launches and short-video reel sessions for habit insights.",
+                "Enforces scheduled screen-time thresholds and app launch limits."
+            ),
+            privacyGuaranteeText = "100% On-Device Privacy: All usage statistics remain in your local device database and are never shared with third parties.",
+            confirmButtonText = "Agree & Configure",
+            declineButtonText = "Decline",
+            onConfirm = {
+                showUsageDisclosure = false
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_USAGE_ACCESS_SETTINGS,
+                        Uri.parse("package:${context.packageName}")
                     )
-                    Text(
-                        "• Computes daily screen time and reels scrolled\n• Enforces scheduled usage thresholds\n• Data is processed 100% locally and never uploaded",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showUsageDisclosure = false
-                        try {
-                            val intent = Intent(
-                                Settings.ACTION_USAGE_ACCESS_SETTINGS,
-                                Uri.parse("package:${context.packageName}")
-                            )
-                            usageLauncher.launch(intent)
-                        } catch (e: Exception) {
-                            try {
-                                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                                usageLauncher.launch(intent)
-                            } catch (e2: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                            }
-                        }
+                    usageLauncher.launch(intent)
+                } catch (e: Exception) {
+                    try {
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        usageLauncher.launch(intent)
+                    } catch (e2: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                     }
-                ) {
-                    Text("Agree & Configure")
                 }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showUsageDisclosure = false }) {
-                    Text("Deny")
-                }
-            }
+            onDecline = { showUsageDisclosure = false }
         )
     }
 
     // Battery Optimization Disclosure Dialog
     if (showBatteryDisclosure) {
-        AlertDialog(
-            onDismissRequest = { showBatteryDisclosure = false },
-            icon = { Icon(Icons.Outlined.BatteryChargingFull, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Unrestricted Background") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "AmniShield needs unrestricted background execution to ensure focus mode timers and scheduled rules are not killed during battery saving.",
-                        style = MaterialTheme.typography.bodyMedium
+        ProminentPermissionDisclosureDialog(
+            icon = Icons.Outlined.BatteryChargingFull,
+            title = "Unrestricted Background",
+            introText = "AmniShield requests exemption from aggressive battery optimizations so your focus sessions and scheduled blocks stay reliable:",
+            bulletPoints = listOf(
+                "Prevents Android OS from pausing active focus mode timers.",
+                "Ensures scheduled blocks and daily goal reminders fire on time.",
+                "Maintains lightweight local protection with minimal battery impact."
+            ),
+            privacyGuaranteeText = "Zero Background Telemetry: Unrestricted background execution is used solely for local timer and blocker enforcement.",
+            confirmButtonText = "Agree & Configure",
+            declineButtonText = "Decline",
+            onConfirm = {
+                showBatteryDisclosure = false
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:${context.packageName}")
                     )
-                    Text(
-                        "• Keeps schedules and timers active reliably\n• Prevents Android OS from pausing protection services\n• Zero background tracking or server telemetry",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showBatteryDisclosure = false
-                        try {
-                            val intent = Intent(
-                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                Uri.parse("package:${context.packageName}")
-                            )
-                            batteryLauncher.launch(intent)
-                        } catch (e: Exception) {
-                            try {
-                                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                                context.startActivity(intent)
-                            } catch (e2: Exception) {
-                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
-                            }
-                        }
+                    batteryLauncher.launch(intent)
+                } catch (e: Exception) {
+                    try {
+                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        context.startActivity(intent)
+                    } catch (e2: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
                     }
-                ) {
-                    Text("Agree & Configure")
                 }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showBatteryDisclosure = false }) {
-                    Text("Deny")
-                }
-            }
+            onDecline = { showBatteryDisclosure = false }
         )
     }
 }

@@ -175,7 +175,12 @@ class UsageStatOverlayManager(private val context: Context) {
                 if (!isConfigReceiverRegistered) {
                     try {
                         val filter = IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED)
-                        context.registerReceiver(configChangeReceiver, filter)
+                        androidx.core.content.ContextCompat.registerReceiver(
+                            context,
+                            configChangeReceiver,
+                            filter,
+                            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+                        )
                         isConfigReceiverRegistered = true
                     } catch (_: Exception) {}
                 }

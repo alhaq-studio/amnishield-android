@@ -91,7 +91,9 @@ class ErrorReportManager(private val context: Context) {
             crashEntry.append("Used Memory: ${totalMemory - freeMemory}MB\n")
             
             crashEntry.append("\n--- CRASH DETAILS ---\n")
-            crashEntry.append("Thread: ${thread.name} (ID: ${thread.id})\n")
+            @Suppress("DEPRECATION")
+            val threadId = thread.id
+            crashEntry.append("Thread: ${thread.name} (ID: $threadId)\n")
             crashEntry.append("Exception: ${throwable.javaClass.simpleName}\n")
             crashEntry.append("Message: ${CrashLogger.getInstance(context).sanitize(throwable.message ?: "No message")}\n")
             

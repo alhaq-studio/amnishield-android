@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -97,11 +98,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
-import androidx.activity.compose.setContent
 import com.alhaq.amnishield.ui.AmniShieldAdaptiveApp
 import com.alhaq.amnishield.ui.theme.AmniShieldTheme
-import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 import com.alhaq.amnishield.ui.state.AppTheme
+import com.alhaq.amnishield.ui.viewmodel.AmniShieldViewModel
 
 
 class MainActivity : AppCompatActivity() {
@@ -191,6 +191,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var directoryPicker: ActivityResultLauncher<Intent>
 
+    private lateinit var deviceCredentialLauncher: ActivityResultLauncher<Intent>
+
 
     private val adaptiveViewModel by lazy {
         AmniShieldViewModel().apply {
@@ -214,6 +216,7 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+
     fun mountAdaptiveComposeShell() {
         setContent {
             val state by adaptiveViewModel.state.collectAsState()
@@ -224,7 +227,7 @@ class MainActivity : AppCompatActivity() {
                     isGoogleSignedIn = false,
                     onOpenAccessibilitySettings = {
                         try {
-                            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                         } catch (e: Exception) {
                             Toast.makeText(this@MainActivity, "Unable to open Accessibility Settings", Toast.LENGTH_SHORT).show()
                         }
@@ -298,6 +301,8 @@ class MainActivity : AppCompatActivity() {
                     drawerLayout.closeDrawer(GravityCompat.START)
                 } else if (supportFragmentManager.backStackEntryCount > 0) {
                     supportFragmentManager.popBackStack()
+                } else if (binding.mainViewPager.currentItem != 0) {
+                    binding.mainViewPager.setCurrentItem(0, true)
                 } else {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
@@ -343,7 +348,8 @@ class MainActivity : AppCompatActivity() {
         setupFragmentNavigation(savedInstanceState)
 
         if (!isFirstLaunchComplete()) {
-            val intent = FragmentActivity.createIntent(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Welcome)
+            val intent = Intent(this, FragmentActivity::class.java)
+            intent.putExtra("fragment", WelcomeFragment.FRAGMENT_ID)
             startActivity(intent, options.toBundle())
             finish()
             return
@@ -469,7 +475,7 @@ class MainActivity : AppCompatActivity() {
         val expiryDate = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(java.util.Date(payload.expires))
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle("Pro License Activated!")
-            .setMessage("Welcome to AmniShield Pro!\n\n• Account: ${payload.email}\n• Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n• Valid Until: $expiryDate\n\nAll premium security features, advanced rules, and tamper protections are now fully unlocked on this device. Cross-device cloud sync is coming soon in Pro (Milestone V1.1).")
+            .setMessage("Welcome to AmniShield Pro!\n\n- Account: ${payload.email}\n- Plan: ${payload.type.replaceFirstChar { it.uppercase() }}\n- Valid Until: $expiryDate\n\nAll premium security features, advanced rules, and tamper protections are now fully unlocked on this device. Cross-device cloud sync is coming soon in Pro (Milestone V1.1).")
             .setPositiveButton("Continue", null)
             .show()
     }
@@ -495,34 +501,89 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.title = title
     }
 
-    private fun setupFragmentNavigation(savedInstanceState: Bundle?) {
-        // Load StatsFragment or deep-linked tab by default
-        if (savedInstanceState == null) {
-            val startTab = intent.getIntExtra("start_tab", R.id.navigation_stats)
-            val initialFragment = when (startTab) {
-                R.id.navigation_advanced -> AdvancedFragment()
-                R.id.navigation_blocks -> BlocksManagerFragment()
-                R.id.navigation_focus -> FocusFragment()
+    private fun resolveTabFromIntent(intent: Intent?, defaultTab: Int): Int {
+        if (intent == null) return defaultTab
+        val explicitTab = intent.getIntExtra("start_tab", -1)
+        if (explicitTab != -1) return explicitTab
+        return when (intent.getStringExtra("navigate_to")?.lowercase()) {
+            "blocks", "blockers" -> R.id.navigation_blocks
+            "focus", "streak" -> R.id.navigation_focus
+            "advanced" -> R.id.navigation_advanced
+            "stats" -> R.id.navigation_stats
+            else -> defaultTab
+        }
+    }
+
+    private fun positionToTabId(position: Int): Int = when (position) {
+        0 -> R.id.navigation_stats
+        1 -> R.id.navigation_blocks
+        2 -> R.id.navigation_focus
+        3 -> R.id.navigation_advanced
+        else -> R.id.navigation_stats
+    }
+
+    private fun tabIdToPosition(tabId: Int): Int = when (tabId) {
+        R.id.navigation_stats -> 0
+        R.id.navigation_blocks -> 1
+        R.id.navigation_focus -> 2
+        R.id.navigation_advanced -> 3
+        else -> 0
+    }
+
+    private inner class MainPagerAdapter(activity: AppCompatActivity) : androidx.viewpager2.adapter.FragmentStateAdapter(activity) {
+        override fun getItemCount(): Int = 4
+
+        override fun createFragment(position: Int): androidx.fragment.app.Fragment {
+            return when (position) {
+                0 -> StatsFragment()
+                1 -> BlocksManagerFragment()
+                2 -> FocusFragment()
+                3 -> AdvancedFragment()
                 else -> StatsFragment()
             }
-            supportFragmentManager.beginTransaction()
-                .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                .replace(R.id.nav_host_fragment, initialFragment)
-                .commit()
-            binding.bottomNavigation.selectedItemId = startTab
-            updateToolbarTitleForTab(startTab)
-        } else {
-            updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
         }
-        
+    }
+
+    private fun setupFragmentNavigation(savedInstanceState: Bundle?) {
+        binding.mainViewPager.adapter = MainPagerAdapter(this)
+        binding.mainViewPager.offscreenPageLimit = 1
+
+        val startTab = if (savedInstanceState == null) {
+            resolveTabFromIntent(intent, R.id.navigation_stats)
+        } else {
+            binding.bottomNavigation.selectedItemId
+        }
+        val startPos = tabIdToPosition(startTab)
+        binding.mainViewPager.setCurrentItem(startPos, false)
+        binding.bottomNavigation.menu.findItem(startTab)?.isChecked = true
+        updateToolbarTitleForTab(startTab)
+
+        binding.mainViewPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                val tabId = positionToTabId(position)
+                if (binding.bottomNavigation.selectedItemId != tabId) {
+                    binding.bottomNavigation.menu.findItem(tabId)?.isChecked = true
+                }
+                updateToolbarTitleForTab(tabId)
+            }
+        })
+
         supportFragmentManager.addOnBackStackChangedListener {
             val isBackStackEmpty = supportFragmentManager.backStackEntryCount == 0
+            if (isBackStackEmpty) {
+                binding.navHostFragment.visibility = View.GONE
+                binding.mainViewPager.visibility = View.VISIBLE
+            } else {
+                binding.mainViewPager.visibility = View.GONE
+                binding.navHostFragment.visibility = View.VISIBLE
+            }
             if (::drawerToggle.isInitialized) {
                 drawerToggle.isDrawerIndicatorEnabled = isBackStackEmpty
                 supportActionBar?.setDisplayHomeAsUpEnabled(!isBackStackEmpty)
                 if (isBackStackEmpty) {
                     drawerToggle.syncState()
-                    updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
+                    updateToolbarTitleForTab(positionToTabId(binding.mainViewPager.currentItem))
                 } else {
                     val currentFrag = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
                     if (currentFrag is SettingsFragment) {
@@ -531,43 +592,17 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        
+
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             if (supportFragmentManager.backStackEntryCount > 0) {
                 supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
             }
-            updateToolbarTitleForTab(item.itemId)
-            when (item.itemId) {
-                R.id.navigation_stats -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                        .replace(R.id.nav_host_fragment, StatsFragment())
-                        .commit()
-                    true
-                }
-                R.id.navigation_blocks -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                        .replace(R.id.nav_host_fragment, BlocksManagerFragment())
-                        .commit()
-                    true
-                }
-                R.id.navigation_focus -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                        .replace(R.id.nav_host_fragment, FocusFragment())
-                        .commit()
-                    true
-                }
-                R.id.navigation_advanced -> {
-                    supportFragmentManager.beginTransaction()
-                        .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
-                        .replace(R.id.nav_host_fragment, AdvancedFragment())
-                        .commit()
-                    true
-                }
-                else -> false
+            val targetPos = tabIdToPosition(item.itemId)
+            if (binding.mainViewPager.currentItem != targetPos) {
+                binding.mainViewPager.setCurrentItem(targetPos, true)
             }
+            updateToolbarTitleForTab(item.itemId)
+            true
         }
     }
 
@@ -575,7 +610,11 @@ class MainActivity : AppCompatActivity() {
         if (supportFragmentManager.backStackEntryCount > 0) {
             supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
         }
-        binding.bottomNavigation.selectedItemId = tabId
+        val targetPos = tabIdToPosition(tabId)
+        binding.bottomNavigation.menu.findItem(tabId)?.isChecked = true
+        if (binding.mainViewPager.currentItem != targetPos) {
+            binding.mainViewPager.setCurrentItem(targetPos, true)
+        }
         updateToolbarTitleForTab(tabId)
     }
 
@@ -583,6 +622,7 @@ class MainActivity : AppCompatActivity() {
 
     fun setBottomNavVisible(visible: Boolean) {
         binding.bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.mainViewPager.isUserInputEnabled = visible
     }
 
     fun setToolbarVisible(visible: Boolean) {
@@ -597,9 +637,9 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val startTab = intent.getIntExtra("start_tab", -1)
-        if (startTab != -1) {
-            selectTab(startTab)
+        val resolvedTab = resolveTabFromIntent(intent, -1)
+        if (resolvedTab != -1) {
+            selectTab(resolvedTab)
         }
         handleDeepLink(intent)
     }
@@ -610,6 +650,10 @@ class MainActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
+        getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+            .edit()
+            .putLong("last_app_open_time", System.currentTimeMillis())
+            .apply()
         updateToolbarTitleForTab(binding.bottomNavigation.selectedItemId)
         checkAppLock()
         // Permissions will now be handled by PermissionsBottomSheet on first launch, 
@@ -661,6 +705,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupActivityLaunchers() {
+
+        deviceCredentialLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                AmniShield.isAppUnlocked = true
+            } else {
+                finish()
+            }
+        }
 
         selectPinnedAppsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -1161,7 +1213,10 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
         dialogView.findViewById<View>(R.id.card_pro_pass)?.setOnClickListener {
-            FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures)
+            val intent = Intent(this, FragmentActivity::class.java).apply {
+                putExtra("feature_type", "premium_features")
+            }
+            startActivity(intent)
             dialog.dismiss()
         }
 
@@ -1490,7 +1545,10 @@ class MainActivity : AppCompatActivity() {
                     openPremiumScreen()
                 }
                 R.id.nav_roadmap -> {
-                    FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Roadmap)
+                    val intent = Intent(this, FragmentActivity::class.java).apply {
+                        putExtra("feature_type", "roadmap")
+                    }
+                    startActivity(intent)
                 }
                 R.id.nav_donate -> {
                     showSupportOptionsDialog()
@@ -1534,6 +1592,8 @@ class MainActivity : AppCompatActivity() {
             showBypassPinDialog(pinCode, onCancel = {
                 selectTab(R.id.navigation_stats)
             }) {
+                binding.mainViewPager.visibility = View.GONE
+                binding.navHostFragment.visibility = View.VISIBLE
                 supportFragmentManager.beginTransaction()
                     .setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out)
                     .replace(R.id.nav_host_fragment, SettingsFragment())
@@ -1542,6 +1602,8 @@ class MainActivity : AppCompatActivity() {
                 setToolbarTitle("Settings")
             }
         } else {
+            binding.mainViewPager.visibility = View.GONE
+            binding.navHostFragment.visibility = View.VISIBLE
             supportFragmentManager.beginTransaction()
                 .setCustomAnimations(R.anim.fade_in, R.anim.fade_out, R.anim.fade_in, R.anim.fade_out)
                 .replace(R.id.nav_host_fragment, SettingsFragment())
@@ -1764,7 +1826,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPremiumScreen() {
-        FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.PremiumFeatures)
+        val intent = Intent(this, FragmentActivity::class.java).apply {
+            putExtra("feature_type", "premium_features")
+        }
+        startActivity(intent)
     }
 
     private fun signInWithGoogle() {
@@ -1787,7 +1852,9 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun openProfileScreen() {
-        FragmentActivity.launch(this, com.alhaq.amnishield.ui.navigation.FragmentDestination.Profile)
+        val intent = Intent(this, FragmentActivity::class.java)
+        intent.putExtra("fragment", "profile")
+        startActivity(intent)
     }
     
     private fun showFAQDialog() {
@@ -1971,16 +2038,55 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun checkAppLock() {
-        val pinEnabled = savedPreferencesLoader.isPinSecurityEnabled()
         val appLockEnabled = savedPreferencesLoader.isAppLockEnabled()
-        val pinCode = savedPreferencesLoader.getPinCode()
+        if (!appLockEnabled || AmniShield.isAppUnlocked) return
 
-        if (pinEnabled && appLockEnabled && pinCode.isNotEmpty() && !AmniShield.isAppUnlocked) {
-            showPinLockFullscreenDialog(pinCode)
+        when (savedPreferencesLoader.getAppLockMode()) {
+            SavedPreferencesLoader.APP_LOCK_MODE_APP_PIN -> {
+                val appPin = savedPreferencesLoader.getAppLockCustomPin()
+                if (appPin.isNotEmpty()) {
+                    showPinLockFullscreenDialog(appPin, allowForgotPin = false)
+                } else {
+                    launchDeviceCredentialOrUnlock()
+                }
+            }
+            SavedPreferencesLoader.APP_LOCK_MODE_GLOBAL_PIN -> {
+                val globalPin = savedPreferencesLoader.getPinCode()
+                if (globalPin.isNotEmpty()) {
+                    showPinLockFullscreenDialog(globalPin, allowForgotPin = true)
+                } else {
+                    launchDeviceCredentialOrUnlock()
+                }
+            }
+            else -> {
+                launchDeviceCredentialOrUnlock()
+            }
         }
     }
 
-    private fun showPinLockFullscreenDialog(correctPinCode: String) {
+    @Suppress("DEPRECATION")
+    private fun launchDeviceCredentialOrUnlock() {
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        if (keyguardManager == null || !keyguardManager.isDeviceSecure) {
+            AmniShield.isAppUnlocked = true
+            return
+        }
+        val credIntent = keyguardManager.createConfirmDeviceCredentialIntent(
+            "Unlock AmniShield",
+            "Verify your identity to access AmniShield"
+        )
+        if (credIntent != null) {
+            runCatching { deviceCredentialLauncher.launch(credIntent) }
+                .onFailure { AmniShield.isAppUnlocked = true }
+        } else {
+            AmniShield.isAppUnlocked = true
+        }
+    }
+
+    private fun showPinLockFullscreenDialog(
+        correctPinCode: String,
+        allowForgotPin: Boolean = true
+    ) {
         val dialog = android.app.Dialog(this, android.R.style.Theme_Material_NoActionBar_Fullscreen)
         
         dialog.window?.let { window ->
@@ -1997,7 +2103,7 @@ class MainActivity : AppCompatActivity() {
                         correctPin = correctPinCode,
                         title = "AmniShield Locked",
                         subtitle = "Enter your 4-digit PIN to access the app",
-                        allowForgotPin = true,
+                        allowForgotPin = allowForgotPin,
                         onDismiss = {
                             dialog.dismiss()
                             finish()

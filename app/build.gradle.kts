@@ -4,6 +4,7 @@ import java.io.FileInputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.secrets)
 }
 
 // Conditionally apply Google Services plugin for Play Store and Universal builds
@@ -15,11 +16,16 @@ if (!isFdroidBuild && hasGoogleServices) {
     apply(plugin = "com.google.gms.google-services")
 }
 
-// Keystore properties
+// Load keystore properties for release signing
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+secrets {
+    propertiesFileName = ".env"
+    defaultPropertiesFileName = ".env.example"
 }
 
 android {
@@ -33,10 +39,6 @@ android {
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
-                enableV1Signing = true
-                enableV2Signing = true
-                enableV3Signing = true
-                enableV4Signing = true
             }
         }
     }
@@ -46,16 +48,15 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 145
-        versionName = "0.3.1 (2026.10.05)"
+        versionName = "0.3.5 (2026.10.21)"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         // Fix for 16 KB page size devices (Android 15+)
         ndk {
-            // Enable 16 KB page size alignment for native libraries
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
         }
     }
-    
+
     packaging {
         jniLibs {
             keepDebugSymbols.add("**/lib*.so")
@@ -80,15 +81,12 @@ android {
             matchingFallbacks.add("debug")
             resValue("string", "app_package_id", "com.alhaq.deenshield.staging")
         }
-        
+
         release {
             applicationIdSuffix = ""
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
-            ndk {
-                debugSymbolLevel = "FULL"
-            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -97,6 +95,9 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
             resValue("string", "app_package_id", "com.alhaq.deenshield")
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 
@@ -118,13 +119,11 @@ android {
             buildConfigField("String", "PLAYSTORE_BASE64_PUBLIC_KEY", "\"\"")
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-
 
     buildFeatures {
         viewBinding = true
@@ -133,6 +132,7 @@ android {
         compose = true
         resValues = true
     }
+
     lint {
         baseline = file("lint-baseline.xml")
         abortOnError = false
@@ -143,9 +143,7 @@ android {
     }
 }
 
-
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -155,8 +153,8 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.viewpager2)
 
-   
     implementation(libs.gson)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -165,12 +163,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
     implementation(libs.mpandroidchart)
     implementation(libs.timerangepicker)
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")
-    
+
     add("playstoreImplementation", libs.play.services.auth)
     add("playstoreImplementation", libs.billing.ktx)
     add("universalImplementation", libs.play.services.auth)
@@ -178,7 +175,6 @@ dependencies {
 
     // Jetpack Compose Dependencies
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.ui)
@@ -186,14 +182,13 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    
+
     // Compose Material 3 Adaptive & Navigation
     implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.material3.adaptive.layout)
     implementation(libs.androidx.compose.material3.adaptive.navigation)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.androidx.navigation.compose)
-
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 
@@ -202,4 +197,3 @@ tasks.configureEach {
         enabled = false
     }
 }
-

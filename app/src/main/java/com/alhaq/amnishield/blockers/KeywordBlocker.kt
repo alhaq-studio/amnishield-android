@@ -48,7 +48,39 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
                 displayUrlBarId = "url_bar",
                 browserSugggestionBoxId = "omnibox_suggestions_dropdown"
             ),
+            "com.google.android.apps.chrome" to BrowserUrlBarInfo(
+                displayUrlBarId = "url_bar",
+                browserSugggestionBoxId = "omnibox_suggestions_dropdown"
+            ),
+            "com.chrome.beta" to BrowserUrlBarInfo(
+                displayUrlBarId = "url_bar",
+                browserSugggestionBoxId = "omnibox_suggestions_dropdown"
+            ),
             "com.brave.browser" to BrowserUrlBarInfo(
+                displayUrlBarId = "url_bar",
+                browserSugggestionBoxId = "omnibox_suggestions_dropdown"
+            ),
+            "com.microsoft.emmx" to BrowserUrlBarInfo(
+                displayUrlBarId = "url_bar",
+                browserSugggestionBoxId = "omnibox_suggestions_dropdown"
+            ),
+            "com.sec.android.app.sbrowser" to BrowserUrlBarInfo(
+                displayUrlBarId = "location_bar_edit_text",
+                browserSugggestionBoxId = "url_bar_suggestions_list"
+            ),
+            "com.sec.android.app.sbrowser.beta" to BrowserUrlBarInfo(
+                displayUrlBarId = "location_bar_edit_text",
+                browserSugggestionBoxId = "url_bar_suggestions_list"
+            ),
+            "com.duckduckgo.mobile.android" to BrowserUrlBarInfo(
+                displayUrlBarId = "omnibarTextInput",
+                browserSugggestionBoxId = "autoCompleteSuggestionsList"
+            ),
+            "com.vivaldi.browser" to BrowserUrlBarInfo(
+                displayUrlBarId = "url_bar",
+                browserSugggestionBoxId = "omnibox_suggestions_dropdown"
+            ),
+            "com.kiwibrowser.browser" to BrowserUrlBarInfo(
                 displayUrlBarId = "url_bar",
                 browserSugggestionBoxId = "omnibox_suggestions_dropdown"
             ),
@@ -67,6 +99,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
     lateinit var blockedKeyword: HashSet<String>
 
     var redirectUrl: String = DEFAULT_REDIRECT_URL
+    var wholeWordOnly: Boolean = true
     var isSearchAllTextFields = false
     var isUnsupportedBrowserBlockingOn = false
     var ignoredPackages: Set<String> = emptySet()
@@ -96,11 +129,25 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
             return if (cachedResult == SAFE_STRING_TOKEN) null else cachedResult
         }
 
-        val keywords = parseTextForKeywords(rawText)
-        keywords.forEach { word ->
-            if (blockedKeyword.contains(word) && !isUnderCooldown(word)) {
-                detectionCache.put(rawText, word)
-                return word
+        val rawLower = rawText.lowercase(Locale.ROOT)
+        val normalizedSpaces = rawLower.replace(wordSplitRegex, " ").trim()
+        val words = parseTextForKeywords(rawText)
+
+        for (keyword in blockedKeyword) {
+            val kw = keyword.trim().lowercase(Locale.ROOT)
+            if (kw.isEmpty()) continue
+            val matched = if (wholeWordOnly) {
+                if (kw.contains(' ')) {
+                    " $normalizedSpaces ".contains(" $kw ")
+                } else {
+                    words.contains(kw)
+                }
+            } else {
+                rawLower.contains(kw)
+            }
+            if (matched && !isUnderCooldown(kw)) {
+                detectionCache.put(rawText, kw)
+                return kw
             }
         }
 
@@ -167,7 +214,8 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
         
         // CRITICAL: Check ignored packages BEFORE any text scanning
         // This prevents blocking system apps like Settings, launchers, etc.
-        if (!packageName.isNullOrEmpty() && ignoredPackages.contains(packageName)) {
+        val effectivePackage = rootPackage?.takeIf { it.isNotBlank() } ?: packageName
+        if (!effectivePackage.isNullOrEmpty() && ignoredPackages.contains(effectivePackage)) {
             return KeywordBlockerResult()
         }
 
@@ -202,7 +250,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
                 recursionResultNodes.forEach { it.recycle() }
                 recursionResultNodes.clear()
             }
-        } else if (!packageName.isNullOrEmpty()) {
+        } else if (!effectivePackage.isNullOrEmpty()) {
             recursionResultNodes.clear()
             for (className in SEARCH_FIELD_CLASS_NAMES) {
                 findNodesByClassName(rootNode, className, false)
@@ -210,7 +258,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
 
             try {
                 for (node in recursionResultNodes) {
-                    if (!isLikelySearchField(node, packageName)) continue
+                    if (!isLikelySearchField(node, effectivePackage)) continue
 
                     val textKeyword = containsBlockedKeyword(node.text)
                     if (textKeyword != null) {
@@ -246,7 +294,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
             }
         }
 
-        val urlBarInfo = packageName?.let { URL_BAR_ID_LIST[it] }
+        val urlBarInfo = effectivePackage?.let { URL_BAR_ID_LIST[it] }
         if (urlBarInfo == null) {
             return if (detectedAdultKeyword != null) {
                 KeywordBlockerResult(isHomePressRequested = false, resultDetectWord = detectedAdultKeyword)
@@ -255,7 +303,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
             }
         }
 
-        val idPrefixPart = "$packageName:id/"
+        val idPrefixPart = "$effectivePackage:id/"
         val displayUrlTextNode =
             ViewBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
 
@@ -273,7 +321,7 @@ class KeywordBlocker(val service: AccessibilityService) : BaseBlocker() {
 
             val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
             val editUrlBar = ViewBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
-                ?: findFirstEditableField(rootNode, packageName)
+                ?: findFirstEditableField(rootNode, effectivePackage)
 
             if (editUrlBar == null) {
                 return KeywordBlockerResult(isHomePressRequested = false, resultDetectWord = detectedAdultKeyword)

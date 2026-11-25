@@ -16,7 +16,7 @@ class RemindersActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            AmniShieldTheme {
+            AmniShieldTheme(appTheme = ThemeUtils.resolveAppTheme(this)) {
                 RemindersScreen(
                     onNavigateBack = { finish() }
                 )

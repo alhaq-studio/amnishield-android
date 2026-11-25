@@ -104,7 +104,6 @@ class ReelsSessionTracker(
         }
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun start() {
         if (isTrackingRunning) return
         isTrackingRunning = true
@@ -114,7 +113,12 @@ class ReelsSessionTracker(
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
         }
-        service.registerReceiver(screenReceiver, filter)
+        androidx.core.content.ContextCompat.registerReceiver(
+            service,
+            screenReceiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     fun stop() {

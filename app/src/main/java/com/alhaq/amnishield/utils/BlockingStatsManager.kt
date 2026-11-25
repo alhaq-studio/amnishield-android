@@ -50,6 +50,7 @@ class BlockingStatsManager private constructor(private val context: Context) {
             details = details
         )
         saveBlockEvent(event)
+        maybeTriggerBlockingAlert("App", resolveReadableLabel(packageName, details))
         
         // Check for achievements
         checkAndNotifyAchievements()
@@ -66,6 +67,7 @@ class BlockingStatsManager private constructor(private val context: Context) {
             packageName = packageName
         )
         saveBlockEvent(event)
+        maybeTriggerBlockingAlert("Keyword", keyword.ifBlank { "Filtered term" })
         
         // Check for achievements
         checkAndNotifyAchievements()
@@ -82,6 +84,7 @@ class BlockingStatsManager private constructor(private val context: Context) {
             viewId = viewId
         )
         saveBlockEvent(event)
+        maybeTriggerBlockingAlert("Reel/Short", resolveReadableLabel(packageName, viewId))
         
         // Check for achievements
         checkAndNotifyAchievements()
@@ -97,6 +100,36 @@ class BlockingStatsManager private constructor(private val context: Context) {
         
         // Check for achievements
         checkAndNotifyAchievements()
+    }
+
+    private fun resolveReadableLabel(packageName: String?, fallback: String?): String {
+        if (!packageName.isNullOrBlank()) {
+            try {
+                val pm = context.packageManager
+                val info = pm.getApplicationInfo(packageName, 0)
+                val label = pm.getApplicationLabel(info).toString()
+                if (label.isNotBlank()) return label
+            } catch (_: Exception) {
+                return packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }
+            }
+        }
+        return fallback?.takeIf { it.isNotBlank() } ?: "Distraction"
+    }
+
+    private fun maybeTriggerBlockingAlert(blockedType: String, itemName: String) {
+        val today = getTodayStats()
+        val totalToday = today.appBlocksCount + today.keywordBlocksCount + today.viewBlocksCount
+        val lastAlertTime = prefs.getLong("last_blocking_alert_time", 0L)
+        val now = System.currentTimeMillis()
+        // Trigger on the 1st block of the day or every 5th block, throttled to at least 15 minutes apart
+        if ((totalToday == 1 || totalToday % 5 == 0) && (now - lastAlertTime >= 15 * 60 * 1000L)) {
+            prefs.edit().putLong("last_blocking_alert_time", now).apply()
+            NotificationHelper.getInstance(context).showBlockingAlert(
+                blockedType = blockedType,
+                itemName = itemName,
+                totalBlockedToday = totalToday
+            )
+        }
     }
     
     /**
@@ -188,6 +221,53 @@ class BlockingStatsManager private constructor(private val context: Context) {
      */
     fun getTodayStats(): StatsSummary {
         return getStatsSummaryForDate(LocalDate.now())
+    }
+
+    fun getAppsBlockedCount(period: String = "today"): Int {
+        return getTodayStats().appBlocksCount
+    }
+
+    fun getReelsBlockedCount(period: String = "today"): Int {
+        return getTodayStats().viewBlocksCount
+    }
+
+    fun getKeywordsBlockedCount(period: String = "today"): Int {
+        return getTodayStats().keywordBlocksCount
+    }
+
+    fun getThreatsBlockedCount(period: String = "today"): Int {
+        val dnsPrefs = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        val dnsEnabled = dnsPrefs.getBoolean("website_blocker_enabled", false) ||
+                dnsPrefs.getBoolean("dns_protection_enabled", false)
+        val events = getBlockEventsForDate(LocalDate.now())
+        val explicitThreats = events.count {
+            it.details?.contains("domain", ignoreCase = true) == true ||
+                    it.details?.contains("url", ignoreCase = true) == true ||
+                    it.details?.contains("threat", ignoreCase = true) == true
+        }
+        return if (explicitThreats > 0) explicitThreats else if (dnsEnabled) (events.count { it.type == BlockType.KEYWORD_BLOCK } / 2) else 0
+    }
+
+    fun getCurrentStreak(): Int {
+        val streakPrefs = context.getSharedPreferences("streak_prefs", Context.MODE_PRIVATE)
+        val savedStreak = streakPrefs.getInt("current_streak", 0)
+        if (savedStreak > 0) return savedStreak
+        var consecutiveDays = 0
+        var checkDate = LocalDate.now()
+        for (i in 0..30) {
+            val summary = getStatsSummaryForDate(checkDate)
+            val hasActivity = (summary.appBlocksCount + summary.keywordBlocksCount + summary.viewBlocksCount + summary.focusSessionsCount) > 0
+            if (hasActivity) {
+                consecutiveDays++
+                checkDate = checkDate.minusDays(1)
+            } else if (i == 0) {
+                // Allow today to still be in progress if yesterday had activity
+                checkDate = checkDate.minusDays(1)
+            } else {
+                break
+            }
+        }
+        return consecutiveDays
     }
 
     /**

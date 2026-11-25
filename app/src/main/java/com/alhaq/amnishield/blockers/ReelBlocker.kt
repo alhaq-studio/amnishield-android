@@ -37,7 +37,8 @@ class ReelBlocker : BaseBlocker() {
         val TIKTOK_PACKAGE_NAMES = hashSetOf(
             "com.ss.android.ugc.trill",
             "com.zhiliaoapp.musically",
-            "com.ss.android.ugc.aweme"
+            "com.ss.android.ugc.aweme",
+            "com.zhiliao.musically.go"
         )
 
         val REEL_TARGET_PACKAGES = hashSetOf(
@@ -70,6 +71,8 @@ class ReelBlocker : BaseBlocker() {
             "com.google.android.youtube:id/reel_player_page_container" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_player_page_content" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/reel_view_pager" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/reel_watch_fragment_root" to PLATFORM_YOUTUBE,
+            "com.google.android.youtube:id/reel_watch_player" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/shorts_container" to PLATFORM_YOUTUBE,
             "com.google.android.youtube:id/shorts_player" to PLATFORM_YOUTUBE,
             "app.revanced.android.youtube:id/reel_recycler" to PLATFORM_YOUTUBE,
@@ -89,22 +92,38 @@ class ReelBlocker : BaseBlocker() {
         val REEL_VIEW_ID_LIST: List<String> = NATIVE_SURFACE_PLATFORM.keys.toList()
 
         // Browsers whose URL bar we inspect for short-form video URLs.
-        // (id_resource_name -> displayed URL/text view in the toolbar)
+        // (id_resource_name -> candidate displayed URL/text views in the toolbar)
         private val BROWSER_URL_BAR_IDS = mapOf(
-            "com.android.chrome" to "url_bar",
-            "com.chrome.beta" to "url_bar",
-            "com.chrome.dev" to "url_bar",
-            "com.chrome.canary" to "url_bar",
-            "com.brave.browser" to "url_bar",
-            "com.microsoft.emmx" to "url_bar",
-            "com.sec.android.app.sbrowser" to "location_bar_edit_text",
-            "org.mozilla.firefox" to "mozac_browser_toolbar_url_view",
-            "org.mozilla.focus" to "mozac_browser_toolbar_url_view",
-            "com.opera.browser" to "url_field",
-            "com.opera.mini.native" to "url_field",
-            "com.duckduckgo.mobile.android" to "omnibarTextInput",
-            "com.vivaldi.browser" to "url_bar",
-            "com.kiwibrowser.browser" to "url_bar"
+            "com.android.chrome" to listOf("url_bar", "title_url"),
+            "com.chrome.beta" to listOf("url_bar", "title_url"),
+            "com.chrome.dev" to listOf("url_bar", "title_url"),
+            "com.chrome.canary" to listOf("url_bar", "title_url"),
+            "com.google.android.apps.chrome" to listOf("url_bar", "title_url"),
+            "com.brave.browser" to listOf("url_bar"),
+            "com.microsoft.emmx" to listOf("url_bar"),
+            "com.sec.android.app.sbrowser" to listOf(
+                "location_bar_edit_text",
+                "url_bar",
+                "url_text",
+                "location_bar_text",
+                "toolbar_url_bar",
+                "url_edit_text"
+            ),
+            "com.sec.android.app.sbrowser.beta" to listOf(
+                "location_bar_edit_text",
+                "url_bar",
+                "url_text",
+                "location_bar_text",
+                "toolbar_url_bar",
+                "url_edit_text"
+            ),
+            "org.mozilla.firefox" to listOf("mozac_browser_toolbar_url_view"),
+            "org.mozilla.focus" to listOf("mozac_browser_toolbar_url_view"),
+            "com.opera.browser" to listOf("url_field"),
+            "com.opera.mini.native" to listOf("url_field"),
+            "com.duckduckgo.mobile.android" to listOf("omnibarTextInput"),
+            "com.vivaldi.browser" to listOf("url_bar"),
+            "com.kiwibrowser.browser" to listOf("url_bar")
         )
 
         // URL fragments that identify short-form video surfaces, mapped to platform.
@@ -194,6 +213,10 @@ class ReelBlocker : BaseBlocker() {
             return null
         }
 
+        if (isInstagramHomeTabSelected(rootNode, packageName)) {
+            return null
+        }
+
         for ((viewId, platform) in NATIVE_SURFACE_PLATFORM) {
             if (!isPlatformEnabled(platform)) continue
             if (isViewOpened(rootNode, viewId)) {
@@ -252,6 +275,10 @@ class ReelBlocker : BaseBlocker() {
             return null
         }
 
+        if (isInstagramHomeTabSelected(rootNode, packageName)) {
+            return null
+        }
+
         for ((viewId, platform) in NATIVE_SURFACE_PLATFORM) {
             if (!isPlatformEnabled(platform)) continue
             if (isViewOpened(rootNode, viewId)) {
@@ -277,13 +304,19 @@ class ReelBlocker : BaseBlocker() {
         rootNode: AccessibilityNodeInfo,
         packageName: String
     ): Pair<String, String>? {
-        val urlBarId = BROWSER_URL_BAR_IDS[packageName] ?: return null
-        val fullId = "$packageName:id/$urlBarId"
-        val urlText = readNodeText(rootNode, fullId) ?: return null
-        if (urlText.isBlank()) return null
+        val urlBarIds = BROWSER_URL_BAR_IDS[packageName] ?: return null
+        var urlText: String? = null
+        for (urlBarId in urlBarIds) {
+            val candidate = readNodeText(rootNode, "$packageName:id/$urlBarId")
+            if (!candidate.isNullOrBlank()) {
+                urlText = candidate
+                break
+            }
+        }
+        val resolvedUrl = urlText ?: return null
 
         for ((regex, platform) in BROWSER_URL_PATTERNS) {
-            if (regex.containsMatchIn(urlText)) {
+            if (regex.containsMatchIn(resolvedUrl)) {
                 return "browser:$packageName:$platform" to platform
             }
         }
@@ -306,18 +339,81 @@ class ReelBlocker : BaseBlocker() {
         return isUnderCooldown(viewId)
     }
 
+    private fun isInstagramHomeTabSelected(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
+        if (packageName != "com.instagram.android" &&
+            packageName != "com.myinsta.android" &&
+            packageName != "com.instagram.lite"
+        ) {
+            return false
+        }
+        val homeTabIds = listOf(
+            "$packageName:id/feed_tab",
+            "$packageName:id/tab_home",
+            "$packageName:id/tab_bar_home",
+            "$packageName:id/ig_nav_tab_home"
+        )
+        for (tabId in homeTabIds) {
+            val matches = try {
+                rootNode.findAccessibilityNodeInfosByViewId(tabId)
+            } catch (_: Exception) {
+                null
+            } ?: continue
+            var foundSelected = false
+            try {
+                for (node in matches) {
+                    if (isNodeVisibleOnScreen(node) && node.isSelected) {
+                        foundSelected = true
+                        break
+                    }
+                }
+            } finally {
+                for (node in matches) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        node.recycle()
+                    } catch (_: Exception) {}
+                }
+            }
+            if (foundSelected) return true
+        }
+        return false
+    }
+
+    private fun isNodeVisibleOnScreen(node: AccessibilityNodeInfo): Boolean {
+        if (!node.isVisibleToUser) return false
+        val rect = android.graphics.Rect()
+        node.getBoundsInScreen(rect)
+        return rect.width() > 0 && rect.height() > 0
+    }
+
     private fun isViewOpened(rootNode: AccessibilityNodeInfo, viewId: String): Boolean {
         if (viewId.startsWith("desc:")) {
             val desc = viewId.substring(5)
-            val node = findElementByDescription(rootNode, desc)
-            val opened = node != null
-            node?.recycle()
-            return opened
+            val node = findElementByDescription(rootNode, desc) ?: return false
+            return try {
+                isNodeVisibleOnScreen(node)
+            } finally {
+                try {
+                    @Suppress("DEPRECATION")
+                    node.recycle()
+                } catch (_: Exception) {}
+            }
         }
-        val node = ViewBlocker.findElementById(rootNode, viewId)
-        val opened = node != null
-        node?.recycle()
-        return opened
+        val matches = try {
+            rootNode.findAccessibilityNodeInfosByViewId(viewId)
+        } catch (_: Exception) {
+            null
+        } ?: return false
+        return try {
+            matches.any { isNodeVisibleOnScreen(it) }
+        } finally {
+            for (node in matches) {
+                try {
+                    @Suppress("DEPRECATION")
+                    node.recycle()
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     private fun findElementByDescription(node: AccessibilityNodeInfo?, desc: String): AccessibilityNodeInfo? {

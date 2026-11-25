@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,8 +36,8 @@ fun AmniSpaceBreathingCircle(
     totalDurationSeconds: Int = 5,
     onComplete: () -> Unit = {}
 ) {
-    var secondsRemaining by rememberSaveable(totalDurationSeconds) { mutableIntStateOf(totalDurationSeconds) }
-    var breathingPhase by rememberSaveable { mutableStateOf("Inhale deeply") }
+    var secondsRemaining by remember { mutableIntStateOf(totalDurationSeconds) }
+    var breathingPhase by remember { mutableStateOf("Inhale deeply") }
 
     val infiniteTransition = rememberInfiniteTransition(label = "AmniSpaceBreathing")
     

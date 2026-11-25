@@ -1,40 +1,90 @@
 package com.alhaq.amnishield.notifications
 
 import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.alhaq.amnishield.R
+import com.alhaq.amnishield.ui.activity.NotificationsActivity
+import com.alhaq.amnishield.utils.NotificationInboxStore
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
+/**
+ * Schedules and dispatches Smart Behavioral Notifications and Daily Reports,
+ * synchronizing every notification with NotificationInboxStore.
+ */
 class SmartNotificationScheduler(private val context: Context) {
 
-    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
     companion object {
-        private const val TAG = "SmartNotificationScheduler"
-        const val DAILY_REPORT_REQUEST_CODE = 1001
-        private const val WORK_FALLBACK_NAME = "smart_notification_worker_fallback"
+        const val CHANNEL_ID_SMART = "amnishield_smart_notifications"
+        const val CHANNEL_ID_CRITICAL = "amnishield_critical_alerts"
+        const val WORK_TAG_SMART_BRAIN = "smart_behavioral_brain_worker"
+        const val ALARM_REQUEST_DAILY_REPORT = 4001
     }
 
-    fun canScheduleExactAlarms(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            alarmManager.canScheduleExactAlarms()
-        } else {
-            true
+    init {
+        createNotificationChannels()
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val smartChannel = NotificationChannel(
+                CHANNEL_ID_SMART,
+                "Smart Coach & Streaks",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Helpful insights, streak motivation, and digital wellbeing tips."
+                enableVibration(true)
+            }
+
+            val criticalChannel = NotificationChannel(
+                CHANNEL_ID_CRITICAL,
+                "Protection Status Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Critical alerts when your shield or blockers are disabled."
+                enableVibration(true)
+            }
+
+            manager.createNotificationChannel(smartChannel)
+            manager.createNotificationChannel(criticalChannel)
         }
     }
 
+    /**
+     * Starts the periodic background worker that runs the Smart Behavioral Brain every 3 hours.
+     */
+    fun startSmartPeriodicChecks() {
+        val workRequest = PeriodicWorkRequestBuilder<SmartNotificationWorker>(3, TimeUnit.HOURS)
+            .addTag(WORK_TAG_SMART_BRAIN)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            WORK_TAG_SMART_BRAIN,
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+
+    /**
+     * Schedules the exact/windowed Daily Report alarm.
+     */
     fun scheduleDailyReport(hour: Int, minute: Int) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, DailyReportReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            DAILY_REPORT_REQUEST_CODE,
+            ALARM_REQUEST_DAILY_REPORT,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -43,60 +93,129 @@ class SmartNotificationScheduler(private val context: Context) {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-
             if (before(Calendar.getInstance())) {
-                add(Calendar.DAY_OF_YEAR, 1)
+                add(Calendar.DATE, 1)
             }
         }
 
         try {
-            if (canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     calendar.timeInMillis,
                     pendingIntent
                 )
-                Log.d(TAG, "Scheduled exact daily report alarm for ${calendar.time}")
             } else {
-                alarmManager.setInexactRepeating(
+                alarmManager.set(
                     AlarmManager.RTC_WAKEUP,
                     calendar.timeInMillis,
-                    AlarmManager.INTERVAL_DAY,
                     pendingIntent
                 )
-                Log.w(TAG, "Exact alarms permission missing. Using inexact repeating alarm.")
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "SecurityException scheduling exact alarm: ${e.message}")
+            e.printStackTrace()
         }
-
-        enqueueWorkManagerFallback()
     }
 
     fun cancelDailyReport() {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, DailyReportReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            DAILY_REPORT_REQUEST_CODE,
+            ALARM_REQUEST_DAILY_REPORT,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
         alarmManager.cancel(pendingIntent)
-        WorkManager.getInstance(context).cancelUniqueWork(WORK_FALLBACK_NAME)
-        Log.d(TAG, "Cancelled daily report alarms and background worker.")
     }
 
-    fun enqueueWorkManagerFallback() {
-        val workRequest = PeriodicWorkRequestBuilder<SmartNotificationWorker>(1, TimeUnit.HOURS)
-            .setInitialDelay(15, TimeUnit.MINUTES)
-            .build()
+    fun canScheduleExactAlarms(): Boolean {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return false
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+    }
 
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            WORK_FALLBACK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            workRequest
+    /**
+     * Fires a notification generated by the SmartBehavioralBrain and records its structured report.
+     */
+    fun fireNotification(payload: SmartBehavioralBrain.NotificationPayload): NotificationInboxStore.InboxItem? {
+        if (payload.type == SmartBehavioralBrain.NotificationType.NONE) return null
+
+        val inboxItem = NotificationInboxStore.add(
+            context = context,
+            title = payload.title,
+            body = payload.message,
+            category = payload.category,
+            customInsight = payload.customInsight,
+            customActionLabel = payload.actionText ?: "View Detailed Report",
+            customActionTarget = payload.actionTarget
         )
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = if (payload.type == SmartBehavioralBrain.NotificationType.PROTECTION_STATUS) {
+            CHANNEL_ID_CRITICAL
+        } else {
+            CHANNEL_ID_SMART
+        }
+
+        // Tapping the notification opens NotificationsActivity with this notification's inline report expanded
+        val openInboxIntent = Intent(context, NotificationsActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(NotificationsActivity.EXTRA_EXPAND_ITEM_ID, inboxItem.id)
+        }
+        val contentPendingIntent = PendingIntent.getActivity(
+            context,
+            inboxItem.id.toInt(),
+            openInboxIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_shield)
+            .setContentTitle(payload.title)
+            .setContentText(payload.message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(payload.message))
+            .setContentIntent(contentPendingIntent)
+            .setAutoCancel(true)
+            .setPriority(
+                if (channelId == CHANNEL_ID_CRITICAL) NotificationCompat.PRIORITY_HIGH
+                else NotificationCompat.PRIORITY_DEFAULT
+            )
+
+        // Primary action button
+        if (payload.actionText != null && payload.actionIntentType != null) {
+            val actionIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = payload.actionIntentType
+                putExtra(NotificationsActivity.EXTRA_EXPAND_ITEM_ID, inboxItem.id)
+            }
+            val actionPendingIntent = PendingIntent.getBroadcast(
+                context,
+                payload.type.ordinal + 100,
+                actionIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, payload.actionText, actionPendingIntent)
+        }
+
+        // Secondary action button -> Smart Reminders settings
+        val settingsIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_OPEN_REMINDERS
+        }
+        val settingsPendingIntent = PendingIntent.getBroadcast(
+            context,
+            999,
+            settingsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        builder.addAction(0, "Settings", settingsPendingIntent)
+
+        try {
+            manager.notify(payload.type.ordinal + 2000, builder.build())
+        } catch (_: SecurityException) {
+        }
+        return inboxItem
     }
 }

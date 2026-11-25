@@ -74,6 +74,8 @@ fun StatsScreen(
     activeWebDomainsCount: Int = 0,
     webDomainProportions: List<Pair<String, Float>> = emptyList(),
     isWebsiteUsageTrackingEnabled: Boolean = true,
+    userName: String = "Guardian",
+    userGoalMinutes: Int = 180,
     onEnableAppUsageTracking: () -> Unit = {},
     onEnableWebsiteUsageTracking: () -> Unit = {},
     onRefresh: () -> Unit,
@@ -82,7 +84,7 @@ fun StatsScreen(
     onViewReelsMetrics: () -> Unit,
     onAppClick: (String) -> Unit
 ) {
-    val dailyLimitMs = 2 * 3600 * 1000L // 2 hours daily limit
+    val dailyLimitMs = userGoalMinutes.coerceAtLeast(15) * 60 * 1000L
 
     LazyColumn(
         modifier = Modifier
@@ -92,6 +94,97 @@ fun StatsScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp)
     ) {
+        // Personalized Guardian Goal Sync Header
+        item {
+            val goalHours = userGoalMinutes / 60
+            val goalMins = userGoalMinutes % 60
+            val goalFormatted = when {
+                goalHours > 0 && goalMins > 0 -> "${goalHours}h ${goalMins}m"
+                goalHours > 0 -> "${goalHours}h"
+                else -> "${goalMins}m"
+            }
+            val usedMinutes = (todayScreenTimeMs / 60_000L).toInt()
+            val remainingMinutes = (userGoalMinutes - usedMinutes).coerceAtLeast(0)
+            val remH = remainingMinutes / 60
+            val remM = remainingMinutes % 60
+            val remainingText = if (usedMinutes <= userGoalMinutes) {
+                when {
+                    remH > 0 && remM > 0 -> "${remH}h ${remM}m left of $goalFormatted daily goal"
+                    remH > 0 -> "${remH}h left of $goalFormatted daily goal"
+                    else -> "${remM}m left of $goalFormatted daily goal"
+                }
+            } else {
+                val overMins = usedMinutes - userGoalMinutes
+                "${overMins}m over your $goalFormatted daily goal"
+            }
+
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.VerifiedUser,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "${userName.ifBlank { "Guardian" }}'s Wellness Pulse",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = remainingText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (usedMinutes <= userGoalMinutes) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                }
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                    ) {
+                        Text(
+                            text = "Goal: $goalFormatted",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Interactive Overview Card (Today vs 7 Days + Clickable Weekly Bars)
         item {
             InteractiveOverviewCard(
