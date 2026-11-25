@@ -72,7 +72,7 @@ The `AmniShieldAccessibilityService` orchestrates accessibility window inspectio
 | :--- | :--- | :--- | :--- | :--- |
 | **0 (Highest)** | `AntiUninstallDetector` | Play Store, OEM Security Centers, Device Admin, App Info | `GLOBAL_ACTION_HOME`, `AntiUninstallPasswordActivity` | Synchronous (Main Binder) |
 | **1** | `FocusModeBlocker` | Active Focus Sessions & Whitelist Enforcements | Full-screen Focus Space (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` | Synchronous (Main Binder) |
-| **2** | `WebsiteBlockerDetector` | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) & Social Apps | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` redirect | Synchronous (Cached blocklists, no disk I/O) |
+| **2** | `WebsiteBlockerDetector` | Chrome, Samsung Internet, Firefox, Brave (15+ browsers) & Social Apps | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` redirect | Synchronous (Cached blocklists + `DomainBlocklistEngine` 64-bit FNV-1a sorted hash matcher over gzipped `adult_domains.gz` / `gambling_domains.gz` assets, no disk I/O) |
 | **3** | `AppBlocker` | Blocked Applications, Launch Limits, Daily Usage Limits | Mindful Breathing (`AmniSpaceActivity`), `pressHome()`, or `WarningActivity` overlay | Synchronous (O(1) cached schedule checks, async UsageStats refresh on `Dispatchers.IO`) |
 | **4** | `KeywordBlocker` & `ReelBlocker` | Search bars, query inputs, and Short-form Video feeds (YouTube, IG, FB, TikTok) | Text erasure, scroll limit counter (`LIMIT_BY_COUNT` or 24/7 block), feed suppression | Deferred Coroutine Worker (`Channel.CONFLATED` on `Dispatchers.Default`) |
 

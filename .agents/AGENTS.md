@@ -4,7 +4,7 @@ This repository (`AmniShield-Android` / `alhaq-studio/amnishield-android`, branc
 
 ## Active Agent Profile: `amni-ecosystem-agent`
 
-- Full Architecture, Roadmap, and Cross-Platform Specifications: `~/.gemini/config/agents/amn-ecosystem-agent.md`
+- Full Architecture, Roadmap, and Cross-Platform Specifications: `~/.gemini/config/agents/amni-ecosystem-agent.md`
 
 ## Enabled Skills
 
@@ -16,7 +16,7 @@ This repository (`AmniShield-Android` / `alhaq-studio/amnishield-android`, branc
 
 ## Current Project Focus
 
-- **Version**: `0.3.5 (2026.10.21)` / `versionCode 145` (Namespace: `com.alhaq.amnishield`, ApplicationId: `com.alhaq.deenshield`).
+- **Version**: `0.4.0 (2026.11.25)` / `versionCode 146` (Namespace: `com.alhaq.amnishield`, ApplicationId: `com.alhaq.deenshield`).
 - **Completed Baseline Milestones**:
   - Milestone 0.3.2 (Accessibility Engine Hardening & Binder Safety)
   - Milestone 0.3.3 (Google Play Store Compliance & Layout Resilience)

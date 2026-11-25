@@ -1,6 +1,6 @@
 # Privacy Policy for AmniShield
 
-**Last Updated: 2026-05-15**
+**Last Updated: 2026-11-25**
 
 ## 1. Introduction
 
@@ -14,9 +14,10 @@ To provide our features, AmniShield collects information in the following ways:
 
 ### a. Information You Provide to Us
 
-* **Account Information:** When you choose to sign in with your Google Account, we receive your basic profile information, such as your name and email address, as provided by Google. This is used solely for authentication and managing premium features.
-* **Configuration Data:** You provide us with your preferences and settings, such as lists of blocked applications, blocked keywords, focus mode configurations, and other settings you configure within the app. This data is stored locally on your device.
+* **Account Information:** Core blocking and Always-On Shields work 100% offline without an account. If you optionally sign in (for example via Supabase email OTP or Google Sign-In in Play Store builds), we receive minimal account metadata (such as your email address and user ID) solely for authentication, Supporter Pass / Community Access Program entitlement verification, and optional future sync.
+* **Configuration Data:** You provide us with your preferences and settings, such as lists of blocked applications, blocked websites, blocked keywords, Always-On Shields, focus mode configurations, and other settings you configure within the app. This data is stored locally on your device.
 * **Schedule and Limit Rules:** App block schedules, grouped unified schedules, and app launch-limit rules are stored locally on your device to enforce your selected controls.
+* **Offline Domain Blocklists (`DomainBlocklistEngine`):** Built-in adult and gambling category blocklists (`adult_domains.gz` and `gambling_domains.gz`) are evaluated 100% on-device using sorted 64-bit FNV-1a hashes. Your browsing URLs are never sent to external servers.
 
 ### b. Information Collected Automatically Through App Usage
 
@@ -58,13 +59,13 @@ We require certain permissions to provide the features of AmniShield. Here is a 
 * **Device Administrator:** This permission is optional and is only required for the Anti-Uninstall feature. It allows us to:
   * Prevent the app from being uninstalled without your permission.
   * **This permission does not give us access to any of your personal data.**
-* **VPN Service:** This permission is used for the DNS-based filtering feature. It allows us to:
-  * Filter network traffic to block ads and trackers.
-  * **We do not log or monitor your network traffic.** All filtering is done on your device.
+* **Camera (`CAMERA`):** This permission is optional and is only used strictly on-device (via ZXing) to scan QR codes or barcodes for registering or unlocking QR-locked shields and block rules. No photos or video are ever saved or transmitted.
+* **Exact Alarms (`SCHEDULE_EXACT_ALARM`) & Battery Optimization (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`):** Used locally to trigger scheduled blocks on time and keep protection services reliable across device sleep states.
+* **Do Not Disturb Access (`ACCESS_NOTIFICATION_POLICY`):** Optional permission used locally when you enable Focus Mode Do Not Disturb automation.
 * **POST_NOTIFICATIONS (Android 13+):** Used to deliver reminders, alerts, and reports that you enable.
 * **RECEIVE_BOOT_COMPLETED:** Used to restore enabled protections and schedules after device restart.
 * **QUERY_ALL_PACKAGES:** Used to detect installed apps for app-blocking setup, category filtering, and auto-block behavior for newly installed apps.
-* **INTERNET:** Used for Google Sign-In, Play Billing verification, optional update checks, and user-initiated feedback/report sharing.
+* **INTERNET:** Used for optional authentication (Supabase email OTP / Google Sign-In), Play Billing or offline-verifiable Supporter Pass activation, Community Access entitlement checks, and user-initiated feedback/report sharing. In the `playstore` flavor only, Firebase Cloud Messaging (`AmnMessagingService`) may be used for account/service notifications; the `fdroid` flavor contains zero Google or Firebase SDKs.
 
 ## 4. How We Use Your Information
 
@@ -90,8 +91,9 @@ To reiterate and emphasize our commitment to your privacy:
 
 AmniShield is designed to minimize data sharing. We do not share your personal information, except in the limited circumstances described below:
 
-* **Google Sign-In:** If you sign in, you are sharing information directly with Google, subject to Google's Privacy Policy. We only receive a token to verify your identity.
-* **Google Play Billing:** If you purchase a premium subscription, the transaction is processed by the Google Play Store. We do not collect or store your payment card information.
+* **Google Sign-In & Supabase Auth:** If you choose to sign in, authentication is handled via Google (in Play Store builds, subject to Google's Privacy Policy) or Supabase email OTP. We only store minimal account metadata needed to verify your identity and Supporter Pass / Community Access status.
+* **Google Play Billing & Stripe:** If you purchase a Supporter Pass via the Play Store flavor, billing is processed by Google Play. For Universal/FOSS builds, Stripe Checkout may be used to issue offline-verifiable NIST P-256 ECDSA license keys. We do not collect or store your payment card information.
+* **Firebase Cloud Messaging (`playstore` flavor only):** Play Store builds include `AmnMessagingService` for optional push notifications. The `fdroid` build contains zero proprietary Google or Firebase SDKs.
 * **Legal Requirements:** We may disclose information if required to do so by law or in the good faith belief that such action is necessary to comply with a legal obligation.
 
 ## 7. Data Retention and Deletion

@@ -1,7 +1,7 @@
 # AmniShield Terms of Service
 
-**Effective Date: 2026-04-25**
-**Version: 1.1**
+**Effective Date: 2026-11-25**
+**Version: 1.2**
 
 ## 1. Acceptance
 
@@ -22,13 +22,17 @@ Some AmniShield features require Android platform permissions and services, incl
 - Boot restart handling
 - Package visibility
 - Optional Device Administrator
-- Optional VPN-based DNS filtering
+- Optional Camera (for on-device QR code lock registration and unlocking)
+- Exact Alarms, Battery Optimization Exemption, and Do Not Disturb Access (optional, for reliable schedules and Focus Mode)
 
 If you deny or revoke required permissions, related features may not function correctly.
 
-## 4. Account, Premium, and Billing
+## 4. Account, Licensing, and Billing
 
-Certain features require sign-in and/or premium entitlement. Purchases and subscription renewals are processed by Google Play. Billing, cancellations, refunds, and tax handling are governed by Google Play terms and applicable law.
+AmniShield's core blocking and filtering features are open-source (GPL-3.0) and free to use without an account. Optional Supporter Pass features or Community Access Program entitlements may require sign-in or license activation:
+- **Play Store Builds:** Purchases and subscriptions are processed by Google Play and governed by Google Play terms.
+- **Direct / FOSS Builds:** Supporter Passes may be purchased via Stripe Checkout and activated offline using cryptographic NIST P-256 ECDSA license keys.
+- **Community Access Program:** Free supporter access may be granted to eligible community members subject to availability and fair use.
 
 ## 5. Privacy and Data Handling
 
@@ -67,4 +71,4 @@ To the maximum extent permitted by law, Alhaq Initiative is not liable for indir
 
 - <info@alhaq.uk>
 - <contact@alhaq.uk>
-- <support@alhaq-.uk>
+- <support@alhaq.uk>
