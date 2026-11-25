@@ -135,7 +135,7 @@ jobs:
             ### Notes
             - Only the **Universal** APK is distributed on GitHub Releases.
             - The **Play Store** flavor is distributed via Google Play Console, and the **F-Droid** flavor is built from source for F-Droid.
-            - See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) and [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for details.
+            - See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ inputs.tag_name || github.ref_name }}/CHANGELOG.md) and [README.md](https://github.com/${{ github.repository }}/blob/${{ inputs.tag_name || github.ref_name }}/README.md) for details.
           files: |
             AmniShield-${{ inputs.tag_name || github.ref_name }}-universal.apk
           draft: false
