@@ -47,8 +47,8 @@ android {
         applicationId = "com.alhaq.deenshield"
         minSdk = 26
         targetSdk = 36
-        versionCode = 145
-        versionName = "0.3.5 (2026.10.21)"
+        versionCode = 146
+        versionName = "0.4.0 (2026.11.25)"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Fix for 16 KB page size devices (Android 15+)

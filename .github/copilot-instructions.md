@@ -4,18 +4,18 @@ You are an expert Android/Kotlin developer working on **AmniShield** - an Islami
 
 ---
 
-## 📋 Project Metadata
+## Project Metadata
 
 **Last Updated**: May 29, 2026  
 **Current Version**: 1.1.6 (Production Ready)  
-**Build Status**: ✅ Successfully Built  
+**Build Status**: Successfully Built  
 **Target SDK**: Android 15 (API 36)  
 **Min SDK**: Android 8.0 (API 26)  
 **Repository**: [https://github.com/alhaq-studio/amnishield-android](https://github.com/alhaq-studio/amnishield-android)
 
 ---
 
-## 🎯 Your Role & Responsibilities
+## Your Role & Responsibilities
 
 - **Primary Role**: Senior Android/Kotlin developer with deep expertise in accessibility services, Material Design 3, and on-device AI/ML
 - **Focus Areas**: Production stability, Play Store compliance, battery optimization, privacy-first architecture
@@ -36,7 +36,7 @@ You are an expert Android/Kotlin developer working on **AmniShield** - an Islami
 - Icons must use explicit aria-label attributes or screen-reader descriptions instead of unicode strings.
 
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### Tech Stack
 - **Language**: 100% Kotlin (JVM target 17)
@@ -105,7 +105,7 @@ app/
 
 ---
 
-## 🔑 Key Features & Implementation Patterns
+## Key Features & Implementation Patterns
 
 ### App Blocker
 - **Location**: `blockers/AppBlocker.kt`
@@ -156,7 +156,7 @@ app/
 
 ---
 
-## 💾 Data Persistence Patterns
+## Data Persistence Patterns
 
 ### SharedPreferences Organization
 ```kotlin
@@ -201,7 +201,7 @@ app/
 
 ---
 
-## 🎨 UI/UX Patterns
+## UI/UX Patterns
 
 ### Fragment Lifecycle
 ```kotlin
@@ -238,7 +238,7 @@ if (!premiumManager.isPremium()) {
 
 ---
 
-## 🔒 Privacy & Security Rules
+## Privacy & Security Rules
 
 ### Absolute Requirements
 1. **On-Device Only**: ALL AI/ML processing stays on device
@@ -256,7 +256,7 @@ if (!premiumManager.isPremium()) {
 
 ---
 
-## 🔄 Broadcast Actions & Service Communication
+## Broadcast Actions & Service Communication
 
 ### Refresh Actions (Send to AmniShieldAccessibilityService)
 ```kotlin
@@ -279,7 +279,7 @@ context.sendBroadcast(intent.setPackage(context.packageName))
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## Testing & Quality Assurance
 
 ### Build Commands
 ```bash
@@ -315,7 +315,7 @@ context.sendBroadcast(intent.setPackage(context.packageName))
 
 ---
 
-## 🚫 Common Pitfalls & Solutions
+## Common Pitfalls & Solutions
 
 ### Problem: Keyword blocker triggers on AmniShield itself
 **Solution**: Check BOTH `packageName` AND `rootPackage` at the start of `onAccessibilityEvent`:
@@ -353,7 +353,7 @@ return PackageWand.getCategoryForPackage(packageName)
 
 ---
 
-## 📦 Dependencies & Libraries
+## Dependencies & Libraries
 
 ### Core Dependencies
 - `androidx.core:core-ktx` - Kotlin extensions
@@ -372,7 +372,7 @@ return PackageWand.getCategoryForPackage(packageName)
 
 ---
 
-## 🎯 Feature Development Workflow
+## Feature Development Workflow
 
 ### Adding a New Blocker
 1. Create class in `blockers/` extending existing patterns
@@ -394,7 +394,7 @@ return PackageWand.getCategoryForPackage(packageName)
 
 ---
 
-## 📝 Code Style & Conventions
+## Code Style & Conventions
 
 ### Naming
 - Classes: PascalCase (`AppBlocker`, `SmartFeaturesManager`)
@@ -421,7 +421,7 @@ try {
 
 ---
 
-## 🔮 Future-Proofing
+## Future-Proofing
 
 ### Android 15+ Considerations
 - 16 KB page size alignment configured in `build.gradle.kts`
@@ -436,7 +436,7 @@ try {
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 - **Testing**: See `TESTING_GUIDE.md`
 - **Error Reporting**: See `ERROR_REPORTING_IMPLEMENTATION_GUIDE.md`
@@ -446,7 +446,7 @@ try {
 
 ---
 
-## 🎓 Key Takeaways
+## Key Takeaways
 
 1. **Privacy First**: All processing on-device, minimal network usage
 2. **Single Service**: Only `AmniShieldAccessibilityService` registered

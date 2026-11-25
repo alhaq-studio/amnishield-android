@@ -14,7 +14,7 @@ AmniShield is a 100% free and open-source, privacy-first digital wellness and di
 ## Download & Testing
 
 - **Google Play Pre-Registration & Open Testing**: [Join the Beta on Google Play](https://play.google.com/apps/testing/com.alhaq.deenshield) | [Play Store Listing](https://play.google.com/store/apps/details?id=com.alhaq.deenshield)
-- **Direct APK Downloads**: Available on [GitHub Releases](https://github.com/alhaq-studio/amnishield-android/releases) (`universal` for standard Google Play Services devices, `fdroid` for de-Googled ROMs).
+- **Direct APK Downloads**: Available on [GitHub Releases](https://github.com/alhaq-studio/amnishield-android/releases) (`universal` APK for sideloading).
 - **Bug Reports & Issues**: Found a bug or want to suggest an improvement? Submit an issue using our [GitHub Issue Tracker](https://github.com/alhaq-studio/amnishield-android/issues/new/choose).
 
 ---
@@ -136,30 +136,33 @@ pinned to a previous Gradle version that has incorrect cached fingerprints.
 
 | Flavor | Published to | Audience |
 | --- | --- | --- |
-| `universal` | **GitHub Releases** | Standard Android - sideloading with Google Play Services |
-| `fdroid` | **GitHub Releases** | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) |
+| `universal` | **GitHub Releases** | Standard Android - sideloading APK distribution |
+| `fdroid` | **F-Droid / Source Build** | De-Googled phones (GrapheneOS, CalyxOS, LineageOS without GMS) |
 | `playstore` | **Play Console only** | Google Play Store users - never published to GitHub |
 
 > `universal` and `fdroid` are **not interchangeable**. The `universal` flavor depends on
-> Google Play Services for billing and sign-in. Users on de-Googled ROMs must use the
+> Google Play Services for billing and sign-in. Users on de-Googled ROMs can build or install the
 > `fdroid` APK, which has zero Google dependencies and uses offline ECDSA licensing instead.
 
 ### Automated GitHub Releases (CI)
 
 The [release.yml](.github/workflows/release.yml) workflow fires automatically when you
-push a version tag. It builds, signs, and publishes both APKs to GitHub Releases:
+push a version tag. It runs all unit tests across all flavors, builds and signs the
+Universal release APK, and publishes only `AmniShield-<tag>-universal.apk` to GitHub Releases:
 
 ```bash
 # Tag a release (triggers the workflow)
-git tag v1.2.3
-git push origin v1.2.3
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 For Self Build:
 
 ```powershell
-# GitHub Releases (the two public APKs)
+# GitHub Releases (Universal APK)
 .\gradlew assembleUniversalRelease
+
+# F-Droid (pure FOSS source build)
 .\gradlew assembleFdroidRelease
 
 # Play Store (submitted via Play Console, not GitHub)

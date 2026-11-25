@@ -1,6 +1,6 @@
 # AmniShield Roadmap & Technical Milestone Tracker
 
-Last updated: October 2026
+Last updated: November 2026
 
 ---
 
@@ -15,7 +15,7 @@ Last updated: October 2026
 
 ## Technical Roadmap
 
-### Completed Milestones (Current Baseline - v0.3.1 / Code 145)
+### Completed Milestones (Current Baseline - v0.4.0 / Code 146)
 
 - [x] **Continuous Cross-App & Cross-Session Reels Engine:** Daily accumulation across app launches and multiple shortform platforms (YouTube Shorts, Instagram Reels, TikTok, Facebook Reels, ReVanced, MyInsta, Lite editions) with midnight cache invalidation.
 - [x] **Resilient Fallback Node Comparator:** Dynamic view-tree traversal (depth up to 8) extracting title, creator, and audio elements to detect reel progression when native platform resource IDs change.

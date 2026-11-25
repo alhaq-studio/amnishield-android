@@ -2,9 +2,9 @@ name: AmniShield Unified CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, Test/Pre-Production ]
+    branches: [ main, Test/Pre-Production, feat/redesign-blocks-manager ]
   pull_request:
-    branches: [ main, Test/Pre-Production ]
+    branches: [ main, Test/Pre-Production, feat/redesign-blocks-manager ]
   workflow_dispatch:
 
 permissions:

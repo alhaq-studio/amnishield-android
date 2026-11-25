@@ -37,10 +37,7 @@ class DomainBlocklistEngine {
         var count = 0
 
         fun appendDomain(raw: String) {
-            val clean = raw.trim().lowercase(Locale.ROOT)
-                .removePrefix("*.")
-                .removePrefix("www.")
-            if (clean.length < 3 || !clean.contains('.') || clean.contains(' ')) return
+            val clean = normalizeRawDomain(raw) ?: return
             if (count == buffer.size) {
                 buffer = buffer.copyOf(buffer.size * 2)
             }
@@ -54,17 +51,7 @@ class DomainBlocklistEngine {
             if (!assetPath.isNullOrBlank()) {
                 runCatching {
                     context.assets.open(assetPath).use { stream ->
-                        GZIPInputStream(stream).use { gz ->
-                            BufferedReader(InputStreamReader(gz, Charsets.UTF_8)).use { reader ->
-                                var line = reader.readLine()
-                                while (line != null) {
-                                    if (line.isNotEmpty() && line[0] != '#') {
-                                        appendDomain(line)
-                                    }
-                                    line = reader.readLine()
-                                }
-                            }
-                        }
+                        readGzipStream(stream, ::appendDomain)
                     }
                     loadedFromAsset = true
                 }
@@ -78,22 +65,59 @@ class DomainBlocklistEngine {
     }
 
     /**
+     * Streams one or more gzipped domain streams (e.g. bundled blocklist assets) into the sorted hash index.
+     */
+    internal fun loadGzipStreamsForTest(streams: Iterable<java.io.InputStream>) {
+        var buffer = LongArray(4096)
+        var count = 0
+        for (stream in streams) {
+            readGzipStream(stream) { raw ->
+                val clean = normalizeRawDomain(raw) ?: return@readGzipStream
+                if (count == buffer.size) {
+                    buffer = buffer.copyOf(buffer.size * 2)
+                }
+                buffer[count++] = fnv1a64(clean)
+            }
+        }
+        publishBuffer(buffer, count)
+    }
+
+    private inline fun readGzipStream(stream: java.io.InputStream, onLine: (String) -> Unit) {
+        GZIPInputStream(stream).use { gz ->
+            BufferedReader(InputStreamReader(gz, Charsets.UTF_8)).use { reader ->
+                var line = reader.readLine()
+                while (line != null) {
+                    onLine(line)
+                    line = reader.readLine()
+                }
+            }
+        }
+    }
+
+    /**
      * Loads normalized domains directly for unit testing without Android AssetManager.
      */
     fun loadDomainsForTest(domains: Iterable<String>) {
         var buffer = LongArray(256)
         var count = 0
         for (raw in domains) {
-            val clean = raw.trim().lowercase(Locale.ROOT)
-                .removePrefix("*.")
-                .removePrefix("www.")
-            if (clean.length < 3 || !clean.contains('.') || clean.contains(' ')) continue
+            val clean = normalizeRawDomain(raw) ?: continue
             if (count == buffer.size) {
                 buffer = buffer.copyOf(buffer.size * 2)
             }
             buffer[count++] = fnv1a64(clean)
         }
         publishBuffer(buffer, count)
+    }
+
+    private fun normalizeRawDomain(raw: String): String? {
+        val stripped = raw.trimStart('\uFEFF').trim()
+        if (stripped.isEmpty() || stripped[0] == '#') return null
+        val clean = stripped
+            .lowercase(Locale.ROOT)
+            .removePrefix("*.")
+            .removePrefix("www.")
+        return if (clean.length >= 3 && clean.contains('.') && !clean.contains(' ')) clean else null
     }
 
     private fun publishBuffer(buffer: LongArray, count: Int) {

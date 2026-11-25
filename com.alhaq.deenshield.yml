@@ -40,7 +40,14 @@ Builds:
     gradle:
       - fdroid
 
+  - versionName: '0.4.0 (2026.11.25)'
+    versionCode: 146
+    commit: v0.4.0
+    subdir: app
+    gradle:
+      - fdroid
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '0.3.1 (2026.10.05)'
-CurrentVersionCode: 145
+CurrentVersion: '0.4.0 (2026.11.25)'
+CurrentVersionCode: 146

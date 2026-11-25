@@ -1,0 +1,5 @@
+- Redesigned Unified Blocks Manager with combined schedules, open limits, and weekly usage reports.
+- Added Always-On Shields for Reels/Shorts, Websites, and Keywords with asymmetric lock protection.
+- Added high-speed on-device FNV-1a DomainBlocklistEngine with bundled gzipped adult and gambling lists.
+- Hardened Accessibility Engine binder-thread safety, prominent disclosure, and rotation state handling.
+- Added hybrid SQLite and DataStore persistence with expanded unit test coverage.

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-11-25 (versionCode 146)
+
+### Added
+- **Unified Blocks Manager & Always-On Shields Redesign**:
+  - Added the redesigned `UnifiedBlocksDashboardScreen`, `CreateOrEditBlockScreen`, `SelectTargetsScreen`, and `WeeklyUsageReportScreen` flow inside `BlocksManagerAdaptiveScreen`.
+  - Introduced `UnifiedBlockRule` supporting combined weekly schedules, launch/open limits, and per-rule authentication.
+  - Added `AlwaysOnShieldsConfig` (Short Video & Reels Guard, Permanent Website Guard, Keyword & Search Filter) with asymmetric lock friction (`ShieldLockConfig`) and Pro expiry unlock safety.
+- **High-Speed Domain Blocklist Engine (`DomainBlocklistEngine`)**:
+  - Primitive sorted 64-bit FNV-1a hash matcher backed by gzipped `adult_domains.gz` and `gambling_domains.gz` assets loaded off the Main Binder Thread.
+- **Synchronized Hybrid Storage & Pure Compose Navigation**:
+  - Relational SQLite persistence (`AmniShieldRuleDatabase`, V1 -> V2 migrations) and reactive Preferences DataStore (`AmniShieldDataStore`) synchronized with `SavedPreferencesLoader` mutex locks.
+  - Pure Compose adaptive navigation shell (`AmniShieldAdaptiveApp`) alongside `FragmentDestination` type-safe routing.
+- **Expanded Verification Suite**:
+  - Added unit test suites covering `UnifiedBlockRule`, `AlwaysOnShieldsConfig`, `AlwaysOnShieldAuthTest`, `DomainBlocklistEngine`, `AmniShieldRuleDatabase`, `FragmentDestination`, and `OnboardingStateHelpers` (169 unit tests per flavor).
+
+### Changed
+- **GitHub Release Pipeline**:
+  - Fixed `release.yml` keystore conditional check so push events no longer trigger workflow validation failures.
+  - Configured GitHub Releases to publish exclusively the signed Universal APK (`AmniShield-<tag>-universal.apk`).
+- **Accessibility Engine Hardening & Store Compliance**:
+  - Enforced Main Binder Thread safety, non-cancelable prominent disclosure (`AccessibilityDisclosureDialog`), mandatory accessibility onboarding gate (`PermissionsScreen`), and rotation state preservation.
+
+### Fixed
+- Fixed `DomainBlocklistEngine` failing to match the leading domain in UTF-8 BOM-encoded gzipped blocklists (`pornhub.com` and `stake.com`) by stripping `\uFEFF` during normalization.
+- Fixed `SettingsFragment` web filter toggle broadcast action to dispatch `INTENT_ACTION_REFRESH_WEBSITE_BLOCKER`.
+- Removed remaining UTF-8 emojis from helper scripts, docs, and webhook templates to enforce zero-emoji compliance.
+
+---
+
 ## [0.3.1] - 2026-10-05 (versionCode 145)
 
 ### Added

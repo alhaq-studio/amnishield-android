@@ -151,7 +151,7 @@ class SettingsFragment : Fragment() {
                         onSignOut = { showSignOutDialog() },
                         onToggleWebFilter = { enabled ->
                             savedPreferencesLoader.setWebsiteBlockerEnabled(enabled)
-                            sendRefreshRequest(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_APP_BLOCKER)
+                            sendRefreshRequest(AmniShieldAccessibilityService.INTENT_ACTION_REFRESH_WEBSITE_BLOCKER)
                             viewModel.loadState(viewModel.state.value.copy(isWebFilterEnabled = enabled))
                         },
                         onToggleUsageLimit = { enabled ->
